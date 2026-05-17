@@ -10,6 +10,18 @@ Three [Cursor](https://cursor.com) / Claude **agent skills** that keep projects 
 
 Full cross-skill protocol: [docs/TRIFECTA.md](docs/TRIFECTA.md)
 
+## Install via skills.sh CLI
+
+```bash
+npx skills add SPRIC76/skills-trifecta
+```
+
+**Badge snippet:**
+
+```markdown
+[![skills.sh](https://skills.sh/b/SPRIC76/skills-trifecta)](https://skills.sh/SPRIC76/skills-trifecta)
+```
+
 ## Install (Cursor)
 
 Copy each skill folder to **personal** skills (all projects) or **project** skills (repo-only):
