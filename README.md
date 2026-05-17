@@ -63,8 +63,6 @@ These skills **guide an AI agent** — they do not auto-run destructive actions.
 
 > *Categorically and formally forumulated to link between sink, sync, and Blink182*
 
-**Voice:** Surgical, paranoid-safe, symphonic (precision + harmony). The name is the joke: sink ↔ sync.
-
 **Highlights:**
 - Similarity spectrum 0% to >100% with six-layer verification
 - 60% merge threshold; mandatory review above 60%; ultra-careful superset handling
