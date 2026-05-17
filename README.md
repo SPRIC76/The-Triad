@@ -45,8 +45,6 @@ These skills **guide an AI agent** — they do not auto-run destructive actions.
 
 > *Far from the woods and a lager, look farther. One might never glimpse a forest through the trees, never stood tall, aye, they'd bend at their knees*
 
-**Voice:** Reflective, structured, overwatch-oriented.
-
 **Three modes:** Cartographer (read/diagnose) · Architect (5-doc system) · Scribe (proposals, specs, internal comms).
 
 **Highlights:**
@@ -65,8 +63,6 @@ These skills **guide an AI agent** — they do not auto-run destructive actions.
 
 > *Categorically and formally forumulated to link between sink, sync, and Blink182*
 
-*Note: The "A. Blinken" attribution is fictional wordplay — not affiliation with any real person.*
-
 **Voice:** Surgical, paranoid-safe, symphonic (precision + harmony). The name is the joke: sink ↔ sync.
 
 **Highlights:**
@@ -83,11 +79,9 @@ These skills **guide an AI agent** — they do not auto-run destructive actions.
 
 ## Solid8 — The Shrinksmith Alchemist
 
-> *"Similar to a dancer phonetically, although I'm not a dancer. I do not dance, nor will I chance to lapse with you in proper trance."*
-
 **Call me Denser** if it's not getting through.
 
-**Voice:** Alchemist / distiller — **distillation, not deletion**.
+> *"Similar to a dancer phonetically, although I'm not a dancer. I do not dance, nor will I chance to lapse with you in proper trance."*
 
 **Highlights:**
 - Tier S–D similarity pipeline; three laws (no delete without approval, lossless merge, archive first)
