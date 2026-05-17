@@ -25,6 +25,38 @@ solid8/
 
 **Requirements:** Python 3.10+ optional, for `synk182/scripts/synk_engine.py` and `solid8/scripts/denser_engine.py`.
 
+## Install (Claude Desktop)
+
+Use one of these methods:
+
+### Method A: Drag-and-drop package (if you create `.skill` files)
+
+1. Package each skill folder as `<name>.skill` (zip archive format).
+2. Open Claude Desktop and drag the `.skill` file into the app.
+3. Confirm the skill is installed and visible in your available skills.
+
+### Method B: Manual folder install
+
+1. Locate your Claude skills directory from Claude settings or docs.
+2. Copy `devcom5/`, `synk182/`, and `solid8/` into that skills directory.
+3. Restart Claude Desktop so it reloads skills.
+
+If your Claude environment uses managed skill paths (for example `/mnt/skills/user/`), place each skill folder there.
+
+## IDE and agent compatibility
+
+These skills are markdown instruction packs (`SKILL.md` + optional `references/` + optional `scripts/`), so they can work in most agent-capable environments:
+
+| Environment | Works? | How to use |
+|-------------|--------|------------|
+| Cursor | Yes | Copy folders into `~/.cursor/skills/` or `.cursor/skills/` |
+| Claude Desktop | Yes | Drag `.skill` package or copy folders into Claude skills path |
+| Claude Code / agent runtimes | Yes | Place folders in the runtime skills directory |
+| Other IDEs with skill/plugin support | Usually | Import/copy each skill folder according to that IDE's skill format |
+| Plain IDE with no agent skill system | Limited | Use docs/scripts manually; auto-trigger behavior will not apply |
+
+For non-Cursor, non-Claude IDEs, the critical requirement is support for instruction-based agent skills. If unsupported, you can still reuse the workflow docs and Python scripts manually.
+
 ## Recommended workflows
 
 - **Full trifecta:** DevCom5 (Cartographer) → Synk182 → Solid8 → DevCom5 (Architect)
