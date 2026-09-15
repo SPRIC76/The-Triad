@@ -1,16 +1,21 @@
 ---
 name: devcom5
 description: >
-  Developer Communications system with adaptive 5-doc Markdown framework,
-  co-authoring workflows, and internal comms generation. 
-  deep-read project state/trajectory/gaps, write/maintain the 5-doc system, 
-  co-author docs, proposals, specs, status reports,  3P updates, newsletters, 
-  FAQs with structured workflows). Multi-tiered depth with adaptive 
-  mid-scan adjustment. 
-  Cross-skill integration with Synk182 and Solid8 via shared PULSE.json.
-  Standalone; amplified with Synk182/Solid8.
-  Supersedes: doc-coauthoring, internal-comms.
-  
+  DevCom5 (Logger): project documentation and developer communications. Reads
+  a project to report its state, trajectory and gaps; writes and maintains a
+  five-document docs/ system (INDEX, ARCHITECTURE, USER_EXPERIENCE, PLANNING,
+  HISTORY) tracked in docs/PULSE.json; and co-authors proposals, specs,
+  decision docs, status reports, 3P updates, newsletters, FAQs and incident
+  reports. Use whenever the user says devcom5, dc5 or logger; asks to document
+  a project, catch them up, or say where things stand or where we were; is
+  onboarding to an unfamiliar codebase, resuming after a break, or preparing a
+  handover; wants docs written or updated; or asks for any structured document
+  or internal update - and proactively when a project's docs are missing or
+  stale. Standalone; works with Synk182 and Solid8 through docs/PULSE.json.
+  Prefer it over doc-coauthoring and internal-comms, which it supersedes.
+metadata:
+  version: "1.1"
+  updated: "2026-09-15"
 ---
 
 # DevCom5 — Developer Communications · 5
@@ -23,15 +28,7 @@ description: >
 >**Architect** — Write/maintain the 5-doc system calibrated to project needs.
 >**Scribe** — Co-author documents, proposals, specs, and internal comms through structured workflows with iterative refinement.
 
-TRIGGER when/user mentions: "devcom5", "dc5", "logger",  
-  documentation mentioned, onboarding to unfamiliar project,
-  resuming after lapse, asked about status/trajectory, creating/updating
-  docs, handover prep, writing proposals/specs/decision docs, drafting
-  internal comms (status reports, 3P updates, newsletters, FAQs, incident
-  reports), or user says "document this", "project status", "catch me up",
-  "where were we", "write/update docs", "draft a proposal", "write a spec",
-  "3P update", "status report", "write a newsletter". Trigger proactively
-  on missing/stale docs. 
+**Proactive:** when you notice a project's docs are missing or stale, offer a Pulse check before it costs anyone a lapse.
 
 ---
 
@@ -59,8 +56,8 @@ Tracked via `docs/PULSE.json`. Read first, write last, every interaction.
     "drift_flags": [], "last_audit": "ISO-8601-ET"
   },
   "cross_skill": {
-    "synk_last_run": null, "synk_drift_detected": false,
-    "solid8_last_run": null, "solid8_files_consolidated": 0,
+    "synk_last_run": null, "synk_drift_detected": false, "synk_files_changed": 0,
+    "solid8_last_run": null, "solid8_files_consolidated": 0, "solid8_redundancy_map": {},
     "pending_signals": []
   },
   "digest_history": [
@@ -73,8 +70,10 @@ Tracked via `docs/PULSE.json`. Read first, write last, every interaction.
 }
 ```
 
+DevCom5 owns every key outside `cross_skill`. Inside it, write only DevCom5's signals and keep every key you do not recognise ([references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md)).
+
 ### On Entry
-1. Read PULSE.json (missing = first encounter → Deep)
+1. Read PULSE.json (missing = first encounter → Deep; unparseable → report it, rebuild the baseline, keep the broken file as `PULSE.corrupt.json`)
 2. Calculate depth via three-tier system (below)
 3. Display status: `📡 DevCom5: [staleness] | Depth: [selected] | Docs: [n/5] | [flags]`
 
@@ -96,8 +95,8 @@ Depth is not static. It's determined, then **adjusted mid-operation**.
 |-----------|---------------|
 | < 24h | **Pulse** — PULSE.json + tree (2 levels) + diff vs last digest |
 | 1–7 days | **Standard** — + READMEs, configs, existing docs |
-| 1–4 weeks | **Thorough** — + entry points, modules, tests. See `references/AUDIT_PROTOCOL.md` |
-| > 1 month / new | **Deep** — + secondary source, POTIMP/archives, full drift. See `references/AUDIT_PROTOCOL.md` |
+| 1–4 weeks | **Thorough** — + entry points, modules, tests. See [references/AUDIT_PROTOCOL.md](references/AUDIT_PROTOCOL.md) |
+| > 1 month / new | **Deep** — + secondary source, POTIMP/archives, full drift. See [references/AUDIT_PROTOCOL.md](references/AUDIT_PROTOCOL.md) |
 
 ### Tier 2: Adaptive Mid-Scan (dynamic adjustment)
 
@@ -142,6 +141,8 @@ Software → ARCHITECTURE heavy. Creative → USER_EXPERIENCE heavy. Research �
 Seed → PLANNING + INDEX. Production → full. Legacy → aggressive capture.
 Solo → concise. Distributed → zero assumptions.
 
+**A project that already has a documentation system** (numbered continuity files, an ADR folder, a docs site): map the five roles onto what exists and maintain those files. Never create a parallel `docs/` set beside a working one — that is the sprawl Solid8 exists to remove.
+
 ---
 
 ## Mode 1: Cartographer
@@ -166,7 +167,7 @@ Classification: [D/M/C] | Depth: [level] (adjusted: [if changed]) | Sessions: [n
 
 ### Comprehension Techniques
 Entry-point tracing → Config-first → Doc-reality cross-check → Pattern recognition → POTIMP/archive awareness.
-Full methodology: `references/AUDIT_PROTOCOL.md`
+Full methodology: [references/AUDIT_PROTOCOL.md](references/AUDIT_PROTOCOL.md)
 
 ---
 
@@ -174,8 +175,8 @@ Full methodology: `references/AUDIT_PROTOCOL.md`
 
 Write/maintain the 5-doc system. Always Cartographer before Architect.
 
-### The Five Documents (all in `/docs`)
-Template: `references/UNIVERSAL_TEMPLATE.md`
+### The Five Documents (all in `docs/`)
+Template: [references/UNIVERSAL_TEMPLATE.md](references/UNIVERSAL_TEMPLATE.md)
 
 | File | Purpose | Peak |
 |------|---------|------|
@@ -191,8 +192,8 @@ No scattered files → ARCHITECTURE Element Notes. Handover-first. Adaptive dept
 
 ### End-of-Session
 1. HISTORY → log + changelog | 2. PLANNING → backlog + ideas
-3. ARCHITECTURE → element notes | 4. Headers in changed files
-5. **PULSE.json → always**
+3. ARCHITECTURE → element notes | 4. Headers (version, date) in changed files
+5. **PULSE.json → always** | 6. Emit `docs_created` when a doc was created this session
 
 ---
 
@@ -214,14 +215,14 @@ For proposals, specs, decision docs, technical docs:
 **Stage 1 — Context Gathering:**
 1. Ask meta-context: doc type, audience, desired impact, template/format, constraints
 2. User info-dumps (stream-of-consciousness, links, files — whatever's efficient)
-3. Ask 5-10 clarifying questions based on gaps
+3. Ask 5-10 clarifying questions based on gaps — first answer what the project, the conversation and the files already say, and ask only the rest
 4. Exit when edge cases and trade-offs can be discussed without needing basics
 
 **Stage 2 — Refinement & Structure:**
 1. Agree on sections (suggest 3-5 based on doc type if user unsure)
 2. Create scaffold with placeholders
 3. Per section: clarify → brainstorm 5-20 options → user curates → draft → iterate
-4. Use `str_replace` for edits, never reprint whole doc
+4. Make targeted edits in place; never reprint the whole doc for a small change
 5. After 3 stable iterations on a section: ask what can be removed
 6. At 80%+ done: full-doc review for flow, redundancy, filler
 
@@ -234,7 +235,7 @@ Fix gaps found. Exit when reader questions are answered correctly.
 ### Scribe Workflow: Internal Communications
 
 For 3P updates, newsletters, FAQs, status reports, incident reports:
-Read `references/COMMS_FORMATS.md` for specific formatting and workflow per type.
+Read [references/COMMS_FORMATS.md](references/COMMS_FORMATS.md) for specific formatting and workflow per type.
 
 **General flow:**
 1. Identify comm type → load format from references
@@ -254,10 +255,10 @@ Read `references/COMMS_FORMATS.md` for specific formatting and workflow per type
 
 ## Trifecta Signals
 
-Full protocol: `references/TRIFECTA_PROTOCOL.md`
+Full protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md)
 
-**Emits:** `drift_detected` → Synk | `architecture_changed` → Solid8 | `stale_project` → Both
-**Consumes:** `sync_completed` (Synk) → ≥Standard | `files_consolidated` (Solid8) → update structure | `redundancy_found` (Solid8) → flag in audit
+**Emits:** `drift_detected` → Synk182 | `architecture_changed` → Solid8 | `stale_project` → Both | `docs_created` → Both
+**Consumes:** `sync_completed` (Synk182) → ≥Standard | `sync_conflict` / `environment_diverged` (Synk182) → flag in audit | `files_consolidated` (Solid8) → update structure | `redundancy_found` (Solid8) → flag in audit | `archive_recommended` (Solid8) → PLANNING
 
 ---
 
@@ -265,14 +266,15 @@ Full protocol: `references/TRIFECTA_PROTOCOL.md`
 - Template-stamping empty sections on seed projects
 - One-sentence sections (fold or skip)
 - Ignoring existing READMEs (absorb them)
+- Building a parallel docs set beside the project's own system
 - Rewriting HISTORY (append-only)
 - Silent findings (report drift)
 - PULSE neglect (always update, even quick visits)
 - Rushing Scribe stages (each exists for a reason)
-- Printing entire docs for small edits (use str_replace)
+- Printing entire docs for small edits (edit in place)
 
 ---
 
-*⁰ Formerly: project-docs (unnamed, pre-v1) → Logger v1.0 → DevCom5 v1.0.
+*⁰ Formerly: project-docs (unnamed, pre-v1) → Logger v1.0 → DevCom5 v1.0 → DevCom5 v1.1 (2026-09-15: triggers moved into the description, Trifecta Protocol v3.0, existing doc systems respected).
 The "5" honors the five-document system at its core. DevCom5 supersedes
 the Anthropic example skills `doc-coauthoring` and `internal-comms`.*

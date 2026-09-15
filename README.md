@@ -5,7 +5,7 @@ Three [Cursor](https://cursor.com) / Claude **agent skills** that keep projects 
 | Skill | Alias | Role | Core question |
 |-------|-------|------|----------------|
 | **DevCom5** | Logger | Docs, audit, comms | What does this project know about itself? |
-| **Synk182** | Symphonous Strategist | Bidirectional sync | Are the copies in agreement? |
+| **Synk182** | Symphonous Strategist | Agreement between two copies | Are the copies in agreement? |
 | **Solid8** | Denser / Shrinksmith | Consolidation | What can be unified without losing meaning? |
 
 Full cross-skill protocol: [docs/TRIFECTA.md](docs/TRIFECTA.md)
@@ -35,25 +35,19 @@ solid8/
 # Project (.cursor/skills/<name>/)
 ```
 
-**Requirements:** Python 3.10+ optional, for `synk182/scripts/synk_engine.py` and `solid8/scripts/denser_engine.py`.
+**Requirements:** Python 3.10+ optional, for `synk182/scripts/synk_engine.py` and `solid8/scripts/denser_engine.py` (standard library only).
 
-## Install (Claude Desktop)
+## Install (Claude)
 
-Use one of these methods:
+### claude.ai and Claude Desktop
 
-### Method A: Drag-and-drop package (if you create `.skill` files)
+1. Package each skill folder as `<name>.skill` — a zip archive with `<name>/SKILL.md` at its root. [SC2](https://github.com/SPRIC76/sc2)'s `package_dual.py` validates and packages in one step.
+2. Upload each `.skill` in your skill settings, or drag it into Claude Desktop.
+3. Confirm the three skills appear in your skills.
 
-1. Package each skill folder as `<name>.skill` (zip archive format).
-2. Open Claude Desktop and drag the `.skill` file into the app.
-3. Confirm the skill is installed and visible in your available skills.
+### Claude Code
 
-### Method B: Manual folder install
-
-1. Locate your Claude skills directory from Claude settings or docs.
-2. Copy `devcom5/`, `synk182/`, and `solid8/` into that skills directory.
-3. Restart Claude Desktop so it reloads skills.
-
-If your Claude environment uses managed skill paths (for example `/mnt/skills/user/`), place each skill folder there.
+Copy `devcom5/`, `synk182/` and `solid8/` into `~/.claude/skills/` (all projects) or `.claude/skills/` (one project).
 
 ## IDE and agent compatibility
 
@@ -62,8 +56,8 @@ These skills are markdown instruction packs (`SKILL.md` + optional `references/`
 | Environment | Works? | How to use |
 |-------------|--------|------------|
 | Cursor | Yes | Copy folders into `~/.cursor/skills/` or `.cursor/skills/` |
-| Claude Desktop | Yes | Drag `.skill` package or copy folders into Claude skills path |
-| Claude Code / agent runtimes | Yes | Place folders in the runtime skills directory |
+| claude.ai / Claude Desktop | Yes | Upload or drag in a `.skill` package per skill |
+| Claude Code | Yes | Copy folders into `~/.claude/skills/` or `.claude/skills/` |
 | Other IDEs with skill/plugin support | Usually | Import/copy each skill folder according to that IDE's skill format |
 | Plain IDE with no agent skill system | Limited | Use docs/scripts manually; auto-trigger behavior will not apply |
 
@@ -73,6 +67,7 @@ For non-Cursor, non-Claude IDEs, the critical requirement is support for instruc
 
 - **Full trifecta:** DevCom5 (Cartographer) → Synk182 → Solid8 → DevCom5 (Architect)
 - **Docs + lean:** DevCom5 → Solid8 → DevCom5
+- **Docs + sync:** DevCom5 (Cartographer) → Synk182 → DevCom5 (Architect)
 - **Sync + lean:** Synk182 → Solid8
 
 ## Safety (general use)
@@ -80,6 +75,7 @@ For non-Cursor, non-Claude IDEs, the critical requirement is support for instruc
 These skills **guide an AI agent** — they do not auto-run destructive actions.
 
 - **Synk182** and **Solid8** require explicit user approval for merges and consolidation.
+- Synk182's engine writes nothing until it applies plan items you approved, and backs up each file first.
 - Archives are written under `[project]/ARCHIVE/` before risky operations.
 - Review archives and proposals before deleting anything.
 
@@ -95,9 +91,10 @@ These skills **guide an AI agent** — they do not auto-run destructive actions.
 - Adaptive depth: Pulse → Standard → Thorough → Deep (can shift mid-scan)
 - Digest system via `docs/PULSE.json` — read first, write last
 - Five-document framework in `/docs`: INDEX, ARCHITECTURE, USER_EXPERIENCE, PLANNING, HISTORY
+- Maintains a project's existing documentation system instead of creating a parallel one
 - Status: `📡 DevCom5: [staleness] | Depth: … | Docs: [n/5]`
 
-**Triggers:** `devcom5`, `dc5`, `logger`, documentation, project status, catch-up, proposals, 3P updates, newsletters, and more (see `devcom5/SKILL.md`).
+**Triggers:** `devcom5`, `dc5`, `logger`, documentation, project status, catch-up, proposals, 3P updates, newsletters, and more (see the description in `devcom5/SKILL.md`).
 
 **References:** `devcom5/references/` — audit protocol, universal template, comms formats.
 
@@ -108,14 +105,21 @@ These skills **guide an AI agent** — they do not auto-run destructive actions.
 > *Categorically and formally forumulated to link between sink, sync, and Blink182*
 
 **Highlights:**
+- Any two copies of a project: a sandbox or upload, a mounted or synced folder, a git worktree, another machine's copy, a deployed copy
 - Similarity spectrum 0% to >100% with six-layer verification
-- 60% merge threshold; mandatory review above 60%; ultra-careful superset handling
-- Three-tier backup, auto-rollback, archives at `[project]/ARCHIVE/synk-[timestamp]/`
+- 60% merge threshold; mandatory review above 60%; supersets never auto-resolved
+- Backs up every file before overwriting (`[project]/ARCHIVE/synk-[timestamp]/`, with manifest and rollback notes), applies only approved items, and rolls back any copy that fails verification
 - Status: `🔄` for scans, rigor shifts, completion
 
-**Not Synk:** Single-file edits, in-directory moves, redundancy consolidation (→ Solid8).
+**Not Synk:** Single-file edits, in-directory moves, redundancy consolidation (→ Solid8), git branch merges (→ git).
 
-**Script:** `python synk182/scripts/synk_engine.py` (optional engine for large projects).
+**Script:**
+
+```bash
+python synk182/scripts/synk_engine.py USER_COPY WORKING_COPY                    # dashboard, read-only
+python synk182/scripts/synk_engine.py USER_COPY WORKING_COPY --plan plan.json   # numbered plan, nothing written
+python synk182/scripts/synk_engine.py USER_COPY WORKING_COPY --apply plan.json --approve 2,5
+```
 
 ---
 
@@ -127,11 +131,12 @@ These skills **guide an AI agent** — they do not auto-run destructive actions.
 
 **Highlights:**
 - Tier S–D similarity pipeline; three laws (no delete without approval, lossless merge, archive first)
+- Finds version (`_v2`), copy (`- Copy`, `(2)`) and backup (`.bak`, `.old`) sprawl; compares Markdown by section, JSON by structure, binaries by hash; treats archive and POTIMP folders as intentional
 - **Solid8** = solid + ∞ rotated — tames endless project entropy
 - Formerly Denser v1.0
 - Status: `⚗️`
 
-**Script:** `python solid8/scripts/denser_engine.py <target_dir>` (optional engine).
+**Script:** `python solid8/scripts/denser_engine.py <target_dir> [--details N] [--json proposal.json]` (read-only analysis; archives before any change).
 
 ---
 

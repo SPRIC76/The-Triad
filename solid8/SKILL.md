@@ -1,32 +1,36 @@
 ---
 name: solid8
 description: >
-  Systematic project consolidation through similar spectrum microscopy
-  (0% to >100%). Identifies duplicate, overlapping, and superseded files,
-  then consolidates into categorically minimum structure preserving full
-  intent and scope. Tiered analysis, safety-first merge with mandatory
-  review, archive-before-action. Multi-tier adaptive depth. 
-  Cross-skill integration with DevCom5 and Synk182 via PULSE.json.
-  Standalone; amplified with DevCom5/Synk.
+  Solid8 (Denser): consolidates a project's sprawl without losing anything.
+  Finds exact duplicates, supersets, near-duplicates and overlap across files -
+  version sprawl such as _v1 and _v2, copy sprawl such as - Copy or (2), backup
+  sprawl such as .bak or .old, and a file sitting beside a zip of itself - then
+  proposes the categorically minimum structure that still holds the project's
+  full intent and scope, with a diff for every merge and an archive before any
+  change. Use whenever the user says solid8, s8 or denser; asks to consolidate,
+  deduplicate, merge similar files, clean up, shrink or reduce sprawl; says
+  there are too many files or versions; or when a scan shows obvious
+  redundancy, or older versions may hold overlooked integrations or undervalued
+  assets. Standalone; works with DevCom5 and Synk182 through docs/PULSE.json.
+  Not for keeping two copies of a project in agreement (that is Synk182).
+metadata:
+  version: "1.1"
+  updated: "2026-09-15"
 ---
 
 # Solid8 — The 'Shrinksmith' Alchemist 
  "Call me **Denser** if it's not getting through to you."
-> *"Similar to a dancer phonetically, athough I'm not a dancer. I do not dance, nor will I chance to lapse with you in proper trance."*
+> *Similar to a dancer phonetically, athough I'm not a dancer. I do not dance, nor will I chance to lapse with you in proper trance.*
 
 **Turns mess and sprawl into essence; Distillation, not deletion.**
-
-TRIGGER when/user mentions: "solid8", "s8", "denser", consolidate, deduplicate,  
-  merging similar files, reducing sprawl, "too many files", "consolidating", 
-  "make this smaller", "shrink", scanning reveals obvious redundancy 
-  (versioned file sprawl, copy sprawl), missing/consumable components 
-  (older versions containing overlooked integrations, undervalued assets). 
 
 **"Consolidated" means:** (for all intents and purposes of this skill)
 the categorically minimum necessary structure/framework/directory/files/data/docs 
 that hierarchically convey and contain the full intent and scope of the project.
 Common synonyms (explicit/context-dependent): unite, merge, combine, integrate, unify, 
 strengthen, centralize, concentrate, compile, collate, organize.
+
+**Missing or consumable components count too:** an older version can hold an integration or asset the current one lost. Surface it; never let consolidation bury it.
 
 
 ## Similarity Tiers
@@ -52,10 +56,11 @@ backup sprawl (`.bak`/`.old`), archive sprawl (file + zip of same).
 
 | Type | Method | Fallback |
 |------|--------|----------|
-| Text/Code | Line diff + Jaccard | Hash |
-| Markdown | Section-aware diff (headers as boundaries) | Line diff |
-| JSON/YAML | Structural key-value diff | Text diff |
-| Binary | Hash only | Size |
+| Text/Code | Line-set Jaccard + superset detection | Hash |
+| Markdown | Section-aware: each line compared under its heading | Line set |
+| JSON | Structural: flattened key paths and values, order ignored | Line set if it does not parse |
+| YAML | Line set (structural only by hand) | Hash |
+| Binary | Hash only — never a content tier | Size |
 
 Superset detection: File A contains every line of B + more → A is superset.
 
@@ -86,9 +91,10 @@ Standard scan finds superset relationships → escalate to Thorough for those cl
 **Report shifts:** `⚗️ Depth adjusted: Thorough → Quick (project already lean)`
 
 ### Tier 3: Cross-Skill Signals
-`new_files_synced` from Synk → ≥ Standard (check new overlaps).
+`new_files_synced` from Synk182 → ≥ Standard (check new overlaps).
 `architecture_changed` from DevCom5 → check if structure changes obsoleted files.
 `stale_project` from DevCom5 → Thorough.
+`docs_created` from DevCom5 → the new docs are doc-worthy; never consolidate them.
 
 ## Safety: Three Laws
 
@@ -112,33 +118,35 @@ On version sequences (`_v1` through `_vN`):
 
 ## Context Awareness
 
-**POTIMP:** Intentional staging. Don't flag unless changes fully absorbed into main.
-**Archives:** Intentionally preserved. Flag only if exact dupe of current.
+**POTIMP:** Intentional staging. Don't flag unless changes fully absorbed into main. The engine reports a POTIMP file only as an exact duplicate or as the subset of a main file.
+**Archives:** Intentionally preserved. Flag only if exact dupe of current. The engine applies this to any folder named `ARCHIVE`, `Archive`, `Archives` or `archive`.
 **Doc files:** Respect DevCom5 flags. Don't consolidate doc-worthy files.
 Flag scattered READMEs for 5-doc absorption.
+**A copy is not always sprawl:** a folder that is another environment's copy of the project (a worktree, a deployed copy, another machine's) is Synk182's to reconcile, not Solid8's to collapse.
 
 ## Scripts
 
-The `scripts/` directory contains the Solid8 analysis engine:
+**`scripts/denser_engine.py`** — the analysis engine. Read-only except `create_archive`.
 
-**`scripts/denser_engine.py`** — Core consolidation logic:
-- `DenserEngine` class with configurable similarity thresholds
-- File fingerprinting (SHA-256, size, line count, pattern detection)
-- Similarity calculation with Jaccard index + superset/subset detection
-- Cluster grouping by hash, basename pattern, and file size
-- Tier classification (S through D) with automated proposal generation
-- Archive creation with manifest.json and rollback.md
-- CLI interface: `python denser_engine.py <target_dir>`
+```bash
+python scripts/denser_engine.py <target_dir>                       # tier counts
+python scripts/denser_engine.py <target_dir> --details 20          # plus the top clusters with files and similarity
+python scripts/denser_engine.py <target_dir> --json proposal.json  # full proposal for review or tooling
+python scripts/denser_engine.py <target_dir> --pulse               # record the scan in docs/PULSE.json
+```
 
-Use the engine for programmatic consolidation on large projects.
+- `DenserEngine(target).scan()` → `.compare_all()` → `.generate_proposal()`; `.create_archive(files, archive_dir, reason)` copies originals with `manifest.json` and `rollback.md` before any merge or removal.
+- Skips `.git`, `node_modules`, build output and caches; groups candidates by hash, by base name with version, copy and backup markers removed, and by size.
+- `--pulse` writes `solid8_last_run` and `solid8_redundancy_map`, emits `redundancy_found` to DevCom5 when anything is found, keeps every other key, and never touches a PULSE that does not parse.
+
 The SKILL.md methodology applies whether using the engine or manual analysis.
 
 ## Trifecta Signals
 
-Full protocol: `references/TRIFECTA_PROTOCOL.md`
+Full protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md)
 
-**Emits:** `files_consolidated` → DevCom5 | `redundancy_found` → DevCom5 | `archive_recommended` → DevCom5 | `consolidation_complete` → Synk
-**Consumes:** `new_files_synced` (Synk) → rescan | `architecture_changed` (DevCom5) → check obsolescence | `stale_project` (DevCom5) → full assessment
+**Emits:** `files_consolidated` → DevCom5 | `redundancy_found` → DevCom5 | `archive_recommended` → DevCom5 | `consolidation_complete` → Synk182
+**Consumes:** `new_files_synced` (Synk182) → rescan | `architecture_changed` (DevCom5) → check obsolescence | `stale_project` (DevCom5) → full assessment | `docs_created` (DevCom5) → protect
 **PULSE writes:** `solid8_last_run`, `solid8_files_consolidated`, `solid8_redundancy_map`
 
 ## Under-the-Hood Display
@@ -150,14 +158,15 @@ Full protocol: `references/TRIFECTA_PROTOCOL.md`
 - Deleting without archiving
 - Treating all versions as redundant
 - Ignoring POTIMP/staging
-- Consolidating across environments (Synk's job)
+- Consolidating across environments (Synk182's job)
 - Merging without review above Tier S
 - Byte-comparing docs (use section-aware diff)
 - Consolidating build artifacts
+- Calling something a duplicate by its name alone — compare the content
 
 ---
 
-*⁰ Formerly: Denser v1.0 (unnamed concept, pre-v1) → Solid8 v1.0.
+*⁰ Formerly: Denser v1.0 (unnamed concept, pre-v1) → Solid8 v1.0 → Solid8 v1.1 (2026-09-15: triggers moved into the description; engine fixes for backups, copy names, binaries, JSON and Markdown, archives, and Windows consoles).
 "Solid8" — solid as in consolidated, 8 as in the infinity symbol ∞ rotated,
 representing the endless cycle of project entropy that this skill tames.
 The Denser alias persists for when subtlety isn't working.*
