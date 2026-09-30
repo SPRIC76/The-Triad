@@ -1,5 +1,5 @@
 # Communications Formats Reference
-<!-- DevCom5 v1.0 | 2026-02-10 | Scribe mode reference -->
+<!-- DevCom5 v1.3 | 2026-02-10 | Scribe mode reference | Updated: 2026-09-30 04:05 ET — header follows the skill's version -->
 
 Scribe mode uses these formats for internal communications.
 

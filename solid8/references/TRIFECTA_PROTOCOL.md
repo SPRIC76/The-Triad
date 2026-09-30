@@ -14,7 +14,7 @@ Each skill works alone; together they cover the whole cycle.
 
 ## Communication: PULSE.json `cross_skill`
 
-DevCom5 owns everything outside `cross_skill`. Inside it, each skill writes only its own keys, and every skill keeps keys it does not recognise — other skills (Octave, for one) add sections of their own.
+DevCom5 owns everything outside `cross_skill`. Inside it, each skill writes only its own keys, and every skill keeps keys it does not recognise — other skills add sections of their own.
 
 ```json
 {

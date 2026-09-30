@@ -13,17 +13,17 @@ description: >-
   copy is newer; says files are different, out of date or missing on one side;
   or when DevCom5 or Solid8 signal that copies have drifted. Not for redundancy
   inside one copy (Solid8), not for git merges or the rules of working in a
-  repo (git, mk-repo-rules), and not for what two versions can do rather than
-  what their files hold (verafox).
+  repo (git, a repo-rules skill), and not for what two versions can do rather
+  than what their files hold (verafox).
 license: Freeware
 metadata:
-  version: "3.2"
+  version: "3.3"
   updated: "2026-09-30"
 ---
 
 # Synk182 — The Symphonous Strategist
  Formerly **nothing**
-> *Formally a link between sink, and sync. *"Who thinks this shi don't stink? let that sync in" signed- A. Blinken.*
+> *Formally a link between sink, and sync. "Who thinks this shi don't stink? let that sync in" signed- A. Blinken.*
 
 **Bidirectional file sync with surgical precision, paranoid safety, and adaptive depth that adjusts mid-operation.**
 
@@ -40,7 +40,7 @@ metadata:
 | 🟢 Immediate | "sync my project/files", "synchronize", "keep in sync" | Activate |
 | 🟡 Confirm | "update my project files" | Clarify: Synk or direct edits? |
 | 🔴 Clarify | "files are different", "don't see my file" | Offer Synk |
-| ❌ Not Synk | Create/edit single files, move within dir, redundancy (→ Solid8), branch merges (→ git), repo and worktree rules (→ mk-repo-rules), what a version can do rather than what its files hold (→ verafox) | — |
+| ❌ Not Synk | Create/edit single files, move within dir, redundancy (→ Solid8), branch merges (→ git), repo and worktree rules (→ your repository's own rules), what a version can do rather than what its files hold (→ verafox, in The Proof Pack) | — |
 
 **Name the two copies first.** Say which is the user's copy (authority) and which is the working copy, in the user's words. Most sync damage starts with the two being swapped.
 
@@ -97,7 +97,7 @@ Standard scan finds superset relationships → escalate to Thorough for those cl
 
 ## Workflow
 
-1. **Inventory** — Scan both copies, fingerprint all files (skips `.git`, `node_modules`, build output, caches and `ARCHIVE`)
+1. **Inventory** — Scan both copies, fingerprint all files (skips `.git`, `node_modules`, build output, caches and the exact folder name `ARCHIVE`, where Synk writes its own backups; a project's other archive-named folders are content and stay in sync, while Solid8 protects them from consolidation)
 2. **Compare** — Classify by tier + direction (with adaptive depth adjustment)
 3. **Propose** — Dashboard: `🔄 ✓12 identical | ⚠️2 superset | 🔀3 merge | ➕3 new`; show diffs for every merge and superset
 4. **Execute** — After approval: backup → copy or merged write → verify (six layers) → roll back failures → log
@@ -115,9 +115,10 @@ python scripts/synk_engine.py USER_COPY WORKING_COPY --apply plan.json --approve
 ```
 
 - Plan items carry `direction`: set for one-sided files; `null` for merges and supersets until the user decides. To apply a merge, write the merged file into one copy, set that item's direction to the other copy in the plan, and approve its id.
-- `--approve new` approves every one-sided file at once — still an explicit approval, so show the list first.
-- `--pulse` writes `synk_last_run`, `synk_drift_detected`, `synk_files_changed` and the signals below into `USER_COPY/docs/PULSE.json`, keeping every other key; it never touches a PULSE that does not parse.
-- The same operations are available as `SynkEngine(...).scan_and_compare()`, `.plan()`, `.diff()`, `.backup()`, `.apply()`.
+- An item is refused before any backup or write when its path leaves either copy (absolute, `..`, drive-relative or UNC forms) or when its destination changed since the plan was written — a file that appeared, or was edited, after `--plan`: re-plan. Each refusal is reported and the run exits 1.
+- `--approve new` approves every one-sided file at once — still an explicit approval, so show the list first. It leaves out an escaping path, and `docs/PULSE.json`, which each copy keeps for itself (approve it by id to copy it).
+- `--pulse` writes `synk_last_run`, `synk_drift_detected` and the signals below into `USER_COPY/docs/PULSE.json`, plus `synk_files_changed` after an apply, keeping every other key. A wrong-typed field (`"pending_signals": null`) is treated as empty with a note; a PULSE that does not parse is never touched; when none exists one is created holding only `cross_skill`, which DevCom5 fills out at its next Deep pass.
+- The same operations are available as `SynkEngine(...).scan_and_compare()`, `.plan()`, `.diff()`, `.backup()`, `.apply()`, with `.refusal(path)` and `.new_ids(plan)` for the checks above.
 
 ## Merge Strategies
 
@@ -145,5 +146,5 @@ Full protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md
 
 ---
 
-*⁰ Formerly: unnamed sync utility (pre-v1) → Synk v1.0 → v2.0 → Synk v3.0 → Synk182 v3.1 (2026-09-15: any two copies, not one sandbox; the engine now really backs up, applies, verifies and rolls back) → Synk182 v3.2 (2026-09-30: part of The Triad; the description says what it is not for beside Solid8, git, mk-repo-rules and verafox; freeware).
+*⁰ Formerly: unnamed sync utility (pre-v1) → Synk v1.0 → v2.0 → Synk v3.0 → Synk182 v3.1 (2026-09-15: any two copies, not one sandbox; the engine now really backs up, applies, verifies and rolls back) → Synk182 v3.2 (2026-09-30: part of The Triad; the description says what it is not for beside Solid8, git, a repo's own rules and verafox; freeware) → Synk182 v3.3 (2026-09-30: the engine refuses a plan item whose path leaves either copy or whose destination changed since the plan, treats a wrong-typed PULSE field as empty with a note, answers a bad folder, plan, approval or diff path with a message, and keeps docs/PULSE.json out of --approve new; the not-for pointers name kinds of work rather than private skills).
 Synk has no prior alias. It has always been Synk. That's the joke.*

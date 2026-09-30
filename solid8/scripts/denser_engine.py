@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Denser Engine v1.2 — Consolidation Analysis
-2026-09-30 | For: solid8 skill v1.2 (v1.1 2026-09-15, v1.0 2026-02-10)
+Denser Engine v1.3 — Consolidation Analysis
+2026-09-30 | For: solid8 skill v1.3 (v1.2 2026-09-30, v1.1 2026-09-15, v1.0 2026-02-10)
+Updated: 2026-09-30 04:05 ET — sprawl found across folders, copy numbers, wrong-typed PULSE fields, target check
 
 Fingerprints every file under a folder, compares likely redundant pairs across
 the full similarity spectrum, and builds a consolidation proposal. It never
@@ -122,7 +123,8 @@ class DenserEngine:
     """
 
     VERSION_PATTERN = re.compile(r"[_\-\s.]v\d+(?:\.\d+)*(?=$|[_\-\s.])", re.IGNORECASE)
-    COPY_PATTERN = re.compile(r"(?:\s*-\s*copy(?:\s*\(\d+\))?|\s*\(\d+\)|[_\s]copy\d*)$", re.IGNORECASE)
+    # A copy number has one to three digits: "(2024)" is a year, not a copy.
+    COPY_PATTERN = re.compile(r"(?:\s*-\s*copy(?:\s*\(\d{1,3}\))?|\s*\(\d{1,3}\)|[_\s]copy\d*)$", re.IGNORECASE)
     BACKUP_PATTERN = re.compile(r"(?:\.(?:bak|old|backup|orig)|~)$", re.IGNORECASE)
 
     SKIP_DIRS = {
@@ -231,7 +233,8 @@ class DenserEngine:
 
     # ── Phase 2: Comparison ─────────────────────────────────────────
     def compare_all(self) -> List[ComparisonResult]:
-        """Compare candidate pairs: same hash, same base name in a folder, same size."""
+        """Compare candidate pairs: same hash, same base name in a folder, same size,
+        and a version, copy or backup name against its base name in any folder."""
         self.comparisons.clear()
         self._compared.clear()
 
@@ -243,16 +246,16 @@ class DenserEngine:
 
         candidates = list(self._group_by_basename().values()) + \
             [g for size, g in self._group_by_size().items() if size > self.SIZE_FLOOR]
-        for files in candidates:
-            for i, a in enumerate(files):
-                for b in files[i + 1:]:
-                    key = frozenset((a, b))
-                    if key in self._compared:
-                        continue
-                    self._compared.add(key)
-                    result = self._compare_pair(a, b)
-                    if result.tier != "-":
-                        self.comparisons.append(result)
+        pairs = [(a, b) for files in candidates for i, a in enumerate(files) for b in files[i + 1:]]
+        pairs += self._sprawl_pairs_across_folders()
+        for a, b in pairs:
+            key = frozenset((a, b))
+            if key in self._compared:
+                continue
+            self._compared.add(key)
+            result = self._compare_pair(a, b)
+            if result.tier != "-":
+                self.comparisons.append(result)
         return self.comparisons
 
     def _compare_pair(self, rel_a: str, rel_b: str) -> ComparisonResult:
@@ -357,6 +360,24 @@ class DenserEngine:
             groups.setdefault(key, []).append(rel)
         return {k: g for k, g in groups.items() if len(g) > 1}
 
+    def _sprawl_pairs_across_folders(self) -> List[Tuple[str, str]]:
+        """Version, copy and backup sprawl that crossed a folder boundary: a marked file
+        against every file of the same base name in any other folder (v1.3). Two
+        unmarked files that merely share a name are left to the per-folder and same-size
+        groupings, so a README.md in every folder is never paired with itself."""
+        by_base: Dict[str, List[str]] = {}
+        for rel, fp in self.fingerprints.items():
+            by_base.setdefault(self._base_name(fp.path.name), []).append(rel)
+        pairs = []
+        for files in by_base.values():
+            if len({Path(r).parent for r in files}) < 2:
+                continue
+            for i, a in enumerate(files):
+                for b in files[i + 1:]:
+                    if self.fingerprints[a].name_pattern or self.fingerprints[b].name_pattern:
+                        pairs.append((a, b))
+        return pairs
+
     def _group_by_size(self) -> Dict[int, List[str]]:
         groups: Dict[int, List[str]] = {}
         for rel, fp in self.fingerprints.items():
@@ -445,7 +466,9 @@ class DenserEngine:
 def update_pulse(project_dir, fields: Dict, signals: Iterable[Tuple[str, str, str]] = ()) -> Optional[Path]:
     """Merge solid8's keys and signals into docs/PULSE.json, keeping every other key.
 
-    A PULSE.json that does not parse is left untouched and None is returned."""
+    A PULSE.json that does not parse is left untouched and None is returned.
+    One that parses but holds a wrong-typed field (cross_skill not an object,
+    pending_signals null) is handled as if that field were empty, and says so."""
     path = Path(project_dir) / "docs" / "PULSE.json"
     data: Dict = {}
     if path.is_file():
@@ -455,15 +478,24 @@ def update_pulse(project_dir, fields: Dict, signals: Iterable[Tuple[str, str, st
             return None
         if not isinstance(data, dict):
             return None
-    cs = data.setdefault("cross_skill", {})
+    cs = data.get("cross_skill")
+    if not isinstance(cs, dict):
+        if cs is not None:
+            _say("   ⚠️  PULSE cross_skill is not an object; treated as empty")
+        cs = data["cross_skill"] = {}
     cs.update(fields)
+    pending = cs.get("pending_signals")
+    if not isinstance(pending, list):
+        if "pending_signals" in cs:
+            _say("   ⚠️  PULSE pending_signals is not a list; treated as empty")
+        pending = []
     cutoff = datetime.now().astimezone() - timedelta(days=7)
     kept = []
-    for s in cs.get("pending_signals", []):
+    for s in pending:
         try:
             old = s.get("consumed") and datetime.fromisoformat(s.get("timestamp", "")) < cutoff
-        except (TypeError, ValueError):
-            old = False
+        except (AttributeError, TypeError, ValueError):
+            old = False  # an entry that is not an object is kept as it is
         if not old:
             kept.append(s)
     now = datetime.now().astimezone().isoformat(timespec="seconds")
@@ -484,6 +516,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--pulse", action="store_true", help="record the scan in TARGET/docs/PULSE.json")
     args = ap.parse_args(argv)
 
+    if not Path(args.target).is_dir():
+        _say(f"✗ The target is not a folder: {args.target}")
+        return 1
     engine = DenserEngine(args.target)
     _say(f"⚗️ Scanning {engine.target_dir} ...")
     engine.scan()

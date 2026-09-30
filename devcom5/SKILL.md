@@ -4,20 +4,20 @@ description: >-
   DevCom5 (Logger): project documentation and developer communications. Reads
   a project to report its state, trajectory and gaps; writes and maintains a
   five-document docs/ system (INDEX, ARCHITECTURE, USER_EXPERIENCE, PLANNING,
-  HISTORY) tracked in docs/PULSE.json; and co-authors proposals, specs,
-  decision docs, status reports, 3P updates, newsletters, FAQs and incident
-  reports. Use whenever the user says devcom5, dc5 or logger; asks to document
-  a project, update a README, changelog or docs, catch them up, or say where
-  things stand or where we were; is onboarding to an unfamiliar codebase,
-  resuming after a break, or preparing a handover; or asks for any structured
-  document or internal update - and proactively when a project's docs are
-  missing or stale. Standalone; works with Synk182 and Solid8 through
-  docs/PULSE.json; supersedes doc-coauthoring and internal-comms. Not for
-  proving a change works (verafox), the user's own knowledge outside a project
-  (knowledge-query), or rendering diagrams (archify).
+  HISTORY); and co-authors proposals, specs, decision docs, status reports, 3P
+  updates, newsletters, FAQs and incident reports. Use whenever the user says
+  devcom5, dc5 or logger; asks to document a project, update a README,
+  changelog or docs, catch them up, or say where things stand or where we
+  were; is onboarding to an unfamiliar codebase, resuming after a break, or
+  preparing a handover; or asks for any structured document or internal
+  update - and proactively when a project's docs are missing or stale.
+  Standalone; works with Synk182 and Solid8 through docs/PULSE.json;
+  supersedes doc-coauthoring and internal-comms. Not for proving a change
+  works (verafox), the user's own knowledge outside a project (a
+  knowledge-search skill), or rendering diagrams (a diagramming skill).
 license: Freeware
 metadata:
-  version: "1.2"
+  version: "1.3"
   updated: "2026-09-30"
 ---
 
@@ -47,7 +47,7 @@ Tracked via `docs/PULSE.json`. Read first, write last, every interaction.
 ```json
 {
   "project": "Name",
-  "pulse_version": "2.0",
+  "pulse_version": "3.0",
   "classification": { "domain": "software", "maturity": "mvp", "complexity": "solo" },
   "heartbeat": {
     "last_seen": "ISO-8601-ET", "last_depth": "standard",
@@ -269,9 +269,9 @@ Full protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md
 
 | Ask | Skill |
 |-----|-------|
-| Prove a change works, grade its evidence, map what a project can do | verafox |
-| What the user knows or has read, outside any one project | knowledge-query |
-| Render the ARCHITECTURE map as a diagram | archify |
+| Prove a change works, grade its evidence, map what a project can do | verafox (The Proof Pack) |
+| What the user knows or has read, outside any one project | a knowledge-search skill |
+| Render the ARCHITECTURE map as a diagram | a diagramming skill |
 | Two copies of the project disagree | Synk182 |
 | Too many versions or copies of a file | Solid8 |
 
@@ -290,6 +290,6 @@ Full protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md
 
 ---
 
-*⁰ Formerly: project-docs (unnamed, pre-v1) → Logger v1.0 → DevCom5 v1.0 → DevCom5 v1.1 (2026-09-15: triggers moved into the description, Trifecta Protocol v3.0, existing doc systems respected) → DevCom5 v1.2 (2026-09-30: part of The Triad; the description says what it is not for beside verafox, knowledge-query and archify; freeware).
+*⁰ Formerly: project-docs (unnamed, pre-v1) → Logger v1.0 → DevCom5 v1.0 → DevCom5 v1.1 (2026-09-15: triggers moved into the description, Trifecta Protocol v3.0, existing doc systems respected) → DevCom5 v1.2 (2026-09-30: part of The Triad; the description says what it is not for beside its siblings; freeware) → DevCom5 v1.3 (2026-09-30: the not-for pointers name kinds of work rather than private skills, with verafox reachable in The Proof Pack; the PULSE template's pulse_version follows the protocol; the reference headers carry the skill's version).
 The "5" honors the five-document system at its core. DevCom5 supersedes
 the Anthropic example skills `doc-coauthoring` and `internal-comms`.*

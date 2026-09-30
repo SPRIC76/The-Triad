@@ -14,16 +14,16 @@ description: >-
   or undervalued assets. Standalone; works with DevCom5 and Synk182 through
   docs/PULSE.json. Not for keeping two copies of a project in agreement
   (Synk182), absorbing an outside tool as your own (verafox Mutate), or memory
-  notes (consolidate-memory).
+  notes (a memory-consolidation tool).
 license: Freeware
 metadata:
-  version: "1.2"
+  version: "1.3"
   updated: "2026-09-30"
 ---
 
 # Solid8 — The 'Shrinksmith' Alchemist 
  "Call me **Denser** if it's not getting through to you."
-> *Similar to a dancer phonetically, athough I'm not a dancer. I do not dance, nor will I chance to lapse with you in proper trance.*
+> *Similar to a dancer phonetically, although I'm not a dancer. I do not dance, nor will I chance to lapse with you in proper trance.*
 
 **Turns mess and sprawl into essence; Distillation, not deletion.**
 
@@ -126,12 +126,12 @@ On version sequences (`_v1` through `_vN`):
 **Doc files:** Respect DevCom5 flags. Don't consolidate doc-worthy files.
 Flag scattered READMEs for 5-doc absorption.
 **A copy is not always sprawl:** a folder that is another environment's copy of the project (a worktree, a deployed copy, another machine's) is Synk182's to reconcile, not Solid8's to collapse.
-**Outside tools and memory notes are not sprawl either:** absorbing someone else's skill or tool as your own is Mutate's job (verafox); a memory folder is consolidate-memory's.
+**Outside tools and memory notes are not sprawl either:** absorbing someone else's skill or tool as your own is Mutate's job (verafox, in The Proof Pack); a memory folder is your memory-consolidation tool's.
 **Inside an archive, nothing is consolidated:** two archived files, one a superset of the other, are left as they are. The engine reports a protected file only as an exact duplicate, or as the subset of a live file.
 
 ## Scripts
 
-**`scripts/denser_engine.py`** — the analysis engine. Read-only except `create_archive`.
+**`scripts/denser_engine.py`** — the analysis engine. Read-only except `create_archive` and `--pulse`.
 
 ```bash
 python scripts/denser_engine.py <target_dir>                       # tier counts
@@ -141,8 +141,8 @@ python scripts/denser_engine.py <target_dir> --pulse               # record the 
 ```
 
 - `DenserEngine(target).scan()` → `.compare_all()` → `.generate_proposal()`; `.create_archive(files, archive_dir, reason)` copies originals with `manifest.json` and `rollback.md` before any merge or removal.
-- Skips `.git`, `node_modules`, build output and caches; groups candidates by hash, by base name with version, copy and backup markers removed, and by size.
-- `--pulse` writes `solid8_last_run` and `solid8_redundancy_map`, emits `redundancy_found` to DevCom5 when anything is found, keeps every other key, and never touches a PULSE that does not parse.
+- Skips `.git`, `node_modules`, build output, caches, and every dot-prefixed folder or file; groups candidates by hash, by base name (version, copy and backup markers removed) within a folder, and by size, and pairs a version, copy or backup name with its base name in any other folder. A copy number has one to three digits, so `(2024)` is a year, not a copy.
+- `--pulse` writes `solid8_last_run` and `solid8_redundancy_map`, emits `redundancy_found` to DevCom5 when anything is found, keeps every other key, and never touches a PULSE that does not parse. A wrong-typed field (`"pending_signals": null`) is treated as empty with a note; when no PULSE exists one is created holding only `cross_skill`, which DevCom5 fills out at its next Deep pass.
 
 The SKILL.md methodology applies whether using the engine or manual analysis.
 
@@ -171,7 +171,7 @@ Full protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md
 
 ---
 
-*⁰ Formerly: Denser v1.0 (unnamed concept, pre-v1) → Solid8 v1.0 → Solid8 v1.1 (2026-09-15: triggers moved into the description; engine fixes for backups, copy names, binaries, JSON and Markdown, archives, and Windows consoles) → Solid8 v1.2 (2026-09-30: part of The Triad; the description says what it is not for beside Synk182, verafox and consolidate-memory; the engine no longer proposes a superset pair that lies wholly inside an archive; freeware).
+*⁰ Formerly: Denser v1.0 (unnamed concept, pre-v1) → Solid8 v1.0 → Solid8 v1.1 (2026-09-15: triggers moved into the description; engine fixes for backups, copy names, binaries, JSON and Markdown, archives, and Windows consoles) → Solid8 v1.2 (2026-09-30: part of The Triad; the description says what it is not for beside Synk182, verafox and a memory tool; the engine no longer proposes a superset pair that lies wholly inside an archive; freeware) → Solid8 v1.3 (2026-09-30: version, copy and backup sprawl is found across folders; a year in parentheses is not a copy number; a wrong-typed PULSE field is treated as empty with a note; a target that is not a folder is an error; the not-for pointers name kinds of work rather than private skills).
 "Solid8" — solid as in consolidated, 8 as in the infinity symbol ∞ rotated,
 representing the endless cycle of project entropy that this skill tames.
 The Denser alias persists for when subtlety isn't working.*

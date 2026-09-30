@@ -1,4 +1,4 @@
-<!-- Version 2.0 | Deps: none | Parent: The Triad (skills-trifecta README at 19a8722) | Path: . | Filename: README.md | Updated: 2026-09-30 01:15 ET — renamed The Triad; an agent skill pack for any host; freeware; versions named | Updated: 2026-09-30 01:37 ET — the address is SPRIC76/The-Triad; the MK1 Made footer -->
+<!-- Version 2.0 | Deps: none | Parent: The Triad (skills-trifecta README at 19a8722) | Path: . | Filename: README.md | Updated: 2026-09-30 01:15 ET — renamed The Triad; an agent skill pack for any host; freeware; versions named | Updated: 2026-09-30 01:37 ET — the address is SPRIC76/The-Triad; the MK1 Made footer | Updated: 2026-09-30 04:05 ET — v1.3: not-for pointers name kinds of work, verafox linked in The Proof Pack; versions 1.3 / 3.3 / 1.3 -->
 # The Triad — DevCom5, Synk182, Solid8
 
 An **agent skill pack**: three skills that keep projects **understood**, **in sync**, and **lean** — coordinated via `docs/PULSE.json`. Each skill is a folder in the Agent Skills format (`SKILL.md`, with `references/` and `scripts/` beside it), so it works in any agent host that reads one. Known until commit 19a8722 as *Skills Trifecta*.
@@ -9,7 +9,7 @@ An **agent skill pack**: three skills that keep projects **understood**, **in sy
 | **Synk182** | Symphonous Strategist | Agreement between two copies | Are the copies in agreement? |
 | **Solid8** | Denser / Shrinksmith | Consolidation | What can be unified without losing meaning? |
 
-**Versions:** DevCom5 1.2 · Synk182 3.2 · Solid8 1.2 · Trifecta Protocol 3.0.
+**Versions:** DevCom5 1.3 · Synk182 3.3 · Solid8 1.3 · Trifecta Protocol 3.0.
 
 Full cross-skill protocol: [docs/TRIFECTA.md](docs/TRIFECTA.md)
 
@@ -81,7 +81,7 @@ For any other host, the one requirement is support for instruction-based agent s
 These skills **guide an AI agent** — they do not auto-run destructive actions.
 
 - **Synk182** and **Solid8** require explicit user approval for merges and consolidation.
-- Synk182's engine writes nothing until it applies plan items you approved, and backs up each file first.
+- Synk182's engine writes nothing until it applies plan items you approved, backs up each file first, and refuses an item whose path leaves the copies or whose target changed since the plan was written.
 - Archives are written under `[project]/ARCHIVE/` before risky operations.
 - Review archives and proposals before deleting anything.
 
@@ -102,7 +102,7 @@ These skills **guide an AI agent** — they do not auto-run destructive actions.
 
 **Triggers:** `devcom5`, `dc5`, `logger`, documentation, project status, catch-up, README and changelog updates, proposals, 3P updates, newsletters, and more (see the description in `devcom5/SKILL.md`).
 
-**Not DevCom5:** proving a change works or grading its evidence, a person's own knowledge base outside a project, rendering diagrams — other skills do those (verafox, knowledge-query, archify).
+**Not DevCom5:** proving a change works or grading its evidence ([verafox](https://github.com/SPRIC76/The-Proof-Pack), in The Proof Pack), a person's own knowledge base outside a project (a knowledge-search skill), rendering diagrams (a diagramming skill).
 
 **References:** `devcom5/references/` — audit protocol, universal template, comms formats.
 
@@ -110,7 +110,7 @@ These skills **guide an AI agent** — they do not auto-run destructive actions.
 
 ## Synk182 — The Symphonous Strategist
 
-> *Categorically and formally forumulated to link between sink, sync, and Blink182*
+> *Categorically and formally formulated to link between sink, sync, and Blink182*
 
 **Highlights:**
 - Any two copies of a project: a sandbox or upload, a mounted or synced folder, a git worktree, another machine's copy, a deployed copy
@@ -119,7 +119,7 @@ These skills **guide an AI agent** — they do not auto-run destructive actions.
 - Backs up every file before overwriting (`[project]/ARCHIVE/synk-[timestamp]/`, with manifest and rollback notes), applies only approved items, and rolls back any copy that fails verification
 - Status: `🔄` for scans, rigor shifts, completion
 
-**Not Synk:** Single-file edits, in-directory moves, redundancy consolidation (→ Solid8), git branch merges (→ git), repo and worktree rules (→ mk-repo-rules), what a version can do rather than what its files hold (→ verafox).
+**Not Synk:** Single-file edits, in-directory moves, redundancy consolidation (→ Solid8), git branch merges (→ git), repo and worktree rules (→ your repository's own rules), what a version can do rather than what its files hold (→ [verafox](https://github.com/SPRIC76/The-Proof-Pack), in The Proof Pack).
 
 **Script:**
 
@@ -144,7 +144,7 @@ python synk182/scripts/synk_engine.py USER_COPY WORKING_COPY --apply plan.json -
 - Formerly Denser v1.0
 - Status: `⚗️`
 
-**Not Solid8:** two copies of a project (→ Synk182), absorbing an outside tool as your own (→ verafox Mutate), memory notes (→ consolidate-memory).
+**Not Solid8:** two copies of a project (→ Synk182), absorbing an outside tool as your own (→ [verafox](https://github.com/SPRIC76/The-Proof-Pack) Mutate, in The Proof Pack), memory notes (→ your memory-consolidation tool).
 
 **Script:** `python solid8/scripts/denser_engine.py <target_dir> [--details N] [--json proposal.json]` (read-only analysis; archives before any change).
 

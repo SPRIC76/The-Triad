@@ -1,5 +1,5 @@
 # Universal Document Template
-<!-- DevCom5 v1.0 | 2026-02-10 | Architect mode reference -->
+<!-- DevCom5 v1.3 | 2026-02-10 | Architect mode reference | Updated: 2026-09-30 04:05 ET — header follows the skill's version -->
 
 Templates for the five-document system. Adapt to classification.
 Never template-stamp — use only sections appropriate to project maturity.
