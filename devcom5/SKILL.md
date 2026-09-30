@@ -5,16 +5,15 @@ description: >-
   Reports a project's state, trajectory and gaps; writes and maintains a
   five-document docs/ system (INDEX, ARCHITECTURE, USER_EXPERIENCE, PLANNING,
   HISTORY); and co-authors a project's proposals, specs, decision docs, status
-  reports, progress, plans and problems updates, newsletters, FAQs and
-  incident reports. Use when the user says
-  devcom5, dc5 or logger; asks to document a project, update a README,
-  changelog or docs, catch them up, or say where things stand or where we
-  were; is onboarding to a codebase, resuming after a break, or preparing a
-  handover; or asks for one of those about a project - and proactively when a
-  project's docs are missing or stale. Pairs with Synk182 and Solid8 via
-  docs/PULSE.json. Not for
-  office documents like a contract or slide deck (a document skill), proving a
-  change works (verafox), the user's knowledge outside a project (a
+  reports, updates on progress, plans and problems, newsletters, FAQs and
+  incident reports. Use when the user says devcom5, dc5 or logger; asks to
+  document a project, update a README, changelog or docs, catch them up, or
+  say where things stand or where we were; is onboarding to a codebase,
+  resuming after a break, or preparing a handover; or asks for one of those
+  about a project - and proactively when a project's docs are missing or
+  stale. Keeps its own state in the project's docs/PULSE.json. Not for office
+  documents like a contract or slide deck (a document skill), proving a change
+  works (a verification tool), the user's knowledge outside a project (a
   knowledge-search skill), or rendering diagrams (a diagramming skill).
 license: Freeware
 metadata:
@@ -33,6 +32,8 @@ metadata:
 >**Scribe** — Co-author documents, proposals, specs, and internal comms through structured workflows with iterative refinement.
 
 **Proactive:** when you notice a project's docs are missing or stale, offer a Pulse check before it costs anyone a lapse.
+
+Works in any agent that reads a `SKILL.md`, on its own; it needs no script.
 
 ---
 
@@ -59,11 +60,7 @@ Tracked via `docs/PULSE.json`. Read first, write last, every interaction.
     "docs_exist": [], "docs_missing": [], "docs_stale": [],
     "drift_flags": [], "last_audit": "ISO-8601-ET"
   },
-  "cross_skill": {
-    "synk_last_run": null, "synk_drift_detected": false, "synk_files_changed": 0,
-    "solid8_last_run": null, "solid8_files_consolidated": 0, "solid8_redundancy_map": {},
-    "pending_signals": []
-  },
+  "cross_skill": { "pending_signals": [] },
   "digest_history": [
     {
       "timestamp": "ISO-8601-ET", "depth_requested": "deep",
@@ -74,7 +71,7 @@ Tracked via `docs/PULSE.json`. Read first, write last, every interaction.
 }
 ```
 
-DevCom5 owns every key outside `cross_skill`. Inside it, write only DevCom5's signals and keep every key you do not recognize ([references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md)).
+DevCom5 owns every key outside `cross_skill`. `cross_skill` is where other tools that share the file keep their keys (see Optional integration): keep every key there you do not recognize, and write only DevCom5's own signals. With no other tool, it stays as above.
 
 ### On Entry
 1. Read PULSE.json (missing = first encounter → Deep; unparseable → report it, rebuild the baseline, keep the broken file as `PULSE.corrupt.json`)
@@ -84,7 +81,7 @@ DevCom5 owns every key outside `cross_skill`. Inside it, write only DevCom5's si
 ### On Exit
 1. Update heartbeat + digest_history (max 10 entries, prune oldest)
 2. Update health assessment
-3. Write cross-skill signals
+3. Write DevCom5's own signals, if other tools share the file
 4. Display: `📡 Updated: [context] | Next: [recommendation]`
 
 ---
@@ -100,7 +97,7 @@ Depth is not static. It's determined, then **adjusted mid-operation**.
 | < 24h | **Pulse** — PULSE.json + tree (2 levels) + diff vs last digest |
 | 1–7 days | **Standard** — + READMEs, configs, existing docs |
 | 1–4 weeks | **Thorough** — + entry points, modules, tests. See [references/AUDIT_PROTOCOL.md](references/AUDIT_PROTOCOL.md) |
-| > 1 month / new | **Deep** — + secondary source, POTIMP/archives, full drift. See [references/AUDIT_PROTOCOL.md](references/AUDIT_PROTOCOL.md) |
+| > 1 month / new | **Deep** — + secondary source, staging and archive folders, full drift. See [references/AUDIT_PROTOCOL.md](references/AUDIT_PROTOCOL.md) |
 
 ### Tier 2: Adaptive Mid-Scan (dynamic adjustment)
 
@@ -120,14 +117,12 @@ During any scan, the system evaluates whether its current depth is appropriate:
 **Always report shifts:**
 `📡 Depth adjusted: Deep → Standard (only 2 files changed since last digest)`
 
-### Tier 3: Cross-Skill Signal Modifiers (override upward only)
+### Tier 3: Signal Modifiers (override upward only)
 
 | Signal | Effect |
 |--------|--------|
-| `synk_drift_detected: true` | ≥ Thorough |
-| `pending_signals` not empty | Process first, may raise depth |
 | `drift_flags` not empty | ≥ Standard even if < 24h |
-| Recent `solid8_last_run` | Check ARCHITECTURE element notes |
+| Signals other tools left in `cross_skill` | See Optional integration; with none, this tier does nothing |
 
 ---
 
@@ -145,7 +140,7 @@ Software → ARCHITECTURE heavy. Creative → USER_EXPERIENCE heavy. Research �
 Seed → PLANNING + INDEX. Production → full. Legacy → aggressive capture.
 Solo → concise. Distributed → zero assumptions.
 
-**A project that already has a documentation system** (numbered continuity files, an ADR folder, a docs site): map the five roles onto what exists and maintain those files. Never create a parallel `docs/` set beside a working one — that is the sprawl Solid8 exists to remove.
+**A project that already has a documentation system** (numbered continuity files, an ADR folder, a docs site): map the five roles onto what exists and maintain those files. Never create a parallel `docs/` set beside a working one — that is sprawl.
 
 ---
 
@@ -170,7 +165,7 @@ Classification: [D/M/C] | Depth: [level] (adjusted: [if changed]) | Sessions: [n
 3-5 line status. No full report.
 
 ### Comprehension Techniques
-Entry-point tracing → Config-first → Doc-reality cross-check → Pattern recognition → POTIMP/archive awareness.
+Entry-point tracing → Config-first → Doc-reality cross-check → Pattern recognition → Staging and archive awareness.
 Full methodology: [references/AUDIT_PROTOCOL.md](references/AUDIT_PROTOCOL.md)
 
 ---
@@ -197,7 +192,7 @@ No scattered files → ARCHITECTURE Element Notes. Handover-first. Adaptive dept
 ### End-of-Session
 1. HISTORY → log + changelog | 2. PLANNING → backlog + ideas
 3. ARCHITECTURE → element notes | 4. Headers (version, date) in changed files
-5. **PULSE.json → always** | 6. Emit `docs_created` when a doc was created this session
+5. **PULSE.json → always** | 6. Where other tools share the file, leave DevCom5's signals (see Optional integration)
 
 ---
 
@@ -208,9 +203,9 @@ structured workflows.
 
 ### When Scribe Activates
 - "write/draft a proposal/spec/decision doc/RFC/PRD"
-- "write a 3P update / status report / newsletter / FAQ"
+- "write a progress, plans and problems (3P) update / status report / newsletter / FAQ"
 - "help me write [a structured document about the project or its team]"
-- Any substantial writing task beyond simple doc maintenance
+- Any substantial writing task about the project
 
 ### Scribe Workflow: Co-Authored Documents
 
@@ -257,24 +252,15 @@ Read [references/COMMS_FORMATS.md](references/COMMS_FORMATS.md) for specific for
 
 ---
 
-## Trifecta Signals
+## Not DevCom5's Job
 
-Full protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md)
-
-**Emits:** `drift_detected` → Synk182 | `architecture_changed` → Solid8 | `stale_project` → Both | `docs_created` → Both
-**Consumes:** `sync_completed` (Synk182) → ≥Standard | `sync_conflict` / `environment_diverged` (Synk182) → flag in audit | `files_consolidated` (Solid8) → update structure | `redundancy_found` (Solid8) → flag in audit | `archive_recommended` (Solid8) → PLANNING
-
----
-
-## Beside Its Siblings
-
-| Ask | Skill |
+| Ask | Where it belongs |
 |-----|-------|
-| Prove a change works, grade its evidence, map what a project can do | verafox (The Proof Pack) |
+| Prove a change works, grade its evidence, map what a project can do | a verification tool |
 | What the user knows or has read, outside any one project | a knowledge-search skill |
 | Render the ARCHITECTURE map as a diagram | a diagramming skill |
-| Two copies of the project disagree | Synk182 |
-| Too many versions or copies of a file | Solid8 |
+| Two copies of the project disagree | a two-copy sync tool |
+| Too many versions or copies of a file | a consolidation tool |
 
 ---
 
@@ -291,6 +277,21 @@ Full protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md
 
 ---
 
-*⁰ Formerly: project-docs (unnamed, pre-v1) → Logger v1.0 → DevCom5 v1.0 → DevCom5 v1.1 (2026-09-15: triggers moved into the description, Trifecta Protocol v3.0, existing doc systems respected) → DevCom5 v1.2 (2026-09-30: part of The Triad; the description says what it is not for beside its siblings; freeware) → DevCom5 v1.3 (2026-09-30: the not-for pointers name kinds of work rather than private skills, with verafox reachable in The Proof Pack; the PULSE template's pulse_version follows the protocol; the reference headers carry the skill's version; updated 2026-09-30 15:25 ET: the description is bounded to documents about a project, and general office documents are named as not its domain).
-The "5" honors the five-document system at its core. DevCom5 supersedes
-the Anthropic example skills `doc-coauthoring` and `internal-comms`.*
+## Optional integration
+
+DevCom5 needs nothing else. Where other tools share the project's `docs/PULSE.json` (its companions in The Triad, Synk182 and Solid8, or any tool that follows the same protocol), they keep their keys in `cross_skill` (`synk_last_run`, `synk_drift_detected`, `synk_files_changed`, `solid8_last_run`, `solid8_files_consolidated`, `solid8_redundancy_map`) and leave signals in `pending_signals`; DevCom5 reads them and leaves its own. With none of them, nothing waits on these signals. Protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md).
+
+**Depth:** `synk_drift_detected: true` → at least Thorough | `pending_signals` not empty → process first, may raise depth | a recent `solid8_last_run` → check ARCHITECTURE element notes
+**Emits:** `drift_detected` → Synk182 | `architecture_changed` → Solid8 | `stale_project` → Both | `docs_created` (when a doc was created this session) → Both
+**Consumes:** `sync_completed` (Synk182) → ≥Standard | `sync_conflict` / `environment_diverged` (Synk182) → flag in audit | `files_consolidated` (Solid8) → update structure | `redundancy_found` (Solid8) → flag in audit | `archive_recommended` (Solid8) → PLANNING
+
+---
+
+## Changelog
+
+- **1.3** — the description and body are bounded to documents about a project; the not-for pointers name jobs rather than other tools; the PULSE template follows the protocol's version; the skill stands alone in any agent.
+- **1.2** — freeware; the description says what it is not for.
+- **1.1** — triggers in the description; existing documentation systems are maintained, not duplicated.
+- **1.0** — first release, as Logger.
+
+*The "5" honors the five-document system at its core.*

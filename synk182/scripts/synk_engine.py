@@ -11,15 +11,16 @@ Updated: 2026-09-30 13:43 ET — a file that cannot be read is named with the re
 Updated: 2026-09-30 14:32 ET — a skipped folder in any spelling the file system folds, a link on either side, a form Windows reserves and an item already applied, whatever its status, are refused before any write; line endings that differ within a file and a byte-order mark alone are named as such, on the dashboard, in the plan and by --diff; anything raised while backing up refuses every item and leaves no archive; a nested archive/ is named as a folder, not as Synk's own; the timestamp grammar is read exactly as the protocol pins it; everything written is LF
 Updated: 2026-09-30 15:25 ET — device names are asked of the running OS (os.path.abspath), never listed, so con.txt, aux/ and COM1 sync on Windows 11 and NUL is refused on every Windows; --approve new counts each item it refuses and exits 1; only .git, .hg, .svn, node_modules and the root's ARCHIVE fold case, so Build/ and a nested archive/ are compared and synced; an item already applied is reported as such at exit 0, with no sync_conflict; a byte-order mark is named beside any other difference; link answers are asked once per prefix, the destination hashed once and each refusal computed once
 Updated: 2026-09-30 15:58 ET — no link or refusal answer outlives the public call that asked it, and each destination's folders are asked again, uncached, just before its write, so a junction made after new_ids, refusal or the checks is refused; only \\\\.\\ is a device: roots given as \\\\?\\C:\\... are used in their plain form and sync; a folder skipped as spelled in one copy and spelled otherwise in the other is named, not offered; a nested ARCHIVE/ is content; --approve new with nothing left to approve exits 0; apply-report.json holds --approve new's refusals
+Updated: 2026-09-30 17:09 ET — nothing is written, backed up, restored or deleted through a junction or link: a user copy's ARCHIVE that is one is named on the dashboard and refuses the apply, the backup asks before each file it reads and writes, the source is asked beside the destination just before each write, a rollback asks again before it acts, and docs/PULSE.json is never written through one; an item under a folder the destination skips as spelled on disk is refused; a root given with the extended prefix whose plain form names another folder, or is too long, keeps its prefix; a device under a network-share root is refused before any backup; --approve new --pulse with nothing to approve records the run; the three rules are named as rules
 
 Two copies: the USER copy (the one the user treats as authority) and the
 WORKING copy (a sandbox or upload, a mounted or cloud-synced folder, a git
 worktree, another machine's copy, a deployed copy). Nothing here writes until
 apply() is called with the ids the user approved.
 
-The three user-specified corrections hold throughout:
+The three fixed rules hold throughout:
   1. Only a 100% hash match skips review.
-  2. 60% is the threshold for intelligent merge (not 75%).
+  2. 60% is the threshold for intelligent merge.
   3. Superset/subset (over 100%) gets maximum scrutiny and is never auto-resolved.
 
 CLI (read-only unless --apply):
@@ -39,9 +40,13 @@ CLI (read-only unless --apply):
         skips, ends in a separator or a space, names a device or a form Windows reserves,
         or names a folder, whose source or destination cannot be read, or whose
         destination changed since the plan was written, is refused before any backup or
-        write, and so is one whose destination folder became a junction or link since
-        (asked again, uncached, just before the write); roots given as \\\\?\\C:\\... are
-        used in their plain form, where the OS maps devices; one already applied is
+        write, and so is one whose destination or source folder became a junction or
+        link since (asked again, uncached, just before the write); nothing is backed up,
+        restored or deleted through a junction or link either (each is asked just before
+        it acts); roots given as \\\\?\\C:\\... are used in their plain form, where the OS
+        maps devices, unless the plain form would name another folder (work. is work)
+        or is too long for a plain path, when the root keeps its prefix; a device is
+        refused under any root, a network share's included; one already applied is
         reported as such, exit 0; the source is copied as it is
         at apply time; an id that names no plan item, or one that appears twice, stops
         the run before anything is applied; an approved item with no direction, or a
@@ -51,15 +56,19 @@ CLI (read-only unless --apply):
         a --plan file that cannot be written, or an empty name given to --plan,
         --apply or --diff, is answered with the reason, exit 1; a plan whose ids are
         not whole numbers or whose hashes are not objects is refused before any write;
-        when no backup folder can be made (a file named ARCHIVE), or a backup fails
-        midway, nothing is written and no archive folder is left behind; any exception
+        when no backup folder can be made (a file named ARCHIVE, or an ARCHIVE that is a
+        junction or link), or a backup fails midway, nothing is written and no archive
+        folder is left behind; --pulse never writes through a docs or PULSE.json that is
+        a junction or link, and --approve new --pulse with nothing to approve still
+        records the run; any exception
         while verifying a copy rolls it back, and a rollback that fails names the backup
         to restore by hand
   Not compared, and named on the dashboard: a junction or link inside either copy, to
         a folder or a file (never followed, so a loop cannot repeat paths; a dangling
         one is named as such), a folder that cannot be listed or a file that cannot be
-        read (named with the reason, never read as absent or empty), and a file in the
-        place of the ARCHIVE folder. Where the file system folds case (Windows, default
+        read (named with the reason, never read as absent or empty), a file in the
+        place of the ARCHIVE folder, and a user copy's ARCHIVE that is itself a junction
+        or link (apply makes no backup through it, so writes nothing). Where the file system folds case (Windows, default
         macOS), any spelling of ARCHIVE at a copy's root is Synk's backup folder, skipped
         and named (a nested archive/ or ARCHIVE/ is content), .git, .hg, .svn and
         node_modules are skipped in any spelling (build-output names only as spelled, and
@@ -110,19 +119,41 @@ BOM = b"\xef\xbb\xbf"
 # are not listed: which names are devices differs between Windows versions (Windows 11 maps
 # only a bare NUL; Windows 10 also con.txt), so the running OS is asked (refusal, below).
 WINDOWS_FORBIDDEN = set('<>:"|?*') | {chr(i) for i in range(32)}
+# a folder's full name must stay under 248 characters for Windows to create it without the
+# \\?\ prefix (MAX_PATH, 260, less room for an 8.3 name); a longer root keeps the prefix
+PLAIN_MAX = 248
+
+
+class LinkRefused(OSError):
+    """A write, a delete or a read for a backup that would pass through a junction or link:
+    refused with the link named, never followed."""
 
 
 def _plain(root: str) -> Optional[str]:
     """A root without the \\\\?\\ prefix a caller may give it (\\\\?\\C:\\x is C:\\x, and
-    \\\\?\\UNC\\server\\share is \\\\server\\share), or None when it has no plain form (a volume
-    mounted by GUID). Under a \\\\?\\ root Windows maps no device name, so NUL written there
-    is a real file ordinary tools cannot delete: devices are asked of the plain form."""
+    \\\\?\\UNC\\server\\share is \\\\server\\share), or None when it has no plain form that
+    names the same folder: a volume mounted by GUID; a segment ending in a dot or a space,
+    or a device name, which the plain form would drop or map (work. would be work, another
+    folder); or a root of PLAIN_MAX characters or more, which a plain path may not reach
+    where long paths are off. A root with no plain form keeps the form it was given. Under
+    a \\\\?\\ root Windows maps no device name, so NUL written there is a real file ordinary
+    tools cannot delete: devices are asked of the plain form, or of a stand-in root."""
     if not root.startswith("\\\\?\\"):
         return root
     rest = root[4:]
     if rest[:4].upper() == "UNC\\":
-        return "\\\\" + rest[4:]
-    return rest if PureWindowsPath(rest).drive[1:2] == ":" else None
+        plain = "\\\\" + rest[4:]
+    elif PureWindowsPath(rest).drive[1:2] == ":":
+        plain = rest
+    else:
+        return None
+    if len(plain) >= PLAIN_MAX or any(s[-1:] in (".", " ") for s in PureWindowsPath(plain).parts[1:]):
+        return None
+    try:
+        same = os.path.normcase(os.path.abspath(plain)).rstrip("\\") == os.path.normcase(plain).rstrip("\\")
+    except (OSError, ValueError):
+        same = False
+    return plain if same else None
 
 
 def _within(where: str, root: str) -> bool:
@@ -316,7 +347,7 @@ class SynkEngine:
         # are what the OS says they are; one with no plain form keeps its prefix
         self.user_dir, self.working_dir = (Path(_plain(str(r)) or str(r)) for r in
                                            (Path(user_dir).resolve(), Path(working_dir).resolve()))
-        self.threshold = threshold  # Correction #2
+        self.threshold = threshold  # Rule 2
         self.skip_dirs = set(SKIP_DIRS if skip_dirs is None else skip_dirs)
         self.archive_root = self.user_dir / "ARCHIVE"  # respelled as it is on disk by _archive_root
         self.user_files: Dict[str, Dict] = {}
@@ -326,14 +357,23 @@ class SynkEngine:
         self.results: Optional[Dict] = None
         self._folds: Dict[Path, bool] = {}
         self._folded = {d.lower() for d in self.skip_dirs if d.lower() in FOLDED_SKIPS}
+        self._skip_folds = {d.lower() for d in self.skip_dirs}
         # a path prefix's link answer and device answer, kept only within one public call
         # (apply, new_ids, left_out_of_new) and dropped at its end: None between calls, so
         # nothing a caller asked earlier outlives a junction that appeared since
         self._links: Optional[Dict[str, bool]] = None
         self._devices: Optional[Dict[str, str]] = None
-        # the OS is asked about devices under each root's plain form (a stand-in drive root
-        # for one with none: device names are mapped by name, not by where they lie)
-        self._device_roots = [_plain(str(r)) or os.path.abspath(os.sep) for r in (self.user_dir, self.working_dir)]
+        # the OS is asked about devices under each root's plain form, and under a stand-in
+        # local root for a root with none or on a network share, where the plain form maps no
+        # device either: device names are mapped by name, not by where they lie
+        self._device_roots: List[str] = []
+        for r in (self.user_dir, self.working_dir):
+            plain = _plain(str(r))
+            if plain:
+                self._device_roots.append(plain)
+            if not plain or plain.startswith("\\\\"):
+                self._device_roots.append(os.path.abspath(os.sep))
+        self._device_roots = list(dict.fromkeys(self._device_roots))
 
     def _folds_case(self, root: Path) -> bool:
         if root not in self._folds:
@@ -377,6 +417,37 @@ class SynkEngine:
             if _is_link(os.path.join(base, *parts[:i])):
                 return "/".join(parts[:i])
         return None
+
+    def _link_to(self, root: Path, target: Path) -> Optional[str]:
+        """_link_on_the_way for a full path under root (an archive file, the archive folder)."""
+        try:
+            rel = os.path.relpath(str(target), str(root))
+        except ValueError:  # another drive: not under the copy at all
+            return str(target)
+        if rel == "." or rel.startswith(".."):
+            return None if rel == "." else str(target)
+        return self._link_on_the_way(root, rel)
+
+    def _no_link_to(self, target: Path, what: str) -> None:
+        """Raise LinkRefused when anything from the user copy down to target, a place under its
+        ARCHIVE, is a junction or link: nothing is written, read or removed through one."""
+        link = self._link_to(self.user_dir, target)
+        if link:
+            raise LinkRefused(f"the user copy's {link} is a junction or link; {what} never goes through one")
+
+    def _skipped_on_disk(self, root: Path, parts: Tuple[str, ...], top: bool) -> Optional[str]:
+        """The on-disk spelling of the folder parts names under root, when the scan skips it
+        in that spelling though not in the plan's: where the file system folds case, a plan's
+        Build/ reaches a build/ the scan skipped as spelled. Asked only for a name that folds
+        to a skip name, so the listing is rare."""
+        name = parts[-1]
+        if name.lower() not in self._skip_folds or not self._folds_case(root):
+            return None
+        try:
+            on_disk = next((n for n in os.listdir(os.path.join(str(root), *parts[:-1])) if n.lower() == name.lower()), None)
+        except OSError:
+            return None
+        return on_disk if on_disk and on_disk != name and self._skipped(on_disk, root, top) else None
 
     def _spells_archive(self, name: str, root: Path) -> bool:
         """Whether name, at a copy's root, is Synk's ARCHIVE: the exact name, or any spelling
@@ -435,6 +506,13 @@ class SynkEngine:
             here = Path(dirpath)
             kept = []
             for d in sorted(dirnames):
+                if (side == "user" and here == root and "ARCHIVE" in self.skip_dirs and self._spells_archive(d, root)
+                        and _is_link(here / d)):  # where every backup goes: named, and apply refuses it
+                    skip(here / d, "Synk's ARCHIVE folder is a junction or link; never followed, so apply makes no "
+                         "backup and writes nothing until it is a plain folder")
+                    if d in self.skip_dirs:
+                        self._skipped_as_spelled[side].append(d)
+                    continue
                 if d in self.skip_dirs and (here == root or d != "ARCHIVE"):  # a nested ARCHIVE/ is content
                     self._skipped_as_spelled[side].append((here / d).relative_to(root).as_posix())
                     continue
@@ -547,7 +625,7 @@ class SynkEngine:
             "timestamp": abs(u["mtime"] - w["mtime"]) <= TIMESTAMP_TOLERANCE_S,
         }
         newer = None if layers["timestamp"] else ("user" if u["mtime"] > w["mtime"] else "working")
-        if layers["hash"]:  # Correction #1: the only case that skips review
+        if layers["hash"]:  # Rule 1: the only case that skips review
             layers.update(line_count=True, content=True)
             return {"status": "identical", "relationship": "identical", "similarity": 1.0,
                     "hash_match": True, "newer": newer, "layers": layers}
@@ -564,9 +642,9 @@ class SynkEngine:
         layers.update(line_count=len(lu) == len(lw), content=False)
         similarity, relationship = self._calculate_extended_similarity(lu, lw)
         if relationship in ("a_superset", "b_superset"):
-            status = "superset"  # Correction #3
+            status = "superset"  # Rule 3
         elif similarity >= self.threshold:
-            status = "merge"  # Correction #2 (includes 100% line-set match with a different hash)
+            status = "merge"  # Rule 2 (includes 100% line-set match with a different hash)
         else:
             status = "different"
         bom = _bom_sides(u["path"], w["path"])  # the line diff reads past a BOM: name it
@@ -677,8 +755,10 @@ class SynkEngine:
         after the backup was made), must not name a device at any prefix as the running OS
         maps it (os.path.abspath puts it outside the copy, at \\\\.\\: NUL on Windows 11,
         con.txt too on Windows 10; asked of the copy's plain form when it was given as
-        \\\\?\\C:\\...), must resolve under each copy, must not lie in a folder the scan skips
-        (so nothing is written where nothing is compared), must not pass through or name a
+        \\\\?\\C:\\..., and of a stand-in local root for a copy on a network share or with
+        no plain form), must resolve under each copy, must not lie in a folder the scan
+        skips, as the plan spells it or as that copy spells it on disk (so nothing is
+        written where nothing is compared), must not pass through or name a
         junction or link on either side (the scan never follows one), and must not name a
         folder in either copy ('sub', or '.' for the copy itself)."""
         if not isinstance(rel, str) or not rel.strip():
@@ -702,13 +782,20 @@ class SynkEngine:
         for i, part in enumerate(win.parts[:-1]):
             if any(self._skipped(part, root, top=i == 0) for root in (self.user_dir, self.working_dir)):
                 return f"path lies in a folder the scan skips ({part})"
+            for root in (self.user_dir, self.working_dir):  # a stale plan's Build/ where the copy holds build/
+                spelled = self._skipped_on_disk(root, win.parts[:i + 1], i == 0)
+                if spelled:
+                    return (f"path lies in a folder the scan skips ({spelled}, as the "
+                            f"{'user' if root == self.user_dir else 'working'} copy spells {part})")
         for root in (self.user_dir, self.working_dir):
             base = str(root)
             for i in range(1, len(win.parts) + 1):
                 if self._is_link(os.path.join(base, *win.parts[:i])):
                     return f"a junction or link on the {'user' if root == self.user_dir else 'working'} side ({'/'.join(win.parts[:i])}); never followed"
-            # no prefix is a link and no segment is '..', so the path resolves where it is spelled
-            if not _within(os.path.abspath(os.path.join(base, *win.parts)), base):
+            # no prefix is a link and no segment is '..', so the path resolves where it is spelled;
+            # a root kept as \\?\... is joined as spelled (abspath would drop a trailing dot there)
+            joined = os.path.join(base, *win.parts)
+            if not _within(os.path.normpath(joined) if base.startswith("\\\\?\\") else os.path.abspath(joined), base):
                 return "path resolves outside the copy"
         if any((root / rel).is_dir() for root in (self.user_dir, self.working_dir)):
             return "names a folder, not a file"
@@ -783,8 +870,11 @@ class SynkEngine:
     # ── Backup ─────────────────────────────────────────────────────────
     def _new_archive_dir(self) -> Tuple[Path, bool]:
         """A fresh folder under the user copy's ARCHIVE, as it is spelled on disk, and whether
-        ARCHIVE itself was made for it (so a backup that fails can leave nothing behind)."""
+        ARCHIVE itself was made for it (so a backup that fails can leave nothing behind). An
+        ARCHIVE that is a junction or link raises LinkRefused: a backup is never written
+        through one, and without a backup nothing is written at all."""
         root = self._archive_root()
+        self._no_link_to(root, "a backup")
         if root.exists() and not root.is_dir():
             raise NotADirectoryError(f"{root} is a file, not a folder: move it aside, then apply again")
         created = not root.exists()
@@ -797,9 +887,20 @@ class SynkEngine:
         dest.mkdir(parents=True)
         return dest, created
 
+    def _write_in_archive(self, path: Path, text: str) -> None:
+        """Write one of the archive's own files (manifest.json, rollback.md, apply-report.json),
+        asking just before the write whether anything from the user copy down to it is a
+        junction or link: LinkRefused, and nothing written, when it is."""
+        self._no_link_to(path, "an archive file")
+        path.write_text(text, encoding="utf-8", newline="\n")
+
     def _discard_archive(self, dest: Path, created_root: bool) -> str:
         """Remove a backup folder that never got its manifest, and ARCHIVE itself when this run
-        made it: an archive holds its manifest or does not exist. Says what could not be removed."""
+        made it: an archive holds its manifest or does not exist. Says what could not be removed.
+        Nothing is removed through a junction or link on the way to it."""
+        link = self._link_to(self.user_dir, dest)
+        if link:
+            return f"; {dest} was left in place: the user copy's {link} is a junction or link, never followed"
         shutil.rmtree(dest, ignore_errors=True)
         if created_root:
             try:
@@ -817,14 +918,18 @@ class SynkEngine:
             src = root / rel
             entry = {"side": side, "existed": src.is_file()}
             if src.is_file():
+                link = self._link_on_the_way(root, rel)  # never read what lies beyond a link into a backup
+                if link:
+                    raise LinkRefused(f"the {side} copy's {link} is a junction or link; a backup never reads through one")
                 target = dest / side / rel
+                self._no_link_to(target, "a backup")  # before its folders are made or it is written
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, target)
                 entry.update(hash=_hash(src), size=src.stat().st_size)
             elif src.exists():  # a folder: not backed up, and never listed for deletion
                 entry["folder"] = True
             manifest["files"][f"{side}:{rel}"] = entry
-        manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8", newline="\n")
+        self._write_in_archive(manifest_path, json.dumps(manifest, indent=2, ensure_ascii=False))
         lines = ["# Rollback", "", f"Archive created: {manifest['timestamp']}", "",
                  "To undo, copy each file under this folder's `user/` or `working/` back to the same",
                  "relative path in that copy, and delete any file listed as not having existed.", ""]
@@ -834,7 +939,7 @@ class SynkEngine:
             how = ("restore from `" + f"{side_name}/{rel}`" if e["existed"] else
                    "a folder, not a file: leave it as it is" if e.get("folder") else "did not exist: delete it")
             lines.append(f"- `{root_name / rel}` — {how}")
-        (dest / "rollback.md").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+        self._write_in_archive(dest / "rollback.md", "\n".join(lines) + "\n")
 
     def backup(self, paths: List[str], side: str) -> Path:
         """Copy the named files of one side ('user' or 'working') into a new archive folder;
@@ -888,8 +993,12 @@ class SynkEngine:
         while verifying a copy rolls it back; a rollback that fails is reported with the
         backup to restore by hand. An item whose destination already holds its source's
         content is reported in already_applied: nothing to do, and not a failure. Link answers
-        are asked afresh by each call, and each destination's folders are asked again,
-        uncached, immediately before its write: a junction that appears is never followed."""
+        are asked afresh by each call, and asked again, uncached, immediately before each
+        act: the destination's and the source's folders before a write, both sides of the
+        backup before each file it reads and writes, the archive before its report, and the
+        copy's and the backup's folders before a rollback restores or deletes. A junction
+        or link found then refuses the act (LinkRefused, or a refusal naming it) and is
+        never followed."""
         with self._one_call():
             return self._apply(plan, approved_ids, refused)
 
@@ -955,9 +1064,13 @@ class SynkEngine:
             src_root, dst_root = (self.user_dir, self.working_dir) if to_working else (self.working_dir, self.user_dir)
             side = "working" if to_working else "user"
             src, dst = src_root / act["path"], dst_root / act["path"]
-            link = self._link_on_the_way(dst_root, act["path"])  # asked of the disk now, not of a cache
+            # asked of the disk now, not of a cache: the destination, then the source, which is
+            # never read through a link into a copy (and so never "verified" against one)
+            link, where = self._link_on_the_way(dst_root, act["path"]), side
+            if not link:
+                link, where = self._link_on_the_way(src_root, act["path"]), "user" if to_working else "working"
             if link:
-                why = f"a junction or link on the {side} side ({link}) appeared before the write; never followed"
+                why = f"a junction or link on the {where} side ({link}) appeared before the write; never followed"
                 report["refused"].append({"path": act["path"], "reason": why})
                 _say(f"  ✗ Refused {act['path']}: {why}")
                 continue
@@ -975,15 +1088,24 @@ class SynkEngine:
             if failed:
                 backup = dest / side / act["path"]
                 try:
+                    # asked again just before the rollback acts: a restore or a delete never goes
+                    # through a link on the way to the copy's file or to its backup
+                    link = self._link_on_the_way(dst_root, act["path"])
+                    if link:
+                        raise LinkRefused(f"the {side} copy's {link} is a junction or link; never followed")
                     if existed:
+                        self._no_link_to(backup, "a restore")
                         shutil.copy2(backup, dst)
                     elif dst.is_file():  # never a folder: only a file this copy created is removed
                         dst.unlink()
                 except Exception as e:
+                    linked = isinstance(e, LinkRefused)
+                    said = f"the rollback was not attempted: {e}" if linked else f"the rollback failed too: {e}"
                     report["rollback_failed"].append({"path": act["path"], "backup": str(backup) if existed else None,
-                                                      "reason": f"{', '.join(failed)}; the rollback failed too: {e}"})
-                    _say(f"  ‼️ NOT rolled back {act['path']} (failed: {', '.join(failed)}; the rollback failed too: {e}): "
-                         + (f"restore it by hand from {backup}" if existed else f"delete {dst} by hand"))
+                                                      "reason": f"{', '.join(failed)}; {said}"})
+                    todo_by_hand = ("nothing was restored or removed; remove the link, then check the file by hand"
+                                    if linked else f"restore it by hand from {backup}" if existed else f"delete {dst} by hand")
+                    _say(f"  ‼️ NOT rolled back {act['path']} (failed: {', '.join(failed)}; {said}): {todo_by_hand}")
                 else:
                     report["rolled_back"].append(act["path"])
                     _say(f"  ↩️ Rolled back {act['path']} (failed: {', '.join(failed)})")
@@ -992,7 +1114,7 @@ class SynkEngine:
                                           "created": not existed, "verified": list(LAYERS)})
                 _say(f"  ✓ {act['direction']}: {act['path']} (six layers verified)")
         try:
-            (dest / "apply-report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8", newline="\n")
+            self._write_in_archive(dest / "apply-report.json", json.dumps(report, indent=2, ensure_ascii=False))
         except OSError as e:
             _say(f"  ⚠️ apply-report.json not written ({e}); the lines above are the record")
         return report
@@ -1012,8 +1134,13 @@ def update_pulse(project_dir, fields: Dict, signals: Iterable[Tuple[str, str, st
     signal whose timestamp cannot be read is pruned with a note; an unconsumed
     signal, and an entry that is not an object, is never touched.
     A docs that is a file raises NotADirectoryError naming it, before anything
-    is written; the CLI reports that, and any other OSError, as a warning."""
+    is written; the CLI reports that, and any other OSError, as a warning. So does a
+    docs or PULSE.json that is a junction or link (LinkRefused): the PULSE is never read
+    or written through one."""
     path = Path(project_dir) / "docs" / "PULSE.json"
+    for p in (path.parent, path):
+        if _is_link(p):
+            raise LinkRefused(f"{p} is a junction or link; the PULSE is never written through one")
     if path.parent.exists() and not path.parent.is_dir():
         raise NotADirectoryError(f"{path.parent} is a file, not a folder")
     data: Dict = {}
@@ -1157,6 +1284,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                 _say("Nothing else to approve: docs/PULSE.json is left to an explicit id." if any(
                     a.get("path") == PULSE_REL and a.get("status") in ("user_only", "working_only") for a in plan)
                      else "Nothing new to approve: no file is in one copy only.")
+                if args.pulse:  # a run with nothing to write is still a run, and is recorded
+                    _record_pulse(synk.user_dir, {"synk_last_run": _now_iso(), "synk_drift_detected": drift,
+                                                  "synk_files_changed": 0}, [])
                 return 0
         else:
             try:

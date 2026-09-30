@@ -10,6 +10,7 @@ Updated: 2026-09-30 07:28 ET — a junction or link inside the target is named a
 Updated: 2026-09-30 13:43 ET — a file that cannot be read is named with the reason and left out, never fingerprinted as empty; a link to a file is named and not followed, a dangling one as such; each candidate file is read once, so a same-size group of hundreds compares in seconds; PULSE stamps are read by one grammar on every Python, and a consumed signal whose stamp cannot be read is pruned with a note; a PULSE saved with a BOM is read; --details below zero is an error
 Updated: 2026-09-30 14:32 ET — a file that becomes unreadable between the scan and the compare is named with the reason; the --json proposal caps each cluster's comparisons at 50 and says how many were left out; the timestamp grammar is read exactly as the protocol pins it; everything written is LF
 Updated: 2026-09-30 15:25 ET — --details says how many comparisons a cluster holds past its first five; --json's help names the cap of 50 per cluster
+Updated: 2026-09-30 17:09 ET — nothing is archived or recorded through a junction or link: create_archive refuses an archive folder, or a folder on the way to it or to an original, that is one, and --pulse refuses a docs or PULSE.json that is one, each naming it
 
 Fingerprints every file under a folder, compares likely redundant pairs across
 the full similarity spectrum, and builds a consolidation proposal. It never
@@ -33,7 +34,9 @@ CLI:
   A junction or link inside TARGET, to a folder or a file, is named and never followed,
   so a loop cannot repeat files (a dangling one is named as such); a folder that cannot
   be listed and a file that cannot be read are named with the reason, never read as
-  absent or empty.
+  absent or empty. Nothing is archived or recorded through a junction or link: an
+  archive folder, a folder on the way to it or to an original, a docs or a PULSE.json
+  that is one is refused, naming it (--pulse then says the PULSE was not written).
 """
 
 import argparse
@@ -115,6 +118,21 @@ def _is_link(path: Path) -> bool:
         return getattr(os.lstat(path), "st_reparse_tag", 0) == IO_REPARSE_TAG_MOUNT_POINT
     except OSError:
         return False
+
+
+class LinkRefused(OSError):
+    """A write, or a read into an archive, that would pass through a junction or link:
+    refused with the link named, never followed."""
+
+
+def _no_link_between(root: Path, target: Path, what: str) -> None:
+    """Raise LinkRefused when anything below root, down to and including target, is a
+    junction or link, asked of the disk now."""
+    at = Path(root)
+    for part in Path(target).relative_to(root).parts:
+        at = at / part
+        if _is_link(at):
+            raise LinkRefused(f"{at} is a junction or link; {what} never goes through one")
 
 
 @dataclass
@@ -545,9 +563,16 @@ class DenserEngine:
 
     # ── Archive ─────────────────────────────────────────────────────
     def create_archive(self, files: List[str], archive_dir: Path, reason: str) -> Path:
-        """Law #3, archive before action: copy originals with a manifest and rollback notes."""
+        """Law #3, archive before action: copy originals with a manifest and rollback notes.
+        Nothing is written into, or read for, the archive through a junction or link: an
+        archive folder, or a folder on the way to it or to an original, that is one raises
+        LinkRefused, naming it."""
         ts = datetime.now().strftime("%Y-%m-%dT%H%M%S")
-        archive_dir = Path(archive_dir)
+        archive_dir = Path(archive_dir).absolute()
+        # an archive inside the target is checked from the target down; one the caller put
+        # elsewhere, from that folder down (where it lies is the caller's choice)
+        base = self.target_dir if archive_dir.is_relative_to(self.target_dir) else archive_dir
+        _no_link_between(base, archive_dir, "an archive")
         dest = archive_dir / f"solid8-{ts}"
         n = 1
         while dest.exists():
@@ -560,17 +585,20 @@ class DenserEngine:
             fp = self.fingerprints.get(rel)
             src = fp.path if fp else self.target_dir / rel
             if src.is_file():
+                _no_link_between(self.target_dir, src, "an archive")
                 target = dest / rel
+                _no_link_between(base, target, "an archive")  # before its folders are made or it is written
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, target)
                 manifest["files"][rel] = {"hash": self._hash_file(src), "size": src.stat().st_size, "action": reason}
-        (dest / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8", newline="\n")
-
         lines = [f"# Rollback: {reason}", "", f"Archive created: {ts}", "",
                  "To restore, copy each file below from this folder back to the same relative path under:",
                  f"`{self.target_dir}`", ""]
         lines += [f"- `{rel}`" for rel in manifest["files"]]
-        (dest / "rollback.md").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+        for name, text in (("manifest.json", json.dumps(manifest, indent=2, ensure_ascii=False)),
+                           ("rollback.md", "\n".join(lines) + "\n")):
+            _no_link_between(base, dest / name, "an archive")  # asked just before each write
+            (dest / name).write_text(text, encoding="utf-8", newline="\n")
         return dest
 
 
@@ -587,8 +615,13 @@ def update_pulse(project_dir, fields: Dict, signals: Iterable[Tuple[str, str, st
     signal whose timestamp cannot be read is pruned with a note; an unconsumed
     signal, and an entry that is not an object, is never touched.
     A docs that is a file raises NotADirectoryError naming it, before anything
-    is written; the CLI reports that, and any other OSError, as a warning."""
+    is written; the CLI reports that, and any other OSError, as a warning. So does a
+    docs or PULSE.json that is a junction or link (LinkRefused): the PULSE is never read
+    or written through one."""
     path = Path(project_dir) / "docs" / "PULSE.json"
+    for p in (path.parent, path):
+        if _is_link(p):
+            raise LinkRefused(f"{p} is a junction or link; the PULSE is never written through one")
     if path.parent.exists() and not path.parent.is_dir():
         raise NotADirectoryError(f"{path.parent} is a file, not a folder")
     data: Dict = {}

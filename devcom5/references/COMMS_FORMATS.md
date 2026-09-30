@@ -1,11 +1,11 @@
 # Communications Formats Reference
-<!-- DevCom5 v1.3 | 2026-02-10 | Scribe mode reference | Updated: 2026-09-30 04:05 ET — header follows the skill's version -->
+<!-- DevCom5 v1.3 | 2026-02-10 | Scribe mode reference | Updated: 2026-09-30 04:05 ET — header follows the skill's version | Updated: 2026-09-30 17:09 ET — 3P defined in its heading -->
 
 Scribe mode uses these formats for internal communications.
 
 ---
 
-## 3P Updates (Progress / Plans / Problems)
+## Progress, Plans and Problems (3P) Updates
 
 **Audience:** Executives, leadership, teammates with some context.
 **Read time:** 30-60 seconds. **Tone:** Matter-of-fact, data-driven.

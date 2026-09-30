@@ -1,5 +1,5 @@
 # Universal Document Template
-<!-- DevCom5 v1.3 | 2026-02-10 | Architect mode reference | Updated: 2026-09-30 04:05 ET — header follows the skill's version -->
+<!-- DevCom5 v1.3 | 2026-02-10 | Architect mode reference | Updated: 2026-09-30 04:05 ET — header follows the skill's version | Updated: 2026-09-30 17:09 ET — staging folders named by their job -->
 
 Templates for the five-document system. Adapt to classification.
 Never template-stamp — use only sections appropriate to project maturity.
@@ -112,7 +112,7 @@ Never template-stamp — use only sections appropriate to project maturity.
 | 🟢 Low | | | |
 
 ## Ideas Addendum
-[Unvalidated ideas, POTIMPs, future possibilities. Separate from backlog.]
+[Unvalidated ideas, staged improvements, future possibilities. Separate from backlog.]
 
 - [Idea]: [brief rationale]
 

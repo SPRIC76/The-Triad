@@ -1,5 +1,5 @@
 # Audit Protocol
-<!-- DevCom5 v1.3 | 2026-02-10 | Updated: 2026-09-30 04:05 ET — header follows the skill's version -->
+<!-- DevCom5 v1.3 | 2026-02-10 | Updated: 2026-09-30 04:05 ET — header follows the skill's version | Updated: 2026-09-30 17:09 ET — staging folders named by their job -->
 
 Read for Thorough/Deep scans. Pulse/Standard use SKILL.md instructions only.
 
@@ -25,7 +25,7 @@ Always report shifts: `📡 Depth adjusted: [from] → [to] ([reason])`
 ## Phase 1: Structural Scan
 
 **Step 1 — Directory Inventory** (tree depth 3-4):
-Categorize: source dirs, configs, docs, assets, tests, archives/POTIMP,
+Categorize: source dirs, configs, docs, assets, tests, archives and staging folders,
 build artifacts, orphan root files. Compare against last digest snapshot.
 
 **Step 2 — Technology Fingerprint** from configs + extensions:
@@ -38,7 +38,7 @@ Language(s), frameworks, package manager, build system, runtime reqs, services.
 | No tests | Seed/early MVP |
 | `.env.example` | MVP+ (deploy-aware) |
 | CI/CD configs | Production |
-| Version archives / POTIMP | Mature iteration |
+| Version archives / staging folders | Mature iteration |
 | Stale lock files | Potentially abandoned |
 | High TODO density | MVP with known debt |
 
@@ -57,7 +57,7 @@ Every existing doc. Assess: accuracy, completeness, freshness, audience, drift.
 **Drift detection is highest-value finding. Always flag explicitly.**
 
 **Step 7 — Trajectory Mining:**
-Git log (if accessible), changelogs, POTIMP/ideas, backlog/TODO files,
+Git log (if accessible), changelogs, staging folders and ideas, backlog/TODO files,
 archive folders, conversation/digest history.
 
 **→ Evaluate downshift/upshift before Phase 3.**

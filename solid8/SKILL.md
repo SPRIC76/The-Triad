@@ -11,10 +11,10 @@ description: >-
   to consolidate, deduplicate, merge similar files, clean up, shrink or reduce
   sprawl; says there are too many files, copies or versions; or when a scan
   shows obvious redundancy, or older versions may hold overlooked integrations
-  or undervalued assets. Standalone; works with DevCom5 and Synk182 through
-  docs/PULSE.json. Not for keeping two copies of a project in agreement
-  (Synk182), absorbing an outside tool as your own (verafox Mutate), or memory
-  notes (a memory-consolidation tool).
+  or undervalued assets. Works on its own. Not for keeping two copies of a
+  project in agreement (a two-copy sync tool), vetting or absorbing an outside
+  tool as your own (a tool-vetting workflow), or memory notes (a
+  memory-consolidation tool).
 license: Freeware
 metadata:
   version: "1.3"
@@ -26,6 +26,8 @@ metadata:
 > *Similar to a dancer phonetically, although I'm not a dancer. I do not dance, nor will I chance to lapse with you in proper trance.*
 
 **Turns mess and sprawl into essence; Distillation, not deletion.**
+
+Works in any agent that reads a `SKILL.md`, on its own; the engine needs only Python 3.10 or later.
 
 **"Consolidated" means:** (for all intents and purposes of this skill)
 the categorically minimum necessary structure/framework/directory/files/data/docs 
@@ -78,14 +80,16 @@ A backup (`.bak`, `.old`, `.backup`, `.orig`, `~`) is compared as the kind of fi
 [Per-tier detail with diffs and preservation notes]
 ```
 
-## Three-Tier Adaptive Depth
+## Adaptive Depth
 
-### Tier 1: Baseline from PULSE
+### Tier 1: Baseline from the last run
 | Condition | Scan Level |
 |-----------|-----------|
 | `solid8_last_run` < 7 days, no signals | **Quick** — hash comparison only, flag exact dupes |
-| 1-4 weeks or new files synced | **Standard** — full similarity analysis |
-| >1 month or stale_project signal | **Thorough** — deep content comparison + version sprawl analysis |
+| 1-4 weeks, new files, or no record of a last run | **Standard** — full similarity analysis |
+| >1 month or a `stale_project` signal | **Thorough** — deep content comparison + version sprawl analysis |
+
+The last run is read from `docs/PULSE.json`, which Solid8 writes only when asked (`--pulse`). With no such file, start at Standard.
 
 ### Tier 2: Adaptive Mid-Scan
 **Downshift:** Thorough scan finds <3 files with >60% similarity → compress to Quick report.
@@ -94,17 +98,14 @@ Standard scan finds superset relationships → escalate to Thorough for those cl
 
 **Report shifts:** `⚗️ Depth adjusted: Thorough → Quick (project already lean)`
 
-### Tier 3: Cross-Skill Signals
-`new_files_synced` from Synk182 → ≥ Standard (check new overlaps).
-`architecture_changed` from DevCom5 → check if structure changes obsoleted files.
-`stale_project` from DevCom5 → Thorough.
-`docs_created` from DevCom5 → the new docs are doc-worthy; never consolidate them.
+### Tier 3: Signals left by other tools (optional)
+Only where other tools share the project's `docs/PULSE.json`; see Optional integration. Signals only raise depth, never lower it.
 
 ## Safety: Three Laws
 
 1. **Nothing deleted without explicit user approval.**
 2. **Every consolidation provably lossless.** Merged = all unique content from both.
-3. **Archive before action.** `[project]/ARCHIVE/solid8-[timestamp]/` with manifest + originals + rollback.md.
+3. **Archive before action.** `[project]/ARCHIVE/solid8-[timestamp]/` with manifest + originals + rollback.md. Never through a junction or link: an archive folder, or a folder on the way to it or to an original, that is one is refused with the link named.
 
 | Tier | Auto-Execute |
 |------|-------------|
@@ -122,12 +123,12 @@ On version sequences (`_v1` through `_vN`):
 
 ## Context Awareness
 
-**POTIMP:** Intentional staging. Don't flag unless changes fully absorbed into main. The engine reports a POTIMP file only as an exact duplicate or as the subset of a main file.
+**Staging folders:** Intentional staging. Don't flag unless changes fully absorbed into main. The engine treats any folder whose name starts with `POTIMP` as staging, and reports a file there only as an exact duplicate or as the subset of a main file.
 **Archives:** Intentionally preserved. Flag only if exact dupe of current. The engine applies this to any folder named `ARCHIVE`, `Archive`, `Archives` or `archive`.
-**Doc files:** Respect DevCom5 flags. Don't consolidate doc-worthy files.
-Flag scattered READMEs for 5-doc absorption.
-**A copy is not always sprawl:** a folder that is another environment's copy of the project (a worktree, a deployed copy, another machine's) is Synk182's to reconcile, not Solid8's to collapse.
-**Outside tools and memory notes are not sprawl either:** absorbing someone else's skill or tool as your own is Mutate's job (verafox, in The Proof Pack); a memory folder is your memory-consolidation tool's.
+**Doc files:** Don't consolidate doc-worthy files (a documentation tool may name them; see Optional integration).
+Flag scattered READMEs for absorption into the project's docs.
+**A copy is not always sprawl:** a folder that is another environment's copy of the project (a worktree, a deployed copy, another machine's) is for a two-copy sync tool to reconcile, not for Solid8 to collapse.
+**Outside tools and memory notes are not sprawl either:** vetting or absorbing someone else's skill or tool as your own is a tool-vetting workflow's job; a memory folder is a memory-consolidation tool's.
 **Inside an archive, nothing is consolidated:** two archived files, one a superset of the other, are left as they are. The engine reports a protected file only as an exact duplicate, or as the subset of a live file.
 
 ## Scripts
@@ -141,20 +142,12 @@ python scripts/denser_engine.py <target_dir> --json proposal.json  # full propos
 python scripts/denser_engine.py <target_dir> --pulse               # record the scan in docs/PULSE.json
 ```
 
-- `DenserEngine(target).scan()` → `.compare_all()` → `.generate_proposal()`; `.create_archive(files, archive_dir, reason)` copies originals with `manifest.json` and `rollback.md` before any merge or removal.
+- `DenserEngine(target).scan()` → `.compare_all()` → `.generate_proposal()`; `.create_archive(files, archive_dir, reason)` copies originals with `manifest.json` and `rollback.md` before any merge or removal, and refuses (`LinkRefused`) when the archive folder, or a folder on the way to it or to an original under the target, is a junction or link, asked just before each original is read and each archive file is written.
 - Skips `.git`, `node_modules`, build output, caches, and every dot-prefixed folder or file; groups candidates by hash, by base name (version, copy and backup markers removed) within a folder, and by size, and pairs a version, copy or backup name with its base name in any other folder. A copy number has one to three digits, so `(2024)` is a year, not a copy. A junction or link inside the target, to a folder or a file, is named and never followed, so a loop cannot repeat files (a dangling one is named as such). A folder that cannot be listed or a file that cannot be read is named with the reason (`unreadable: N`, then each), never fingerprinted as empty; a file that becomes unreadable between the scan and the compare is named the same way, and its pairs get no tier. Each candidate file is read once per run, so a folder of hundreds of same-size files compares in seconds.
 - A `--json` file that cannot be written (a missing folder, or a folder in its place), or an empty `--json` name, is answered with the reason and exit 1, after the report; a `--pulse` beside it still records the scan. `--details` takes a count of 0 or more. The proposal caps each cluster's comparisons at 50 (`comparisons_cap`; a near-duplicate cluster of hundreds of files would otherwise write tens of thousands), and a capped cluster says how many were left out (`comparisons_total`, `comparisons_left_out`); on the terminal, `--json` says how many were left out in all, and each cluster `--details` shows lists its first five comparisons and how many more it holds; `--pulse`'s map is capped the same way. Everything the engine writes (the proposal, the archive's files, `docs/PULSE.json`) is LF on every platform.
-- `--pulse` writes `solid8_last_run` and `solid8_redundancy_map`, emits `redundancy_found` to DevCom5 when anything is found, keeps every other key, and never touches a PULSE that does not parse or holds no JSON object, and says so; a PULSE saved with a UTF-8 BOM is read. A consumed signal (JSON `true`) older than seven days is pruned, one whose timestamp the protocol's grammar cannot read is pruned with a note, and an unconsumed one is never touched. A wrong-typed field (`"pending_signals": null`) is treated as empty with a note; when no PULSE exists one is created holding only `cross_skill`, which DevCom5 fills out at its next Deep pass. When `docs` is a file, or the PULSE cannot be written, the scan still reports and says the PULSE was not written.
+- `--pulse` writes `solid8_last_run` and `solid8_redundancy_map`, leaves a `redundancy_found` signal when anything is found, keeps every other key, and never touches a PULSE that does not parse or holds no JSON object, and says so; a PULSE saved with a UTF-8 BOM is read. A consumed signal (JSON `true`) older than seven days is pruned, one whose timestamp the protocol's grammar cannot read is pruned with a note, and an unconsumed one is never touched. A wrong-typed field (`"pending_signals": null`) is treated as empty with a note; when no PULSE exists one is created holding only `cross_skill`. When `docs` is a file, `docs` or `PULSE.json` is a junction or link, or the PULSE cannot be written, the scan still reports and says the PULSE was not written.
 
 The SKILL.md methodology applies whether using the engine or manual analysis.
-
-## Trifecta Signals
-
-Full protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md)
-
-**Emits:** `files_consolidated` → DevCom5 | `redundancy_found` → DevCom5 | `archive_recommended` → DevCom5 | `consolidation_complete` → Synk182
-**Consumes:** `new_files_synced` (Synk182) → rescan | `architecture_changed` (DevCom5) → check obsolescence | `stale_project` (DevCom5) → full assessment | `docs_created` (DevCom5) → protect
-**PULSE writes:** `solid8_last_run`, `solid8_files_consolidated`, `solid8_redundancy_map`
 
 ## Under-the-Hood Display
 **Scan:** `⚗️ Scanning [n] files | Clusters: [n]`
@@ -164,16 +157,28 @@ Full protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md
 ## Anti-Patterns
 - Deleting without archiving
 - Treating all versions as redundant
-- Ignoring POTIMP/staging
-- Consolidating across environments (Synk182's job)
+- Ignoring staging folders
+- Consolidating across environments (a two-copy sync tool's job)
 - Merging without review above Tier S
 - Byte-comparing docs (use section-aware diff)
 - Consolidating build artifacts
 - Calling something a duplicate by its name alone — compare the content
 
----
+## Optional integration
 
-*⁰ Formerly: Denser v1.0 (unnamed concept, pre-v1) → Solid8 v1.0 → Solid8 v1.1 (2026-09-15: triggers moved into the description; engine fixes for backups, copy names, binaries, JSON and Markdown, archives, and Windows consoles) → Solid8 v1.2 (2026-09-30: part of The Triad; the description says what it is not for beside Synk182, verafox and a memory tool; the engine no longer proposes a superset pair that lies wholly inside an archive; freeware) → Solid8 v1.3 (2026-09-30: version, copy and backup sprawl is found across folders; a backup, with every trailing marker removed, is compared as the kind of file it backs up, so a backup of a binary is binary; a year in parentheses is not a copy number; a wrong-typed PULSE field is treated as empty with a note; a target that is not a folder is an error; --pulse warns instead of failing when docs is a file, and --json answers a file it cannot write, or an empty name, with the reason; a junction or link is named and not followed, and a signal stamped with Z is pruned on every Python; a file that cannot be read is named with the reason, never fingerprinted as empty; a link to a file is named and not followed; each candidate file is read once, so a same-size group of hundreds compares in seconds; PULSE stamps are read by one grammar on every Python, a PULSE saved with a BOM is read, and --details below zero is an error; a file unreadable at compare time is named; the --json proposal caps each cluster's comparisons at 50 and says how many were left out; the timestamp grammar is read exactly as the protocol pins it, and everything the engine writes is LF; the not-for pointers name kinds of work rather than private skills; updated 2026-09-30 15:25 ET: --details says how many comparisons a cluster holds past its first five).
-"Solid8" — solid as in consolidated, 8 as in the infinity symbol ∞ rotated,
+Solid8 needs nothing else. Where other tools share the project's `docs/PULSE.json` (its companions in The Triad, DevCom5 and Synk182, or any tool that follows the same protocol), `--pulse` leaves signals for them and Solid8 reads theirs; with none of them, or no PULSE file, nothing waits on these signals and Solid8 runs at its own tiers. Protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md).
+
+**Emits:** `files_consolidated` → DevCom5 | `redundancy_found` → DevCom5 | `archive_recommended` → DevCom5 | `consolidation_complete` → Synk182
+**Consumes:** `new_files_synced` (Synk182) → at least Standard, check new overlaps | `architecture_changed` (DevCom5) → check whether structure changes made files obsolete | `stale_project` (DevCom5) → Thorough | `docs_created` (DevCom5) → the new docs are doc-worthy; never consolidate them. DevCom5's doc flags mark the doc-worthy files.
+**PULSE writes:** `solid8_last_run`, `solid8_files_consolidated`, `solid8_redundancy_map`
+
+## Changelog
+
+- **1.3** — version, copy and backup sprawl is found across folders; a backup is compared as the kind of file it backs up; a year in parentheses is not a copy number; junctions and links are named and never followed, and nothing is archived or recorded through one; unreadable files are named, never fingerprinted as empty; the proposal caps each cluster's comparisons and says how many were left out; everything written is LF; the skill names jobs rather than other tools, and stands alone in any agent.
+- **1.2** — freeware; the description says what it is not for; no superset pair is proposed inside an archive.
+- **1.1** — triggers in the description; engine fixes for backups, copy names, binaries, JSON and Markdown, archives, and Windows consoles.
+- **1.0** — first release, as Denser.
+
+*"Solid8" — solid as in consolidated, 8 as in the infinity symbol ∞ rotated,
 representing the endless cycle of project entropy that this skill tames.
 The Denser alias persists for when subtlety isn't working.*
