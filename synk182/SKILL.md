@@ -13,7 +13,7 @@ description: >-
   copy is newer; says files are different, out of date or missing on one side;
   or when DevCom5 or Solid8 signal that copies have drifted. Not for redundancy
   inside one copy (Solid8), not for git merges or the rules of working in a
-  repo (git, mk-repo-rules), and not for what two versions can do rather than
+  repo (git, the repo's own rules), and not for what two versions can do rather than
   what their files hold (verafox).
 license: Freeware
 metadata:
@@ -40,7 +40,7 @@ metadata:
 | 🟢 Immediate | "sync my project/files", "synchronize", "keep in sync" | Activate |
 | 🟡 Confirm | "update my project files" | Clarify: Synk or direct edits? |
 | 🔴 Clarify | "files are different", "don't see my file" | Offer Synk |
-| ❌ Not Synk | Create/edit single files, move within dir, redundancy (→ Solid8), branch merges (→ git), repo and worktree rules (→ mk-repo-rules), what a version can do rather than what its files hold (→ verafox) | — |
+| ❌ Not Synk | Create/edit single files, move within dir, redundancy (→ Solid8), branch merges (→ git), repo and worktree rules (→ your repository's own rules), what a version can do rather than what its files hold (→ verafox) | — |
 
 **Name the two copies first.** Say which is the user's copy (authority) and which is the working copy, in the user's words. Most sync damage starts with the two being swapped.
 
@@ -145,5 +145,5 @@ Full protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md
 
 ---
 
-*⁰ Formerly: unnamed sync utility (pre-v1) → Synk v1.0 → v2.0 → Synk v3.0 → Synk182 v3.1 (2026-09-15: any two copies, not one sandbox; the engine now really backs up, applies, verifies and rolls back) → Synk182 v3.2 (2026-09-30: part of The Triad; the description says what it is not for beside Solid8, git, mk-repo-rules and verafox; freeware).
+*⁰ Formerly: unnamed sync utility (pre-v1) → Synk v1.0 → v2.0 → Synk v3.0 → Synk182 v3.1 (2026-09-15: any two copies, not one sandbox; the engine now really backs up, applies, verifies and rolls back) → Synk182 v3.2 (2026-09-30: part of The Triad; the description says what it is not for beside Solid8, git, a repository's own rules and verafox; freeware).
 Synk has no prior alias. It has always been Synk. That's the joke.*

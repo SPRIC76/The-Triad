@@ -102,7 +102,7 @@ These skills **guide an AI agent** — they do not auto-run destructive actions.
 
 **Triggers:** `devcom5`, `dc5`, `logger`, documentation, project status, catch-up, README and changelog updates, proposals, 3P updates, newsletters, and more (see the description in `devcom5/SKILL.md`).
 
-**Not DevCom5:** proving a change works or grading its evidence, a person's own knowledge base outside a project, rendering diagrams — other skills do those (verafox, knowledge-query, archify).
+**Not DevCom5:** proving a change works or grading its evidence, a person's own knowledge base outside a project, rendering diagrams — other tools do those.
 
 **References:** `devcom5/references/` — audit protocol, universal template, comms formats.
 
@@ -119,7 +119,7 @@ These skills **guide an AI agent** — they do not auto-run destructive actions.
 - Backs up every file before overwriting (`[project]/ARCHIVE/synk-[timestamp]/`, with manifest and rollback notes), applies only approved items, and rolls back any copy that fails verification
 - Status: `🔄` for scans, rigor shifts, completion
 
-**Not Synk:** Single-file edits, in-directory moves, redundancy consolidation (→ Solid8), git branch merges (→ git), repo and worktree rules (→ mk-repo-rules), what a version can do rather than what its files hold (→ verafox).
+**Not Synk:** Single-file edits, in-directory moves, redundancy consolidation (→ Solid8), git branch merges (→ git), repo and worktree rules (→ your repository's own rules), what a version can do rather than what its files hold (→ verafox).
 
 **Script:**
 
@@ -144,7 +144,7 @@ python synk182/scripts/synk_engine.py USER_COPY WORKING_COPY --apply plan.json -
 - Formerly Denser v1.0
 - Status: `⚗️`
 
-**Not Solid8:** two copies of a project (→ Synk182), absorbing an outside tool as your own (→ verafox Mutate), memory notes (→ consolidate-memory).
+**Not Solid8:** two copies of a project (→ Synk182), absorbing an outside tool as your own (→ verafox Mutate), memory notes (→ a memory-consolidation tool).
 
 **Script:** `python solid8/scripts/denser_engine.py <target_dir> [--details N] [--json proposal.json]` (read-only analysis; archives before any change).
 

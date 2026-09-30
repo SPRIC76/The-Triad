@@ -36,7 +36,7 @@ SKILLS = ("devcom5", "synk182", "solid8")
 CALL_WORDS = {"devcom5": ("devcom5", "dc5", "logger"),
               "synk182": ("synk", "s182", "synk it"),
               "solid8": ("solid8", "s8", "denser")}
-SIBLINGS = ("verafox", "knowledge-query", "archify", "mk-repo-rules", "consolidate-memory", "Synk182", "Solid8")
+SIBLINGS = ("verafox", "Synk182", "Solid8")
 
 
 def _load(name, rel):

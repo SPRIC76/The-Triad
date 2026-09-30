@@ -14,7 +14,7 @@ description: >-
   or undervalued assets. Standalone; works with DevCom5 and Synk182 through
   docs/PULSE.json. Not for keeping two copies of a project in agreement
   (Synk182), absorbing an outside tool as your own (verafox Mutate), or memory
-  notes (consolidate-memory).
+  notes (a memory-consolidation tool).
 license: Freeware
 metadata:
   version: "1.2"
@@ -126,7 +126,7 @@ On version sequences (`_v1` through `_vN`):
 **Doc files:** Respect DevCom5 flags. Don't consolidate doc-worthy files.
 Flag scattered READMEs for 5-doc absorption.
 **A copy is not always sprawl:** a folder that is another environment's copy of the project (a worktree, a deployed copy, another machine's) is Synk182's to reconcile, not Solid8's to collapse.
-**Outside tools and memory notes are not sprawl either:** absorbing someone else's skill or tool as your own is Mutate's job (verafox); a memory folder is consolidate-memory's.
+**Outside tools and memory notes are not sprawl either:** absorbing someone else's skill or tool as your own is Mutate's job (verafox); a memory folder is a memory-consolidation tool's.
 **Inside an archive, nothing is consolidated:** two archived files, one a superset of the other, are left as they are. The engine reports a protected file only as an exact duplicate, or as the subset of a live file.
 
 ## Scripts
@@ -171,7 +171,7 @@ Full protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md
 
 ---
 
-*⁰ Formerly: Denser v1.0 (unnamed concept, pre-v1) → Solid8 v1.0 → Solid8 v1.1 (2026-09-15: triggers moved into the description; engine fixes for backups, copy names, binaries, JSON and Markdown, archives, and Windows consoles) → Solid8 v1.2 (2026-09-30: part of The Triad; the description says what it is not for beside Synk182, verafox and consolidate-memory; the engine no longer proposes a superset pair that lies wholly inside an archive; freeware).
+*⁰ Formerly: Denser v1.0 (unnamed concept, pre-v1) → Solid8 v1.0 → Solid8 v1.1 (2026-09-15: triggers moved into the description; engine fixes for backups, copy names, binaries, JSON and Markdown, archives, and Windows consoles) → Solid8 v1.2 (2026-09-30: part of The Triad; the description says what it is not for beside Synk182, verafox and a memory-consolidation tool; the engine no longer proposes a superset pair that lies wholly inside an archive; freeware).
 "Solid8" — solid as in consolidated, 8 as in the infinity symbol ∞ rotated,
 representing the endless cycle of project entropy that this skill tames.
 The Denser alias persists for when subtlety isn't working.*

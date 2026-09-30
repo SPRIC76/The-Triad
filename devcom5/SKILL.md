@@ -14,7 +14,7 @@ description: >-
   missing or stale. Standalone; works with Synk182 and Solid8 through
   docs/PULSE.json; supersedes doc-coauthoring and internal-comms. Not for
   proving a change works (verafox), the user's own knowledge outside a project
-  (knowledge-query), or rendering diagrams (archify).
+  (a knowledge-base tool), or rendering diagrams (a diagram tool).
 license: Freeware
 metadata:
   version: "1.2"
@@ -270,8 +270,8 @@ Full protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md
 | Ask | Skill |
 |-----|-------|
 | Prove a change works, grade its evidence, map what a project can do | verafox |
-| What the user knows or has read, outside any one project | knowledge-query |
-| Render the ARCHITECTURE map as a diagram | archify |
+| What the user knows or has read, outside any one project | a knowledge-base tool |
+| Render the ARCHITECTURE map as a diagram | a diagram tool |
 | Two copies of the project disagree | Synk182 |
 | Too many versions or copies of a file | Solid8 |
 
@@ -290,6 +290,6 @@ Full protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md
 
 ---
 
-*⁰ Formerly: project-docs (unnamed, pre-v1) → Logger v1.0 → DevCom5 v1.0 → DevCom5 v1.1 (2026-09-15: triggers moved into the description, Trifecta Protocol v3.0, existing doc systems respected) → DevCom5 v1.2 (2026-09-30: part of The Triad; the description says what it is not for beside verafox, knowledge-query and archify; freeware).
+*⁰ Formerly: project-docs (unnamed, pre-v1) → Logger v1.0 → DevCom5 v1.0 → DevCom5 v1.1 (2026-09-15: triggers moved into the description, Trifecta Protocol v3.0, existing doc systems respected) → DevCom5 v1.2 (2026-09-30: part of The Triad; the description says what it is not for beside verafox, a knowledge-base tool and a diagram tool; freeware).
 The "5" honors the five-document system at its core. DevCom5 supersedes
 the Anthropic example skills `doc-coauthoring` and `internal-comms`.*
