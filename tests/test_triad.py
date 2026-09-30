@@ -1,4 +1,4 @@
-"""Version 1.1 | Deps: stdlib; Skillshaper's validate_skill.py when present | Parent: The Triad (DevCom5 1.3, Synk182 3.3, Solid8 1.3) | Path: tests | Filename: test_triad.py | Created: 2026-09-30 01:12 ET - kept tests for the pack: the two engines, the three skill folders, and the pack's own ratchets. | Updated: 2026-09-30 04:05 ET - v1.3: red-first cases from the v1.2 review (bounded plan paths, stale plans, wrong-typed PULSE fields, CLI messages, copy numbers, sprawl across folders, pointer and version ratchets); comments read for a public reader; both engines checked for personal paths. | Updated: 2026-09-30 04:53 ET - red-first cases from the second v1.3 review: folder targets and rollback, backups read as the file they back up, unknown --approve ids, one folder given twice, an unparseable PULSE reported, signals only when true, protocol safety rule 4; the pointer check is an allow-list, so the test names no private skill. | Updated: 2026-09-30 05:37 ET - red-first cases from the third v1.3 review: --pulse when docs is a file, a PULSE holding no object, an approved item with no direction, an item with only an id named by its id, --plan beside --apply and --diff beside another action, a backup of a binary, backups with two markers; the pointer check reads what a pointer names, in any of its forms, rather than its first word. | Updated: 2026-09-30 06:09 ET - red-first cases from the fourth v1.3 review: a --plan or --json file that cannot be written, an item with no path in the --approve new listing; the pointer check reads the "X tool/helper/plugin" form, verbs beyond "use", possessives and subjects, loose names, Task/Need/Tool tables, wrapped clauses and a bare arrow's name, leaves slot words, counts and the pack's flows alone, and every allowed kind must be read from the pack.
+"""Version 1.1 | Deps: stdlib; Skillshaper's validate_skill.py when present | Parent: The Triad (DevCom5 1.3, Synk182 3.3, Solid8 1.3) | Path: tests | Filename: test_triad.py | Created: 2026-09-30 01:12 ET - kept tests for the pack: the two engines, the three skill folders, and the pack's own ratchets. | Updated: 2026-09-30 04:05 ET - v1.3: red-first cases from the v1.2 review (bounded plan paths, stale plans, wrong-typed PULSE fields, CLI messages, copy numbers, sprawl across folders, pointer and version ratchets); comments read for a public reader; both engines checked for personal paths. | Updated: 2026-09-30 04:53 ET - red-first cases from the second v1.3 review: folder targets and rollback, backups read as the file they back up, unknown --approve ids, one folder given twice, an unparseable PULSE reported, signals only when true, protocol safety rule 4; the pointer check is an allow-list, so the test names no private skill. | Updated: 2026-09-30 05:37 ET - red-first cases from the third v1.3 review: --pulse when docs is a file, a PULSE holding no object, an approved item with no direction, an item with only an id named by its id, --plan beside --apply and --diff beside another action, a backup of a binary, backups with two markers; the pointer check reads what a pointer names, in any of its forms, rather than its first word. | Updated: 2026-09-30 06:09 ET - red-first cases from the fourth v1.3 review: a --plan or --json file that cannot be written, an item with no path in the --approve new listing; the pointer check reads the "X tool/helper/plugin" form, verbs beyond "use", possessives and subjects, loose names, Task/Need/Tool tables, wrapped clauses and a bare arrow's name, leaves slot words, counts and the pack's flows alone, and every allowed kind must be read from the pack. | Updated: 2026-09-30 07:28 ET - red-first cases from the fifth v1.3 review: the pointer check tells a skill name from English's own hyphenated words by form, with a short ratcheted list of lexicalized compounds, keeps a realistic-prose corpus green and reads a one-word name after a verb again; an empty --plan, --apply, --diff or --json name, a file named ARCHIVE, hand-edited plan ids and hashes, junctions and links, a folder that cannot be listed, and signals stamped with Z.
 
 Run from the pack folder:  python -B -m unittest discover -s tests -v
 
@@ -24,7 +24,9 @@ import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
+from datetime import datetime, timedelta
 from pathlib import Path
+from unittest import mock
 
 # Importing the skills' scripts must not leave __pycache__ inside a skill folder.
 sys.dont_write_bytecode = True
@@ -70,6 +72,46 @@ def _run_cp1252(script, *args):
     env = dict(os.environ, PYTHONIOENCODING="cp1252", PYTHONUTF8="0")
     return subprocess.run([sys.executable, "-B", str(script), *map(str, args)],
                           capture_output=True, env=env, timeout=120)
+
+
+def _link_folder(link, target):
+    """Make link a junction to target (a symbolic link where there are no junctions);
+    False when this machine makes neither."""
+    if os.name == "nt":
+        return subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(target)],
+                              capture_output=True, timeout=60).returncode == 0
+    try:
+        os.symlink(target, link, target_is_directory=True)
+        return True
+    except OSError:
+        return False
+
+
+def _unlistable(folder):
+    """An os.walk that cannot list folder, as when an ACL denies it to the user. The fifth
+    v1.3 review drove a real deny with icacls; a kept test does not change a machine's ACLs."""
+    real, folder = os.walk, Path(folder).resolve()
+
+    def walk(top, topdown=True, onerror=None, followlinks=False):
+        for dirpath, dirnames, filenames in real(top, topdown, None, followlinks):
+            if Path(dirpath).resolve() == folder:
+                if onerror:
+                    onerror(PermissionError(13, "Access is denied", str(folder)))
+                dirnames[:] = []
+                continue
+            yield dirpath, dirnames, filenames
+    return walk
+
+
+def _old_signals(consumed_by):
+    """A PULSE's consumed signals, a month old in three ISO-8601 forms (Z, +00:00, no offset)
+    and a day old with Z, named by form."""
+    old, recent = datetime.now() - timedelta(days=30), datetime.now() - timedelta(days=1)
+    stamps = {"z": old.strftime("%Y-%m-%dT%H:%M:%SZ"), "utc": old.strftime("%Y-%m-%dT%H:%M:%S+00:00"),
+              "naive": old.strftime("%Y-%m-%dT%H:%M:%S"), "recent": recent.strftime("%Y-%m-%dT%H:%M:%SZ")}
+    return json.dumps({"cross_skill": {"pending_signals": [
+        {"from": "devcom5", "signal": s, "to": consumed_by, "timestamp": t, "consumed": True}
+        for s, t in stamps.items()]}})
 
 
 def _frontmatter(skill):
@@ -123,31 +165,113 @@ def _frontmatter(skill):
 _SKILL_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 _LOOSE_NAME = re.compile(r"[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)+")
 _HYPHENATED = r"[a-z0-9]+(?:-[a-z0-9]+)+"
-_NOUN = r"(?:skills?|tools?|helpers?|plugins?)"
-# A name ends its phrase; a word a noun follows is describing it ("read-only mode").
-_ENDS = (r"(?![\w-])(?=\s*(?:$|[.,;:!?)`'\"*|])"
-         r"|\s+(?:instead|for|to|when|if|here|there|first|or|and|" + _NOUN + r")\b)")
-_ENDING = re.compile(r"(?<![\w-])(" + _HYPHENATED + ")" + _ENDS)
-_KIND = re.compile(r"\b(?:a|an|the|your)\s+([a-z0-9][a-z0-9-]*)\s+(" + _NOUN + r")\b")
-_VERB = r"(?:[Uu]se|[Ss]ee|[Tt]ry|[Ll]oad|[Rr]un|[Aa]sk|[Cc]all|[Ii]nvoke)"
-_AFTER_LEAD = re.compile(r"\b(?:" + _VERB + r"|in|via|the)\s+(?:(?:the|a|an|your)\s+)?(" + _HYPHENATED + ")" + _ENDS)
-_BACKTICKED = re.compile(r"\b" + _VERB + r"\s+(?:(?:the|a|an|your)\s+)?`([a-z0-9][a-z0-9-]*)`")
-_USE_FOR = re.compile(r"\b[Uu]se\s+(?:(?:the|a|an|your)\s+)?([a-z0-9]+)(?=\s+(?:for|instead)\b)")
-_POSSESSIVE = re.compile(r"(?<![\w-])(" + _HYPHENATED + r")'s\b")
-_SUBJECT = re.compile(r"(?<![\w-])(" + _HYPHENATED + r")\s+(?:handles?|does|covers?|owns?|takes?)\b")
-# Words that fill a pointer's slot but name no skill, and counts, versions and
-# architectures ('(2)', '(v2)', '(x64)'). A false red is answered by rewording, or by
-# adding the word here on purpose.
-_NOT_A_NAME = {"it", "this", "that", "them", "these", "those", "one", "both", "each", "any", "some",
-               "none", "manual", "optional", "caution", "care",
-               "read-only", "one-off", "e-mail", "file-system", "drag-and-drop"}
+
+# A skill name is a kebab-case identifier: it hyphenates where English writes a space
+# ("private notes" is private-notes). English hyphenates its own words by a few forms,
+# so a hyphenated word is English when one of them explains it: a prefix, particle or
+# number first (re-plan, co-maintainer, on-call, back-end, third-party); a particle last
+# (follow-up, sign-off, check-ins); a linker inside (end-to-end, point-in-time); a
+# participle last (self-contained, spell-checking); a modifier head last (read-only,
+# high-level, domain-specific, long-term); a one-letter or all-digit part (e-mail,
+# utf-8). The forms are closed classes of English, so a compound nobody listed is still
+# known by its form. What no form marks is kept as data in _ENGLISH_COMPOUNDS, which a
+# test keeps free of anything a form marks and of every allowed name.
+_PARTICLES = frozenset("up off in out on over back down by away through about around along apart ahead".split())
+_LEADS = _PARTICLES | frozenset(
+    "re co sub self non pre post anti multi cross semi de un ex mid under inter intra meta auto bi tri mono "
+    "poly pseudo quasi super ultra well ill half all counter micro macro mini mega hyper per zero one two "
+    "three four five six seven eight nine ten hundred first second third fourth fifth last single double "
+    "triple many few".split())
+_LINKERS = frozenset("to and or of the a an in on for at as by n".split())
+_HEADS = frozenset(
+    "only level specific based aware free safe wide side time term party purpose platform source way like "
+    "friendly proof ready facing bound driven oriented centric agnostic compatible dependent independent "
+    "sensitive insensitive native first worthy style scale grade class alone".split())
+_PARTICIPLE = re.compile(r"[a-z]{3,}(?:ed|ing)|known|written|built|made|driven|grown|drawn|given|taken"
+                         r"|broken|hidden|proven|shown|done|held|kept")
+_ENGLISH_COMPOUNDS = frozenset("""
+    ad-hoc best-effort brute-force camel-case check-box cherry-pick code-base code-review command-line
+    copy-paste data-set dead-end dead-lock dry-run end-point end-user fact-check file-name file-system
+    front-end front-matter go-to hard-link hot-fix how-to kebab-case key-value life-cycle load-test man-page
+    merge-request must-have no-op peer-review plain-text pull-request real-world rich-text round-trip
+    run-book sanity-check side-effect snake-case spell-check time-stamp to-do tool-chain
+    unit-test web-hook what-if wild-card work-flow work-tree""".split())
+
+
+def _english_by_form(word):
+    """True when one of English's own hyphenating forms explains a hyphenated word."""
+    parts = word.split("-")
+    return (parts[0] in _LEADS or parts[-1] in _PARTICLES or parts[-1] in _HEADS
+            or bool(_PARTICIPLE.fullmatch(parts[-1])) or any(p in _LINKERS for p in parts[1:-1])
+            or any(len(p) == 1 or p.isdigit() for p in parts))
+
+
+def _english(word):
+    """True when a hyphenated word is English's own, as it stands or as a plural."""
+    forms = {word, word[:-1] if word.endswith("s") else word, word[:-2] if word.endswith("es") else word}
+    return any(_english_by_form(w) or w in _ENGLISH_COMPOUNDS for w in forms if "-" in w)
+
+
+# One word is a name by its slot and its shape. Where the slot is certain (an arrow
+# group, a Skill cell) a word is read unless its ending marks ordinary English (manual,
+# optional); in prose, where "use caution" and "use notetaker" share a slot, a word is
+# read only with a name's mark: a digit inside it (notes2go), or an agent's or a
+# coiner's ending (notetaker, jotify), a count noun English never uses bare.
+_ORDINARY = re.compile(r"[a-z]+(?:ly|al|ive|ous|able|ible|ful|less|tion|sion|ment|ness|ity|ance|ence|wise|wards?)")
+_NAME_MARK = re.compile(r"[a-z]{2,}\d+[a-z][a-z0-9]*|[a-z]{3,}(?:er|or|ify)")
+# English's closed classes (pronouns, determiners, quantifiers, a few adverbs) fill a
+# pointer's slot ('use yours instead') but name nothing; nor do counts and versions.
+_CLOSED = frozenset("""
+    it its this that them they these those one ones both each either neither any some none all another other
+    others such same yours mine ours theirs his hers whichever whatever whoever however whenever wherever
+    something anything nothing everything someone anyone nobody everyone somebody anybody everybody here there
+    now later soon again instead elsewhere nowhere anywhere everywhere somewhere above below never ever rather
+    further together whether""".split())
 _NUMBERED = re.compile(r"[a-z]?\d+")
+# A name takes no article: "the follow-up" is a common noun, except before the noun a
+# kind is described by ("the X skill"). A word after "git" is git's own (git filter-repo).
+_NOT_BEFORE_A_NAME = frozenset("a an the this that these those each every any some no your our their its his her my "
+                               "git".split())
+
+_NOUN = r"(?:skills?|tools?|helpers?|plugins?)"
+_SUBJECT_VERB = (r"(?:is|are|was|does|do|can|will|should|may|must|handles?|covers?|owns?|takes?|keeps?|exists?"
+                 r"|holds?|manages?|writes?|runs?|tracks?|stores?|deals?|works?|lives?|belongs?)")
+# A name ends its phrase: punctuation, a version, a function word, a skill noun ("the X
+# skill"), or the verb it is the subject of; a word a noun follows is describing it
+# ("read-only mode", "zip-file backups"), and a dot before a letter is a file's extension.
+_ENDS = (r"(?![\w-])(?=\s*(?:$|[,;:!?)(`'\"*_|+—–]|\.(?!\w)|→|->)"
+         r"|\s+(?:instead|for|to|when|if|here|there|first|or|and|which|but|then|v?\d[\w.]*|"
+         + _NOUN + "|" + _SUBJECT_VERB + r")\b)")
+_EDGE = r"(?<![\w\-./\\])"
+_ENDING = re.compile(_EDGE + "(" + _HYPHENATED + ")" + _ENDS)
+_KIND = re.compile(r"\b(?:a|an|the|your)\s+([a-z0-9][a-z0-9-]*)\s+(" + _NOUN + r")\b")
+_VERB = r"(?:[Uu]se|[Ss]ee|[Tt]ry|[Ll]oad|[Rr]un|[Aa]sk|[Cc]all|[Ii]nvoke|[Oo]pen|[Pp]refer|[Ii]nstall)"
+_VERB_OBJECT = re.compile(r"\b" + _VERB + r"\s+([a-z][a-z0-9]*)" + _ENDS)
+_BACKTICKED = re.compile(r"\b" + _VERB + r"\s+(?:(?:the|a|an|your)\s+)?`([a-z0-9][a-z0-9-]*)`")
+_BARE_OWNER = re.compile(_EDGE + r"([a-z][a-z0-9]*)(?='s\b|\s+" + _SUBJECT_VERB + r"\b)")
+_SENTENCE_CASE = re.compile(r"(?:^|(?<=[.!?;:]\s))([A-Z][a-z0-9]*(?:-[a-z0-9]+)+)(?![\w-])")
 _ARROW = re.compile(r"\((?:→|->)\s*((?:[^()]|\([^()]*\))*)\)")
 # A bare arrow is the pack's flow notation ('backup → copy → verify'); it points at a
 # skill only when a hyphenated name follows it and ends the line or the clause.
 _BARE_ARROW = re.compile(r"(?<!\()(?:→|->)[ \t]*(" + _HYPHENATED + r")(?=[ \t]*(?:$|[.,;)]))", re.M)
-_PAREN =re.compile(r"\((?:→|->)?\s*((?:[^()]|\([^()]*\))*)\)")
+_PAREN = re.compile(r"\((?:→|->)?\s*((?:[^()]|\([^()]*\))*)\)")
 _PARTS = re.compile(r",|\s+(?:or|and)\s+")
+_VERSION = re.compile(r"\s+v?\d+(?:\.\d+)*\+?$")
+_NOT_FOR = re.compile(r"(?i)\bnot (?:(?:meant|intended|designed|built|made|used|suited) )?for\b|\bout of scope\b"
+                      r"|\*\*not [^*\n]+:\*\*")
+_NOT_FOR_LABEL = re.compile(r"(?i)^\s*(?:#{1,6}\s+)?[*_]*(?:[a-z' ]*\s)?(?:not (?:\w+ )?for|out of scope)[*_:\s]*$")
+
+
+def _free(text, start):
+    """True when the word before start is neither an article nor git (_NOT_BEFORE_A_NAME)."""
+    before = re.search(r"([A-Za-z]+)[ \t]+$", text[max(0, start - 40):start])
+    return not before or before.group(1).lower() not in _NOT_BEFORE_A_NAME
+
+
+def _opens(text, start):
+    """True when a lone word at start opens its phrase: after the clause's start or its
+    punctuation, or after 'is', so 'a schema-aware editor does' names nothing."""
+    return bool(re.search(r"(?:^|[.,;:(—–→]|\b(?:is|are|was|were))\s*$", text[max(0, start - 40):start]))
 
 
 def _kinds(text, one_word):
@@ -157,84 +281,257 @@ def _kinds(text, one_word):
 
 
 def _part_names(part, certain):
-    """The names one part of a pointer names: its whole text when that is a skill name, and
+    """The names one part of a pointer names: its whole text, bare of parentheses, a
+    version and markup, when that is a skill name (a lone word by its slot, above), and
     a kind. certain: the part is surely a pointer (an arrow group or a Skill cell), so a
     loosely written name and a hyphenated word ending its phrase anywhere in it count."""
-    part = re.sub(r"\([^()]*\)", "", part).strip().strip("`").strip()
-    names = [part] if _SKILL_NAME.fullmatch(part) else []
+    part = _VERSION.sub("", re.sub(r"\([^()]*\)", "", part).strip()).strip("`*_ ")
+    names = []
+    if _SKILL_NAME.fullmatch(part):
+        if "-" in part or (not _ORDINARY.fullmatch(part) if certain else _NAME_MARK.fullmatch(part)):
+            names.append(part)
+    elif certain and _LOOSE_NAME.fullmatch(part):
+        names.append(part.lower().replace("_", "-"))
     if certain:
-        if not names and _LOOSE_NAME.fullmatch(part):
-            names.append(part.lower().replace("_", "-"))
-        names += _ENDING.findall(part)
+        names += [m.group(1) for m in _ENDING.finditer(part) if _free(part, m.start())]
     return names + _kinds(part, one_word=True)
 
 
 def _prose_names(text):
-    """Names in the prose of a not-for sentence and the next: a hyphenated word after a verb
-    or in/via/the, one that owns something ("X's job") or does something ("X handles
-    those"), a backticked word after a verb, "use X for/instead", and "the X-Y skill"."""
-    return (_AFTER_LEAD.findall(text) + _POSSESSIVE.findall(text) + _SUBJECT.findall(text)
-            + _BACKTICKED.findall(text) + _USE_FOR.findall(text) + _kinds(text, one_word=False))
+    """Names in the prose of a pointer clause: a hyphenated word that ends its phrase with
+    no article or git before it (a sentence's capital aside); a lone word after a verb, or
+    opening its phrase to own or do something ("notetaker's job", "notetaker handles
+    those"), when it bears a name's mark; a backticked word after a verb; and "a/the/your
+    X-Y skill"."""
+    text = _SENTENCE_CASE.sub(lambda m: m.group(1).lower(), text)
+    names = [m.group(1) for m in _ENDING.finditer(text) if _free(text, m.start())]
+    names += [m.group(1) for m in _VERB_OBJECT.finditer(text) if _NAME_MARK.fullmatch(m.group(1))]
+    names += [m.group(1) for m in _BARE_OWNER.finditer(text)
+              if _NAME_MARK.fullmatch(m.group(1)) and _opens(text, m.start())]
+    return names + _BACKTICKED.findall(text) + _kinds(text, one_word=False)
+
+
+def _clause_names(line):
+    """The names a pointer clause names: its parentheses up to '. ' or ';', each part read
+    by _part_names, and the prose of its sentence and the next."""
+    clause = re.split(r"\.\s|;", line, maxsplit=1)[0]
+    names = [n for group in _PAREN.findall(clause) for part in group.split(",")
+             for n in _part_names(part, certain=False)]
+    return names + _prose_names(" ".join(re.split(r"(?<=\.)\s+", line, maxsplit=2)[:2]))
 
 
 def _skill_column(headers):
-    """The column of a table that names skills: Skill(s) or Tool(s), or Use beside Ask, Need
-    or Task; -1 when there is none ('How to use' is not a Use column)."""
+    """The column of a table that names skills: one whose header says skill (Skill, Skill to
+    use, Which skill), or a Use, Tool or Handled by column beside a request (Ask, Need,
+    When); -1 when there is none. Beside a Task or a Version, a Tool column lists programs
+    ('| Lint | ruff |'), and 'How to use' is not a Use column."""
     for i, h in enumerate(headers):
-        if h in ("skill", "skills", "tool", "tools"):
+        if re.search(r"\bskills?\b", h):
             return i
-    if "use" in headers and {"ask", "need", "task"} & set(headers):
-        return headers.index("use")
+    if {"ask", "need", "when", "request"} & set(headers):
+        for i, h in enumerate(headers):
+            if h in ("use", "tool", "tools", "handled by", "handler", "owner"):
+                return i
     return -1
 
 
 def _pointers_read(text):
     """Every skill-shaped name a Markdown text's pointers name, once each, in order.
 
-    Reads what a pointer names, not its first word. The pointers read are:
+    The pointers read are:
       - '(→ ...)' and '(-> ...)' groups, anywhere, and a bare arrow's name (_BARE_ARROW);
-      - a table's Skill or Tool column, or its Use column beside Ask, Need or Task;
-      - '(...)' groups in a 'not for' or '**Not X:**' clause, up to '. ', ';' or the line's end;
-      - the prose of that sentence and the next (_prose_names).
-    A paragraph wrapped mid-sentence reads as one line. Arrow groups and table cells are
-    split on ',', 'or' and 'and', a clause's parentheses on ',' only, and each part is read
-    by _part_names, so '(see above)', '(v2 and later)' and '(e.g., branch merges)' name
-    nothing. Beyond a whole part, a word is a name only where it ends its phrase (_ENDS),
-    so 'read-only mode' and 'a three-way merge' name nothing; _NOT_A_NAME and counts or
-    versions never are. Not read, by design: any other word after a bare arrow, which the
-    pack writes for its flows ('backup → copy → verify'), and one bare word ending a
-    sentence after a verb ('use caution.'); a private name in either form passes, and a
-    review that finds one adds the form here with a kept red case.
+      - a table's skill column (_skill_column);
+      - a clause after 'not for', 'not meant/intended/designed/built/made/used/suited for',
+        'out of scope' or '**Not X:**', up to the line's end, and each line of the list
+        under a heading or label that says one of them ('## Not for', '**Not for:**').
+    A paragraph wrapped mid-sentence reads as one line, a link as its text, CRLF as LF and
+    a curly apostrophe as a straight one. Arrow groups and table cells are split on ',',
+    'or' and 'and', a clause's parentheses on ',' only, and each part is read by
+    _part_names; a clause's prose by _prose_names. A word read is dropped when English
+    writes it itself (_english, _CLOSED) or it is a count or a version.
+    Not read, by design, each with a kept green case or a reason:
+      - a hyphenated word after an article ('see the release-train'), or describing a noun
+        ('zip-file backups'): a name takes no article and heads its phrase;
+      - a word right after 'git' ('git filter-repo'): git's own;
+      - any other word after a bare arrow: the pack's flows ('backup → copy → verify');
+      - a lone word in prose without a name's mark ('use rebase.', 'use jotbook.'): English
+        cannot tell a mass noun from a one-word name by shape;
+      - a lone word opening a sentence ('Jotbook keeps those.'): a sentence's capital and
+        a product's own (Docker) look the same;
+      - a Tool column beside a Task or a Version: it lists programs, not skills.
+    Read, by design: a lone lowercase word alone in an arrow group or a Skill cell, unless
+    its ending marks it ordinary ('(→ upstream)' reads as a name: write '(→ the upstream
+    project)'); and a public tool in a pointer's slot ('use docker.', 'run `pytest`'),
+    which is added to POINTER_NAMES on purpose, as git is. A review that finds a private
+    name passing adds its form here with a kept red case.
     """
+    text = text.replace("\r\n", "\n").replace("’", "'")
     text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)  # a Markdown link reads as its text
     text = re.sub(r"\n[ \t]+", " ", text)  # a folded frontmatter description reads as one line
     text = re.sub(r"(?<=[^\s|])\n(?=[a-z(])", " ", text)  # so does a paragraph wrapped mid-sentence
     named = [n for group in _ARROW.findall(text) for part in _PARTS.split(group)
              for n in _part_names(part, certain=True)]
     named += _BARE_ARROW.findall(text)
+    lines = text.splitlines()
     col, in_table = -1, False
-    for line in text.splitlines():
+    for line in lines:
         if not line.lstrip().startswith("|"):
             in_table = False
             continue
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         if not in_table:  # a table's first row is its header
-            in_table, col = True, _skill_column([c.strip("* ").lower() for c in cells])
+            in_table, col = True, _skill_column([c.strip("*_: ").lower() for c in cells])
         elif 0 <= col < len(cells) and cells[col].strip("-: "):
             named += [n for part in _PARTS.split(cells[col]) for n in _part_names(part, certain=True)]
-    for m in re.finditer(r"(?i)\bnot for\b|\*\*not [^*\n]+:\*\*", text):
-        line = text[m.end():].split("\n", 1)[0]
-        clause = re.split(r"\.\s|;", line, maxsplit=1)[0]
-        named += [n for group in _PAREN.findall(clause) for part in group.split(",")
-                  for n in _part_names(part, certain=False)]
-        named += _prose_names(" ".join(re.split(r"(?<=\.)\s+", line, maxsplit=2)[:2]))
-    return list(dict.fromkeys(n for n in named if n not in _NOT_A_NAME and not _NUMBERED.fullmatch(n)))
+    for m in _NOT_FOR.finditer(text):
+        named += _clause_names(text[m.end():].split("\n", 1)[0])
+    for i, line in enumerate(lines):
+        if _NOT_FOR_LABEL.match(line):  # the list under it, after any blank lines, to a blank line or heading
+            rest = lines[i + 1:]
+            while rest and not rest[0].strip():
+                rest = rest[1:]
+            for item in rest:
+                if not item.strip() or item.lstrip().startswith("#"):
+                    break
+                named += _clause_names(item)
+    return list(dict.fromkeys(n for n in named if n not in _CLOSED and not _NUMBERED.fullmatch(n)
+                              and not ("-" in n and _english(n))))
 
 
 def _unlisted_pointers(text):
     """The names _pointers_read finds that are neither a sibling, git nor an allowed kind."""
     allowed = POINTER_NAMES | POINTER_KINDS
     return [n for n in _pointers_read(text) if n not in allowed]
+
+
+# Realistic skill prose that points at no skill outside the pack: the fifth v1.3
+# review's paragraphs (all but its '(→ upstream)', a limit named in _pointers_read),
+# then fresh ones naming public tools and ordinary hyphenated words. Each must read
+# nothing; a grammar change that reads one of them is a false red.
+REALISTIC_PROSE = (
+    # the fifth v1.3 review
+    "description: >-\n  Synk182 compares two copies of a project and applies what you approve.\n"
+    "  Not for merging branches (use git). A command-line tool that never writes\n  until you approve a plan.",
+    "Not for secrets or credentials; use a third-party tool for those.",
+    "Not for licence checks. Use an open-source tool such as licensee.",
+    "Not for three-way merges; git's built-in tool does those.",
+    "Not for CI pipelines. Each engine is a stand-alone tool.",
+    "Not for scripting; it is not a general-purpose helper.",
+    "Not for IDE integration (that is a first-party plugin's job).",
+    "**Not Solid8:** archiving to tape. It is a cross-platform tool, nothing more.",
+    "Not for legal review; use a domain-specific skill.",
+    "Not for the back-end or the front-end; only the docs.",
+    "Not for the command-line. Use the engine from a script.",
+    "Not for live copies; use a dry-run first.",
+    "Not for history rewrites; use a cherry-pick or a rebase.",
+    "Not for one-off edits via copy-paste.",
+    "Not for onboarding; see the write-up in docs/.",
+    "Not for scheduling; see the follow-up.",
+    "Not for the day-to-day, only releases.",
+    "Not for the pull-request; see git.",
+    "Not for the post-mortem; DevCom5 writes those.",
+    "The engine is not for the faint-hearted.",
+    "Not for the end-user's machine; that copy is theirs.",
+    "Not for hot-fixes; on-call handles those.",
+    "Not for cleanup; a follow-up covers that.",
+    "Not for merges in a work-tree.",
+    "| x | merges (→ git cherry-pick) |",
+    "| x | later (→ a follow-up) |",
+    "| x | notes (→ by hand, copy-paste) |",
+    "changed since the plan → re-plan.",
+    "verify fails → roll-back; verify holds → log",
+    "review → sign-off.",
+    "scan → compare → plan → back-up → apply → verify.",
+    "| Tool | Version |\n|---|---|\n| python | 3.10+ |\n| git | any |",
+    "| Tools | Purpose |\n|---|---|\n| ruff | lint |\n| pytest | tests |",
+    "| Task | Tool |\n|---|---|\n| Lint | ruff |\n| Diff | git |\n| Merge | by hand |",
+    "Not for a shared copy; use yours instead.",
+    "Not for both copies; use either for the plan.",
+    "Not for writes; it is a read-only tool.",
+    "Not for a first run; run the dry-run first.",
+    "Not for releases; ask a co-maintainer.",
+    "Not for edits in the sub-folder.",
+    "Not for parsing; that is a lower-level tool's job.",
+    "Not for the high-level; see the low-level.",
+    "Not for bundles. Each skill is a self-contained tool.",
+    "Not for frameworks (a drop-in helper).",
+    "Not for the long-term; use git.",
+    "Not for repeats; use a one-off.",
+    "Not for the well-known cases.",
+    "Not for the end-to-end; only unit checks.",
+    "write → read-back.",
+    # fresh, for the fix of that review
+    "description: >-\n  Tidies a docs folder before a release. Not for code formatting (Prettier and Black\n"
+    "  already own that) or for spell-checking, which codespell does well.",
+    "Not for secrets. Keep tokens in a password manager such as Bitwarden or KeePassXC, never in a plan file.",
+    "Not for real-time sync; this is a point-in-time comparison that runs on demand.",
+    "Not for large binaries (use Git LFS or an object store).",
+    "Not for notebooks: nbdime understands .ipynb diffs and merges far better than a line-based tool.",
+    "| Tool | Minimum | Why |\n|---|---|---|\n| python | 3.10 | the engines |\n| git | 2.30 | history checks |\n"
+    "| gh | 2.40 | optional, for release notes |",
+    "Flow: scan → dry-run → sign-off → apply → read-back → log.",
+    "Not for merge conflicts → resolve them in your editor or with git mergetool.",
+    "Not for cross-repo refactors; see the follow-up in docs/ROADMAP.md.",
+    "Not for pre-commit hooks. Wire the engine into pre-commit yourself if you want it on every commit.",
+    "Not for editing YAML by hand; yq and a schema-aware editor do that job.",
+    "Not for Markdown lint (markdownlint and Vale are the usual picks).",
+    "Not for the day-to-day churn of a work-in-progress branch, only for release copies.",
+    "Not for one-way mirrors; rsync or robocopy /MIR is simpler for that.",
+    "Not for anything user-facing: the engine writes plain-text reports for a human to read.",
+    "Not for a hand-off between two people; write a short hand-over note instead.",
+    "Not for CI. The engines are stand-alone scripts a workflow can call, but nothing here sets one up.",
+    "Not for copy-paste edits. Retype the change, or apply a proper patch with git apply.",
+    "Not for long-running jobs; each run is a single pass that exits when it is done.",
+    "Not for multi-root workspaces yet (one root per run).",
+    "Not for sub-modules; run the engine inside each sub-module on its own.",
+    "Not for lock files (package-lock.json, poetry.lock); regenerate them with the package manager.",
+    "Not for time-stamped backups (the engine keeps its own under ARCHIVE/).",
+    "Not for code review. A pull-request template and a second pair of eyes do more than any engine.",
+    "Not for rewriting history; git rebase and git filter-repo exist for that.",
+    "Not for images; oxipng and svgo shrink those without touching the docs.",
+    "Not for anything outside the two folders you name: no network calls, no auto-updates, no telemetry.",
+    "Not for non-UTF-8 files; the engine reads UTF-8 and skips the rest with a note.",
+    "Not for a shared drive without asking: check with the copy's co-owner first.",
+    "**Not Synk182:** a one-off rename (do it by hand), or a follow-up merge (→ git).",
+    "Not for scripted runs in a read-only container; --apply needs write access.",
+    "Not for large monorepos: scan time grows with file count, so point it at a sub-folder.",
+    "If the premise changed since the plan → re-plan. If a verify fails → roll-back.",
+    "Not for notes → use your own note-taking app.",
+    "Not for tests; pytest and coverage.py already cover that.",
+    "Not for Docker images or other build artefacts (see the Dockerfile's own docs).",
+    "| When | Use |\n|---|---|\n| Two copies drifted | Synk182 |\n| A branch merge | git |\n| A decision to log | DevCom5 |",
+    "Not for built-in help; run the engine with --help for that.",
+    "Not for check-ins to main: the engine never commits, pushes or tags.",
+    "Not for high-stakes copies without a backup; take a snapshot first.",
+    "| Ask | Skill |\n|---|---|\n| Two copies drifted | Synk182 |\n| Anything else | none |\n| Retyping a list | by hand |",
+    "Not for lint (ruff does that), nor for type checks, which mypy or pyright handle.",
+    "Not suited for huge repos: a full re-scan of 100k files takes a while.",
+    "Out of scope: GitHub issues, pull-request reviews and release tagging (the gh CLI does those).",
+    "Not for side-by-side diffs; a GUI such as Meld or Beyond Compare shows those better.",
+    "Not for the first run on a new machine (do a dry-run, then a read-back).",
+    "Not for opt-in telemetry or crash reports; the engines send nothing anywhere.",
+    "Not for key-value stores or SQLite files: those are binary, and the engine skips them.",
+    "Not for a to-do list. Keep one in your issue tracker (GitHub Issues, Jira, Linear).",
+    "Not for formatting; use black.",
+    "Not for side-by-side merges; use meld or kdiff3 instead.",
+    "Not for containers; run podman.",
+    "## Out of scope\n\n- Branch merges (git)\n- Anything on a network drive (copy it local first)\n- A follow-up release",
+    "Not for notes; use care. Not for merges; use rebase, with judgement, and sparingly.",
+    # each listed English compound where a pointer is read, so every entry earns its place
+    "Not for fixes that are ad-hoc, best-effort or brute-force.",
+    "Out of scope: renaming between camel-case, snake-case and kebab-case.",
+    "Not for review work (code-review, peer-review, fact-check, spell-check); ask a person.",
+    "Not for everyday lists (check-box, to-do, how-to, must-have); keep those in your issue tracker.",
+    "Not for git plumbing (cherry-pick, merge-request, pull-request, work-tree); git and your host cover it.",
+    "Not for the repository's layout (code-base, file-system, file-name, hard-link).",
+    "Not for data questions (data-set, key-value, plain-text, rich-text); ask whoever owns the data.",
+    "Out of scope: release plumbing (tool-chain, web-hook, end-point, front-end, command-line).",
+    "Not for tests (unit-test, load-test, sanity-check, dry-run): run the project's own suite.",
+    "Not for writing docs (man-page, run-book, front-matter, life-cycle).",
+    "Not for chasing bugs (dead-lock, dead-end, side-effect, round-trip, hot-fix).",
+    "Not for scenario planning (what-if, real-world, work-flow); bring those to the team.",
+    "Not for spelling questions (end-user, go-to, wild-card, no-op, time-stamp, copy-paste); follow the house style guide.",
+)
 
 
 # ─────────────────────────────────────────────────────────────── solid8
@@ -513,6 +810,45 @@ class Solid8Engine(unittest.TestCase):
                 self.assertIn("Proposal not written", out.getvalue())
                 self.assertIn("PULSE updated", out.getvalue())
                 self.assertIn("solid8_last_run", pulse.read_text(encoding="utf-8"))
+
+    def test_cli_json_given_an_empty_name_says_so(self):
+        # Break it catches: --json "" (an empty shell variable) dropped without a word:
+        # the proposal printed, nothing written, exit 0 (found by the fifth v1.3
+        # review). It is answered as a proposal that cannot be written.
+        _write(self.tmp, "a.txt", "same\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([self.tmp, "--json", "", "--pulse"])
+        self.assertEqual(rc, 1)
+        self.assertIn("Proposal not written (no file name given)", out.getvalue())
+        self.assertIn("solid8_last_run", (Path(self.tmp) / "docs" / "PULSE.json").read_text(encoding="utf-8"))
+
+    def test_a_junction_inside_the_target_is_named_and_not_followed(self):
+        # Break it catches: a junction walked as a folder: one back to the target gave
+        # "64 files fingerprinted", 2016 exact duplicates and a ~98% reduction, all one
+        # file seen through the loop (found by the fifth v1.3 review). A link the walk
+        # skips anyway (node_modules, as a package manager links it) goes unnamed.
+        _write(self.tmp, "a.txt", "one\n")
+        if not _link_folder(Path(self.tmp) / "loop", self.tmp):
+            self.skipTest("this machine makes neither a junction nor a symbolic link")
+        self.assertTrue(_link_folder(Path(self.tmp) / "node_modules", self.tmp))
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([self.tmp])
+        self.assertEqual(rc, 0)
+        self.assertIn("Exact dupes (S): 0", out.getvalue())
+        self.assertRegex(out.getvalue(), r"not followed.*loop")
+        e = self.engine()
+        self.assertEqual(sorted(e.fingerprints), ["a.txt"])
+        self.assertEqual(e.not_followed, ["loop"])
+
+    def test_pulse_prunes_old_consumed_signals_whatever_their_offset_form(self):
+        # Same break as the Synk182 case: a month-old consumed signal stamped with Z
+        # kept on Python 3.10, and one with no offset kept on every version.
+        _write(self.tmp, "docs/PULSE.json", _old_signals("solid8"))
+        path = self.mod.update_pulse(self.tmp, {"solid8_last_run": "x"})
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        self.assertEqual([s["signal"] for s in data["cross_skill"]["pending_signals"]], ["recent"])
 
 
 # ─────────────────────────────────────────────────────────────── synk182
@@ -1050,6 +1386,119 @@ class Synk182Engine(unittest.TestCase):
         self.assertIn("Not in 'new': item 10 (no path)", out.getvalue())
         self.assertTrue((self.w / "new.txt").is_file())
 
+    def test_cli_plan_given_an_empty_name_says_so(self):
+        # Break it catches: --plan "" (an empty shell variable) dropped without a word:
+        # the dashboard printed, nothing written, exit 0 (found by the fifth v1.3
+        # review). It is answered as a plan that cannot be written, and --pulse still
+        # records the scan.
+        _write(self.u, "new.txt", "brand new\n")
+        # the same drop for --apply and --diff, the other flags that take a name
+        for extra, words in ((["--plan", "", "--pulse"], "Plan not written (no file name given)"),
+                             (["--apply", ""], "--apply was given an empty name"),
+                             (["--diff", ""], "--diff was given an empty name")):
+            with self.subTest(flag=extra[0]):
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    rc = self.mod.main([str(self.u), str(self.w), *extra])
+                self.assertEqual(rc, 1)
+                self.assertIn(words, out.getvalue())
+        self.assertIn("synk_last_run", (self.u / "docs" / "PULSE.json").read_text(encoding="utf-8"))
+        self.assertFalse((self.w / "new.txt").exists())
+
+    def test_a_file_named_archive_is_not_compared_and_apply_refuses_before_any_write(self):
+        # Break it catches: a FILE named ARCHIVE in the user copy, where the backups go,
+        # listed as an item of its own and ending --apply --approve new in a raw
+        # FileExistsError traceback (found by the fifth v1.3 review). It is named and
+        # left out of the plan, and the apply is refused before anything is written.
+        _write(self.u, "ARCHIVE", "not a folder")
+        _write(self.u, "new.txt", "brand new\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            s = self.synk()
+            r = s.scan_and_compare()
+            plan_file = _write(self.tmp, "plan.json", json.dumps(s.plan()))
+        self.assertEqual(sorted(r["files"]), ["new.txt"])
+        self.assertRegex(out.getvalue(), r"not compared.*ARCHIVE")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "new"])
+        self.assertEqual(rc, 1)
+        self.assertIn("ARCHIVE is a file, not a folder", out.getvalue())
+        self.assertFalse((self.w / "new.txt").exists())
+        self.assertEqual((self.u / "ARCHIVE").read_text(encoding="utf-8"), "not a folder")
+
+    def test_cli_hand_edited_plan_fields_are_refused_before_any_write(self):
+        # Break it catches: a hand-edited plan whose hashes are not an object ("abc", 5)
+        # or whose id is not a whole number ([1], "1") passing the shape check, then an
+        # AttributeError or TypeError traceback, or "1" applied by --approve new while
+        # --approve 1 said no item has id 1 (found by the fifth v1.3 review).
+        _write(self.u, "a.txt", "x\n")
+        item = {"id": 1, "path": "a.txt", "status": "user_only", "direction": "user_to_working",
+                "hashes": {"user": None, "working": None}}
+        for bad, approve, words in (({**item, "hashes": "abc"}, "1", "hashes"), ({**item, "hashes": "abc"}, "new", "hashes"),
+                                    ({**item, "hashes": 5}, "1", "hashes"), ({**item, "id": [1]}, "new", "whole-number id"),
+                                    ({**item, "id": "1"}, "new", "whole-number id"), ({**item, "id": "1"}, "1", "whole-number id")):
+            with self.subTest(item=bad, approve=approve):
+                plan_file = _write(self.tmp, "plan.json", json.dumps([bad]))
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", approve])
+                self.assertEqual(rc, 1)
+                self.assertIn(words, out.getvalue())
+                self.assertFalse((self.w / "a.txt").exists())
+                self.assertFalse((self.u / "ARCHIVE").exists())
+
+    def test_a_junction_inside_a_copy_is_named_and_not_followed(self):
+        # Break it catches: a junction walked as a folder: one back to the user copy gave
+        # 63 phantom paths (loop/a.txt, loop/loop/a.txt, ...) and a 63-item plan (found
+        # by the fifth v1.3 review). It is named and not followed, and nothing under its
+        # path is compared or planned in either copy. A link the scan skips anyway
+        # (node_modules, as a package manager links it) goes unnamed.
+        _write(self.u, "a.txt", "one\n")
+        _write(self.w, "loop/b.txt", "only here\n")
+        if not _link_folder(self.u / "loop", self.u):
+            self.skipTest("this machine makes neither a junction nor a symbolic link")
+        self.assertTrue(_link_folder(self.u / "node_modules", self.u))
+        out = io.StringIO()
+        with redirect_stdout(out):
+            s = self.synk()
+            r = s.scan_and_compare()
+            plan = s.plan()
+        self.assertEqual(sorted(r["files"]), ["a.txt"])
+        self.assertEqual([a["path"] for a in plan], ["a.txt"])
+        self.assertEqual([(n["side"], n["path"]) for n in r["not_compared"]], [("user", "loop")])
+        self.assertRegex(out.getvalue(), r"not compared.*loop.*not followed")
+
+    def test_a_folder_that_cannot_be_listed_is_named_not_read_as_absent(self):
+        # Break it catches: a folder in the user copy the user may not list (an ACL deny)
+        # read as empty, so its files showed as only in the working copy and --approve
+        # new copied into it (found by the fifth v1.3 review). It is named, and nothing
+        # under its path is compared or planned in either copy.
+        _write(self.u, "top.txt", "t\n")
+        _write(self.w, "top.txt", "t\n")
+        _write(self.u, "denied/a.txt", "same\n")
+        _write(self.w, "denied/a.txt", "same\n")
+        _write(self.w, "denied/b.txt", "only in working\n")
+        out = io.StringIO()
+        with mock.patch.object(self.mod.os, "walk", _unlistable(self.u / "denied")), redirect_stdout(out):
+            s = self.synk()
+            r = s.scan_and_compare()
+            plan = s.plan()
+        self.assertEqual(sorted(r["files"]), ["top.txt"])
+        self.assertEqual(plan, [])
+        self.assertEqual([(n["side"], n["path"]) for n in r["not_compared"]], [("user", "denied")])
+        self.assertRegex(out.getvalue(), r"not compared.*denied.*cannot be listed")
+
+    def test_pulse_prunes_old_consumed_signals_whatever_their_offset_form(self):
+        # Break it catches: a month-old consumed signal stamped with a trailing Z pruned
+        # on Python 3.11 and 3.12 but kept forever on 3.10 (fromisoformat reads Z only
+        # from 3.11), and one with no offset kept on every version (found by the fifth
+        # v1.3 review). Z is UTC on every version, and no offset is local time.
+        _write(self.u, "docs/PULSE.json", _old_signals("synk182"))
+        path = self.mod.update_pulse(self.u, {"synk_last_run": "x"})
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        self.assertEqual([s["signal"] for s in data["cross_skill"]["pending_signals"]], ["recent"])
+
     def test_cli_diff_beside_plan_apply_or_pulse_is_an_error(self):
         # Break it catches: --diff returning before anything else ran, so --plan,
         # --apply or --pulse given beside it were dropped without a word and the
@@ -1142,6 +1591,16 @@ class SkillFolders(unittest.TestCase):
         self.assertEqual(len(rule), 1, "Safety rule 4 must say what a missing PULSE leads to")
         self.assertIn("creates `docs/PULSE.json` holding only `cross_skill`", rule[0])
         self.assertIn("leave it untouched, say so and work standalone", rule[0])
+
+    def test_protocol_says_which_signal_timestamps_are_pruned(self):
+        # Break it catches: the protocol saying only "ISO-8601" while the engines pruned
+        # a Z stamp on some Python versions and never pruned one with no offset (found by
+        # the fifth v1.3 review). The engines' pruning is driven in each engine's own
+        # case; here the lifecycle rule must name both forms.
+        protocol = (ROOT / "docs/TRIFECTA.md").read_text(encoding="utf-8")
+        rule = protocol[protocol.index("**Lifecycle:**"):].split("\n\n", 1)[0]
+        self.assertIn("with an offset or `Z`", rule)
+        self.assertIn("read as local time", rule)
 
     def test_description_reaches_the_host_listing(self):
         # Break it catches: a description a strict host drops from its listing,
@@ -1279,6 +1738,110 @@ class SkillFolders(unittest.TestCase):
         for kind in sorted(POINTER_KINDS):
             with self.subTest(kind=kind):
                 self.assertIn(kind, read)
+
+    def test_pointer_check_reads_the_fifth_reviews_forms(self):
+        # Break it catches: a pointer the check passed at 1ce715f (the fifth v1.3
+        # review): an em dash or a colon, verbs and prepositions beyond the first eight,
+        # a "Not for" heading, "Out of scope:", more table headers, a version or italics
+        # around a name, a name opening a sentence or owning with a curly apostrophe, and
+        # a one-word name after a verb, as a possessive or as a subject.
+        red = {"Not for notes — private-notes.": ["private-notes"],
+               "Not for notes: private-notes.": ["private-notes"],
+               "Not for notes; leave those to private-notes.": ["private-notes"],
+               "Not for notes; those belong to private-notes.": ["private-notes"],
+               "Not for notes; open private-notes.": ["private-notes"],
+               "Not for notes; prefer private-notes.": ["private-notes"],
+               "Not for notes; install private-notes first.": ["private-notes"],
+               "Not for notes; switch to private-notes.": ["private-notes"],
+               "Not for notes; reach for private-notes.": ["private-notes"],
+               "Not for notes; that is what private-notes is for.": ["private-notes"],
+               "Not for notes; private-notes exists for that.": ["private-notes"],
+               "Not for notes; do those with private-notes.": ["private-notes"],
+               "Not for notes; go through private-notes.": ["private-notes"],
+               "Not for notes; take those from private-notes.": ["private-notes"],
+               "Not for notes; those are done by private-notes.": ["private-notes"],
+               "Not for notes; hand those off to private-notes.": ["private-notes"],
+               "Not for notes; delegate to private-notes.": ["private-notes"],
+               "Not for notes; defer to private-notes.": ["private-notes"],
+               "Not for notes → use private-notes.": ["private-notes"],
+               "Not for notes: `private-notes`.": ["private-notes"],
+               "Not for notes. Private-notes keeps those.": ["private-notes"],
+               "Not for notes (that is private-notes’s job).": ["private-notes"],
+               "Not meant for notes (private-notes).": ["private-notes"],
+               "## Not for\n\n- Notes (private-notes)\n- Merges (git)": ["private-notes"],
+               "**Not for:**\n- memos (memo-sweeper)": ["memo-sweeper"],
+               "Out of scope: notes (private-notes).": ["private-notes"],
+               "| Ask | Handled by |\n|---|---|\n| Notes | private-notes |": ["private-notes"],
+               "| Need | Skill to use |\n|---|---|\n| Notes | private-notes |": ["private-notes"],
+               "| Ask | Which skill |\n|---|---|\n| Notes | private-notes |": ["private-notes"],
+               "| When | Use |\n|---|---|\n| Notes | private-notes |": ["private-notes"],
+               "| Ask | Skill: |\n|---|---|\n| Notes | private-notes |": ["private-notes"],
+               "| Ask | Skill |\n|---|---|\n| Notes | private-notes v2 |": ["private-notes"],
+               "| Ask | Skill |\n|---|---|\n| Notes | _private-notes_ |": ["private-notes"],
+               "| x | notes (→ private-notes v2) |": ["private-notes"],
+               "| Ask | Skill |\n|---|---|\n| Notes | jotbook v2 |": ["jotbook"],
+               "| x | notes (→ jotbook 2.1) |": ["jotbook"],
+               "Not for notes; use notetaker.": ["notetaker"],
+               "Not for notes; use notes2go.": ["notes2go"],
+               "Not for notes; that is notetaker's job.": ["notetaker"],
+               "Not for notes; notetaker handles those.": ["notetaker"]}
+        for text, names in red.items():
+            with self.subTest(red=text):
+                self.assertEqual(_unlisted_pointers(text), names)
+        for text in ("Not for merges; use caution.", "Not for merges. Use discretion.", "Not for notes; use care.",
+                     "Not for merges; use rebase.", "Not for merges; use judgement.", "Not for merges; use sparingly."):
+            with self.subTest(green=text):
+                self.assertEqual(_unlisted_pointers(text), [])
+
+    def test_pointer_check_reads_nothing_in_realistic_prose(self):
+        # Break it catches: ordinary English read as a skill name. At 1ce715f, 43 of the
+        # fifth review's 50 realistic paragraphs went red (third-party, dry-run,
+        # follow-up, a '| Tool | Version |' table, 'use yours instead').
+        for text in REALISTIC_PROSE:
+            with self.subTest(text=text):
+                self.assertEqual(_unlisted_pointers(text), [])
+
+    def test_english_forms_are_known_without_being_listed(self):
+        # Break it catches: an English compound read as a name because nobody listed it.
+        # None of these is in _ENGLISH_COMPOUNDS or in the realistic prose, and each sits
+        # alone in an arrow group, the slot that reads any hyphenated word, so each is
+        # known by its form: a prefix, particle or number first, a particle last, a
+        # linker inside, a participle or a modifier head last, a one-letter or digit part.
+        held_out = ("re-run", "co-author", "sub-agent", "self-hosted", "non-blocking", "pre-release",
+                    "post-merge", "multi-agent", "cross-reference", "sign-up", "log-in", "add-ons", "hand-offs",
+                    "two-pass", "one-shot", "peer-to-peer", "up-to-date", "hand-written", "hard-coded",
+                    "long-lived", "thread-safe", "context-aware", "platform-agnostic", "user-friendly",
+                    "server-side", "compile-time", "sha-256", "x-ray", "record-keeping", "mobile-first")
+        for word in held_out:
+            with self.subTest(word=word):
+                self.assertNotIn(word, _ENGLISH_COMPOUNDS)
+                self.assertFalse(any(word in text for text in REALISTIC_PROSE))
+                self.assertEqual(_unlisted_pointers(f"| x | y (→ {word}) |"), [])
+
+    def test_english_compounds_list_holds_only_what_no_form_marks(self):
+        # Keeps _ENGLISH_COMPOUNDS the one place for English's unmarked compounds: an
+        # entry a form already marks is dead weight, and an entry that is an allowed
+        # name or kind would hide a pointer.
+        for word in sorted(_ENGLISH_COMPOUNDS):
+            with self.subTest(word=word):
+                self.assertRegex(word, r"^[a-z]+(?:-[a-z]+)+$")
+                self.assertFalse(_english_by_form(word), "a form already marks it")
+                self.assertNotIn(word, POINTER_NAMES | POINTER_KINDS)
+
+    def test_english_compounds_list_holds_only_what_the_corpus_needs(self):
+        # Keeps _ENGLISH_COMPOUNDS from growing on a guess: every entry must be needed by
+        # a paragraph of REALISTIC_PROSE, which reads a name without it. An entry is
+        # added with the realistic paragraph that needs it, and removing one is caught.
+        global _ENGLISH_COMPOUNDS
+        full = _ENGLISH_COMPOUNDS
+        try:
+            for word in sorted(full):
+                with self.subTest(word=word):
+                    _ENGLISH_COMPOUNDS = full - {word}
+                    self.assertTrue(any(word in _unlisted_pointers(p) for p in REALISTIC_PROSE),
+                                    "no realistic paragraph needs it")
+        finally:
+            _ENGLISH_COMPOUNDS = full
 
     def test_devcom5_template_names_the_protocol_version(self):
         # Break it catches: the pulse_version in DevCom5's PULSE template drifting

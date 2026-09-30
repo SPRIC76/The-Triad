@@ -6,6 +6,7 @@ Updated: 2026-09-30 04:05 ET — sprawl found across folders, copy numbers, wron
 Updated: 2026-09-30 04:53 ET — a backup is compared as the kind of file it backs up (cfg.json.bak as JSON)
 Updated: 2026-09-30 05:37 ET — a backup of a binary is binary, every trailing backup marker is removed, --pulse warns when docs is a file and says a PULSE holding no object holds none
 Updated: 2026-09-30 06:09 ET — an --json file that cannot be written is answered with the reason and exit 1, and --pulse still records the scan
+Updated: 2026-09-30 07:28 ET — a junction or link inside the target is named and not followed; an empty --json name is answered; a signal stamped with Z is pruned on every Python
 
 Fingerprints every file under a folder, compares likely redundant pairs across
 the full similarity spectrum, and builds a consolidation proposal. It never
@@ -24,7 +25,10 @@ reported only as exact duplicates, or as the subset of a live file.
 
 CLI:
   python denser_engine.py TARGET [--details N] [--json OUT] [--pulse]
-  an --json OUT that cannot be written is answered with the reason, exit 1; --pulse still runs
+  an --json OUT that cannot be written, or an empty name, is answered with the reason,
+  exit 1; --pulse still runs
+  A junction or link inside TARGET is named and never followed, so a loop cannot
+  repeat files.
 """
 
 import argparse
@@ -46,6 +50,9 @@ BINARY_EXTENSIONS = {
 }
 
 
+IO_REPARSE_TAG_MOUNT_POINT = 0xA0000003  # a Windows junction
+
+
 def _say(text: str = "") -> None:
     """Print without dying on a console that cannot encode the emoji."""
     try:
@@ -53,6 +60,26 @@ def _say(text: str = "") -> None:
     except UnicodeEncodeError:
         enc = getattr(sys.stdout, "encoding", None) or "ascii"
         print(text.encode(enc, "replace").decode(enc))
+
+
+def _stamp(text: str) -> datetime:
+    """A signal's ISO-8601 timestamp as an aware time: a trailing Z is UTC on every Python
+    (fromisoformat reads it only from 3.11), and a stamp with no offset is local time."""
+    return datetime.fromisoformat(text[:-1] + "+00:00" if text[-1:] in ("Z", "z") else text).astimezone()
+
+
+def _is_link(path: Path) -> bool:
+    """True for a Windows junction or a symbolic link: a folder the walk must not enter,
+    since it may loop back into the target or reach outside it."""
+    if os.path.islink(path):
+        return True
+    isjunction = getattr(os.path, "isjunction", None)  # Python 3.12+
+    if isjunction is not None:
+        return isjunction(path)
+    try:  # below 3.12, a junction is a folder with the mount-point reparse tag
+        return getattr(os.lstat(path), "st_reparse_tag", 0) == IO_REPARSE_TAG_MOUNT_POINT
+    except OSError:
+        return False
 
 
 @dataclass
@@ -150,6 +177,7 @@ class DenserEngine:
         self.fingerprints: Dict[str, FileFingerprint] = {}
         self.comparisons: List[ComparisonResult] = []
         self.unreadable: List[str] = []
+        self.not_followed: List[str] = []
         self._compared: Set[frozenset] = set()
 
     # ── Phase 1: Discovery ──────────────────────────────────────────
@@ -157,6 +185,7 @@ class DenserEngine:
         """Scan the target folder and build the fingerprint inventory."""
         self.fingerprints.clear()
         self.unreadable.clear()
+        self.not_followed.clear()
         for file_path in self._walk_files(self.target_dir):
             rel = file_path.relative_to(self.target_dir).as_posix()
             fp = self._fingerprint(file_path, rel)
@@ -165,11 +194,17 @@ class DenserEngine:
         return self.fingerprints
 
     def _walk_files(self, root: Path):
-        """Walk the tree, skipping build artifacts, hidden entries and unreadable folders."""
+        """Walk the tree, skipping build artifacts, hidden entries and unreadable folders, and
+        not entering a junction or link, which is named in self.not_followed: one back into
+        the target would show every file again, level after level."""
         def onerror(err):
             self.unreadable.append(str(getattr(err, "filename", err)))
         for dirpath, dirnames, filenames in os.walk(root, onerror=onerror):
-            dirnames[:] = sorted(d for d in dirnames if not d.startswith(".") and d not in self.SKIP_DIRS)
+            here = Path(dirpath)
+            walked = [d for d in dirnames if not d.startswith(".") and d not in self.SKIP_DIRS]
+            links = [d for d in walked if _is_link(here / d)]  # a skipped one (node_modules) goes unnamed
+            self.not_followed += [(here / d).relative_to(root).as_posix() for d in sorted(links)]
+            dirnames[:] = sorted(d for d in walked if d not in links)
             for name in sorted(filenames):
                 if not name.startswith("."):
                     yield Path(dirpath) / name
@@ -510,7 +545,7 @@ def update_pulse(project_dir, fields: Dict, signals: Iterable[Tuple[str, str, st
     kept = []
     for s in pending:
         try:
-            old = s.get("consumed") and datetime.fromisoformat(s.get("timestamp", "")) < cutoff
+            old = s.get("consumed") and _stamp(s.get("timestamp", "")) < cutoff
         except (AttributeError, TypeError, ValueError):
             old = False  # an entry that is not an object is kept as it is
         if not old:
@@ -556,14 +591,18 @@ def main(argv: Optional[List[str]] = None) -> int:
         _say(f"   🗜️  zips beside their contents: {len(proposal.archive_sprawl)}")
     if engine.unreadable:
         _say(f"   ⚠️  unreadable: {len(engine.unreadable)}")
+    if engine.not_followed:
+        _say(f"   ⚠️  junctions or links not followed: {', '.join(engine.not_followed)}")
     order = {t: i for i, t in enumerate("SABCD")}
     for c in sorted(proposal.clusters, key=lambda c: (order[c["tier"]], -len(c["files"])))[:args.details]:
         _say(f"\n   [{c['tier']}] " + " | ".join(c["files"]))
         for comp in c["comparisons"][:5]:
             _say(f"       {comp['similarity']:.2f} {comp['relationship']}: {comp['delta']}")
     json_written = True
-    if args.json:
+    if args.json is not None:  # an empty name ("--json ''", an empty shell variable) is still given
         try:
+            if not args.json.strip():
+                raise OSError("no file name given")
             Path(args.json).write_text(json.dumps(proposal.to_dict(), indent=2, ensure_ascii=False), encoding="utf-8")
         except OSError as e:  # a missing folder, a folder in its place, no permission to write
             _say(f"\n   ✗ Proposal not written ({e})")

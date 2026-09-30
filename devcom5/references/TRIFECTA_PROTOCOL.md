@@ -1,5 +1,5 @@
 # Trifecta Protocol
-<!-- v3.0 | 2026-09-15 | Byte-identical in DevCom5, Synk182 and Solid8 (v2.0 2026-02-10) | Updated: 2026-09-30 04:50 ET — Safety 4 says what a missing or unparseable PULSE leads to -->
+<!-- v3.0 | 2026-09-15 | Byte-identical in DevCom5, Synk182 and Solid8 (v2.0 2026-02-10) | Updated: 2026-09-30 04:50 ET — Safety 4 says what a missing or unparseable PULSE leads to | Updated: 2026-09-30 07:28 ET — which signal timestamps are pruned: an offset or Z, and none read as local time -->
 
 Cross-skill integration through one file in the project: `docs/PULSE.json`.
 Each skill works alone; together they cover the whole cycle.
@@ -40,8 +40,10 @@ DevCom5 owns everything outside `cross_skill`. Inside it, each skill writes only
 | `pending_signals` | any | Advisory messages between skills |
 
 **Lifecycle:** Emit `consumed: false` → Consumer reads, acts, sets `consumed: true` →
-Prune consumed signals >7 days. Read the signal name from `signal`; writers before v3.0
-sometimes used `type`, so fall back to it. Signals are advisory, not commands.
+Prune consumed signals >7 days. A `timestamp` is ISO-8601 with an offset or `Z`
+(`2026-09-30T14:12:00Z`); one with neither is read as local time. Read the signal name
+from `signal`; writers before v3.0 sometimes used `type`, so fall back to it. Signals are
+advisory, not commands.
 
 ## Signal Catalog
 

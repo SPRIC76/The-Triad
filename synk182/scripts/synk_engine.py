@@ -6,6 +6,7 @@ Updated: 2026-09-30 04:05 ET — plan paths bounded to the copies, stale plan re
 Updated: 2026-09-30 04:53 ET — folder targets refused, rollback never deletes a folder, unknown --approve ids and one folder given twice are errors, an unparseable PULSE is reported, sync_completed and new_files_synced only when true
 Updated: 2026-09-30 05:37 ET — an approved item with no direction exits 1 with its reason, an item with no path is named by its id, --plan with --apply and --diff with another action are errors, --pulse warns when docs is a file and says a PULSE holding no object holds none
 Updated: 2026-09-30 06:09 ET — a --plan file that cannot be written is answered with the reason and exit 1, and --pulse still records the scan; the --approve new listing names an item with no path by its id
+Updated: 2026-09-30 07:28 ET — a junction or link inside either copy, a folder that cannot be listed and a file where ARCHIVE goes are named and not compared; apply refuses before any write when no backup can be made; a hand-edited plan (an id that is not a whole number, hashes that are not an object) is refused; an empty --plan, --apply or --diff name is answered; a signal stamped with Z is pruned on every Python
 
 Two copies: the USER copy (the one the user treats as authority) and the
 WORKING copy (a sandbox or upload, a mounted or cloud-synced folder, a git
@@ -29,7 +30,14 @@ CLI (read-only unless --apply):
         an id that names no plan item stops the run before anything is applied;
         an approved item with no direction is skipped with its reason, and exits 1
   --plan, --diff and --apply are separate runs; --diff takes no --pulse;
-        a --plan file that cannot be written is answered with the reason, exit 1
+        a --plan file that cannot be written, or an empty name given to --plan,
+        --apply or --diff, is answered with the reason, exit 1; a plan whose ids are
+        not whole numbers or whose hashes are not objects is refused before any write;
+        when no backup folder can be made (a file named ARCHIVE), nothing is written
+  Not compared, and named on the dashboard: a junction or link inside either copy
+        (never followed, so a loop cannot repeat paths), a folder that cannot be
+        listed (named as unreadable, never read as absent), and a file in the place
+        of the ARCHIVE folder
   --threshold 0.6   --pulse (write results to USER_DIR/docs/PULSE.json)
 """
 
@@ -52,6 +60,7 @@ LAYERS = ["existence", "hash", "size", "timestamp", "line_count", "content"]
 TIMESTAMP_TOLERANCE_S = 2.0
 DIRECTIONS = ("user_to_working", "working_to_user")
 PULSE_REL = "docs/PULSE.json"
+IO_REPARSE_TAG_MOUNT_POINT = 0xA0000003  # a Windows junction
 PULSE_UNTOUCHED = "  ⚠️ PULSE.json does not hold a JSON object; left untouched, so this run is not recorded there"
 
 
@@ -95,6 +104,31 @@ def _now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
+def _whole(value) -> bool:
+    """True for a plan id as --plan writes it: a whole number (1, or 1.0), not "1", [1] or true."""
+    return type(value) is int or (type(value) is float and value.is_integer())
+
+
+def _stamp(text: str) -> datetime:
+    """A signal's ISO-8601 timestamp as an aware time: a trailing Z is UTC on every Python
+    (fromisoformat reads it only from 3.11), and a stamp with no offset is local time."""
+    return datetime.fromisoformat(text[:-1] + "+00:00" if text[-1:] in ("Z", "z") else text).astimezone()
+
+
+def _is_link(path: Path) -> bool:
+    """True for a Windows junction or a symbolic link: a folder the scan must not enter,
+    since it may loop back into the copy or reach outside it."""
+    if os.path.islink(path):
+        return True
+    isjunction = getattr(os.path, "isjunction", None)  # Python 3.12+
+    if isjunction is not None:
+        return isjunction(path)
+    try:  # below 3.12, a junction is a folder with the mount-point reparse tag
+        return getattr(os.lstat(path), "st_reparse_tag", 0) == IO_REPARSE_TAG_MOUNT_POINT
+    except OSError:
+        return False
+
+
 class SynkEngine:
     """Bidirectional comparison and verified copying across the full similarity spectrum."""
 
@@ -107,19 +141,44 @@ class SynkEngine:
         self.archive_root = self.user_dir / "ARCHIVE"
         self.user_files: Dict[str, Dict] = {}
         self.working_files: Dict[str, Dict] = {}
+        self.not_compared: List[Dict] = []
         self.results: Optional[Dict] = None
 
     # ── Inventory ──────────────────────────────────────────────────────
-    def _scan_directory(self, root: Path, other_root: Path) -> Dict[str, Dict]:
+    def _scan_directory(self, root: Path, other_root: Path, side: str) -> Dict[str, Dict]:
+        """Fingerprint every file under root. A junction or link, a folder that cannot be
+        listed, and a file named ARCHIVE at the top (where Synk's backups go) are not read:
+        each is added to self.not_compared with its reason."""
         files: Dict[str, Dict] = {}
         if not root.is_dir():
             return files
-        for dirpath, dirnames, filenames in os.walk(root):
+
+        def skip(path, reason: str) -> None:
+            try:
+                rel = Path(path).relative_to(root).as_posix()
+            except ValueError:
+                rel = str(path)
+            self.not_compared.append({"side": side, "path": rel, "reason": reason})
+
+        def unlistable(err: OSError) -> None:
+            skip(err.filename or root, f"cannot be listed: {err.strerror or err}")
+
+        for dirpath, dirnames, filenames in os.walk(root, onerror=unlistable):
             here = Path(dirpath)
-            dirnames[:] = sorted(d for d in dirnames
-                                 if d not in self.skip_dirs and (here / d).resolve() != other_root)
+            kept = []
+            for d in sorted(dirnames):
+                if d in self.skip_dirs:
+                    continue
+                if _is_link(here / d):  # a junction back into the copy loops; one elsewhere leaves it
+                    skip(here / d, "a junction or link; not followed")
+                elif (here / d).resolve() != other_root:
+                    kept.append(d)
+            dirnames[:] = kept
             for name in sorted(filenames):
                 p = here / name
+                if here == root and name == "ARCHIVE":
+                    skip(p, "a file where Synk's ARCHIVE folder goes")
+                    continue
                 try:
                     st = p.stat()
                 except OSError:
@@ -132,16 +191,27 @@ class SynkEngine:
 
     # ── Compare ────────────────────────────────────────────────────────
     def scan_and_compare(self, quiet: bool = False) -> Dict:
-        """Fingerprint both copies and classify every path. Read-only."""
-        self.user_files = self._scan_directory(self.user_dir, self.working_dir)
-        self.working_files = self._scan_directory(self.working_dir, self.user_dir)
+        """Fingerprint both copies and classify every path. Read-only.
+
+        A path under anything either copy did not read (self.not_compared) is left out of
+        the comparison in both, since what the unread side holds there is unknown."""
+        self.not_compared = []
+        self.user_files = self._scan_directory(self.user_dir, self.working_dir, "user")
+        self.working_files = self._scan_directory(self.working_dir, self.user_dir, "working")
+        unread = [n["path"] for n in self.not_compared]
+
+        def read_in_both(rel: str) -> bool:
+            return not any(u == "." or rel == u or rel.startswith(u + "/") for u in unread)
+
+        self.user_files = {r: f for r, f in self.user_files.items() if read_in_both(r)}
+        self.working_files = {r: f for r, f in self.working_files.items() if read_in_both(r)}
         counts = dict.fromkeys(("identical", "superset", "merge", "different", "user_only", "working_only"), 0)
         files = {}
         for rel in sorted(set(self.user_files) | set(self.working_files)):
             a = self._analyze_file_pair(rel, self.user_files.get(rel), self.working_files.get(rel))
             counts[a["status"]] += 1
             files[rel] = a
-        self.results = {"total": len(files), **counts, "files": files}
+        self.results = {"total": len(files), **counts, "files": files, "not_compared": list(self.not_compared)}
         if not quiet:
             self._dashboard()
         return self.results
@@ -201,6 +271,8 @@ class SynkEngine:
             if a["status"] != "identical":
                 sim = f"{a['similarity']:.0%}" if a["relationship"] not in ("missing", "binary") else a["relationship"]
                 _say(f"   {a['status']:<13} {sim:>8}  {rel}" + (f"  (newer: {a['newer']})" if a["newer"] else ""))
+        for n in r["not_compared"]:
+            _say(f"   ⚠️ not compared, in either copy: {n['side']} copy's {n['path']} ({n['reason']})")
 
     def diff(self, rel: str) -> str:
         u, w = self.user_dir / rel, self.working_dir / rel
@@ -264,6 +336,8 @@ class SynkEngine:
         if act.get("status") in ("user_only", "working_only") and dst.exists():
             return f"the {side} copy now has this file; re-plan"
         if "hashes" in act:  # plans written before v2.1 carry no hashes
+            if act["hashes"] is not None and not isinstance(act["hashes"], dict):  # a hand edit
+                return "its hashes are not an object, as --plan writes them; re-plan"
             planned = (act["hashes"] or {}).get(side)
             if (_hash(dst) if dst.is_file() else None) != planned:
                 return f"the {side} copy changed since the plan; re-plan"
@@ -277,6 +351,8 @@ class SynkEngine:
 
     # ── Backup ─────────────────────────────────────────────────────────
     def _new_archive_dir(self) -> Path:
+        if self.archive_root.exists() and not self.archive_root.is_dir():
+            raise NotADirectoryError(f"{self.archive_root} is a file, not a folder: move it aside, then apply again")
         stamp = datetime.now().strftime("%Y-%m-%dT%H%M%S")
         dest = self.archive_root / f"synk-{stamp}"
         i = 1
@@ -373,7 +449,13 @@ class SynkEngine:
                 todo.append(act)
         if not todo:
             return report
-        dest = self._new_archive_dir()
+        try:
+            dest = self._new_archive_dir()
+        except OSError as e:  # ARCHIVE is a file, or cannot be made: with no backup, nothing is written
+            for act in todo:
+                report["refused"].append({"path": act["path"], "reason": f"no backup can be made: {e}"})
+            _say(f"  ✗ Refused {len(todo)} item(s), nothing written: no backup can be made: {e}")
+            return report
         report["archive"] = str(dest)
         for side, direction in (("working", "user_to_working"), ("user", "working_to_user")):
             paths = [a["path"] for a in todo if a["direction"] == direction]
@@ -443,7 +525,7 @@ def update_pulse(project_dir, fields: Dict, signals: Iterable[Tuple[str, str, st
     kept = []
     for s in pending:
         try:
-            old = s.get("consumed") and datetime.fromisoformat(s.get("timestamp", "")) < cutoff
+            old = s.get("consumed") and _stamp(s.get("timestamp", "")) < cutoff
         except (AttributeError, TypeError, ValueError):
             old = False  # an entry that is not an object is kept as it is
         if not old:
@@ -481,14 +563,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--pulse", action="store_true", help="record results in USER_DIR/docs/PULSE.json")
     args = ap.parse_args(argv)
 
-    if args.approve.strip() and not args.apply:
+    # a flag given an empty value ("--plan ''", from an empty shell variable) is still given
+    plan_out, plan_in, diff_rel = (v is not None for v in (args.plan, args.apply, args.diff))
+    if args.approve.strip() and not plan_in:
         _say("✗ --approve works only with --apply PLAN_JSON; nothing was applied")
         return 1
-    if args.plan and args.apply:  # one of them would be dropped without a word
+    if plan_out and plan_in:  # one of them would be dropped without a word
         _say("✗ --plan and --apply are separate runs: write the plan, review it, then apply it; nothing was done")
         return 1
-    beside_diff = [flag for flag, on in (("--plan", args.plan), ("--apply", args.apply), ("--pulse", args.pulse)) if on]
-    if args.diff and beside_diff:
+    beside_diff = [flag for flag, on in (("--plan", plan_out), ("--apply", plan_in), ("--pulse", args.pulse)) if on]
+    if diff_rel and beside_diff:
         _say(f"✗ --diff shows one file and writes nothing: run it without {', '.join(beside_diff)}; nothing was done")
         return 1
     for label, folder in (("user copy", args.user_dir), ("working copy", args.working_dir)):
@@ -499,22 +583,28 @@ def main(argv: Optional[List[str]] = None) -> int:
         _say(f"✗ The user copy and the working copy are the same folder: {args.user_dir}")
         return 1
     synk = SynkEngine(args.user_dir, args.working_dir, threshold=args.threshold)
-    if args.diff:
+    for flag, value in (("--diff", args.diff), ("--apply", args.apply)):
+        if value is not None and not value.strip():
+            _say(f"✗ {flag} was given an empty name; nothing was done")
+            return 1
+    if diff_rel:
         if not any((root / args.diff).is_file() for root in (synk.user_dir, synk.working_dir)):
             _say(f"✗ {args.diff} exists in neither copy")
             return 1
         _say(synk.diff(args.diff))
         return 0
-    results = synk.scan_and_compare(quiet=bool(args.apply))
+    results = synk.scan_and_compare(quiet=plan_in)
     drift = results["total"] != results["identical"]
-    if args.apply:
+    if plan_in:
         try:
             plan = json.loads(Path(args.apply).read_text(encoding="utf-8"))
         except (OSError, ValueError) as e:
             _say(f"✗ Cannot read the plan {args.apply}: {e}")
             return 1
-        if not isinstance(plan, list) or not all(isinstance(a, dict) and "id" in a for a in plan):
-            _say(f"✗ {args.apply} is not a plan: expected a list of items with ids, as --plan writes it")
+        # a whole-number id, as --plan writes it (1.0 is the same id): "1" was applied by
+        # --approve new but not by --approve 1, and [1] could not be looked up at all
+        if not isinstance(plan, list) or not all(isinstance(a, dict) and _whole(a.get("id")) for a in plan):
+            _say(f"✗ {args.apply} is not a plan: expected a list of items, each with a whole-number id, as --plan writes it")
             return 1
         if args.approve.strip().lower() == "new":
             ids = synk.new_ids(plan)
@@ -554,8 +644,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 1 if report["rolled_back"] or report["refused"] or report["skipped"] else 0
     plan = synk.plan()
     plan_written = True
-    if args.plan:
+    if plan_out:
         try:
+            if not args.plan.strip():
+                raise OSError("no file name given")
             Path(args.plan).write_text(json.dumps(plan, indent=2, ensure_ascii=False), encoding="utf-8")
         except OSError as e:  # a missing folder, a folder in its place, no permission to write
             _say(f"✗ Plan not written ({e})")
