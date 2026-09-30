@@ -1,4 +1,4 @@
-"""Version 1.3 | Deps: stdlib; Skillshaper's validate_skill.py when present | Parent: The Triad (DevCom5 1.3, Synk182 3.3, Solid8 1.3) | Path: tests | Filename: test_triad.py | Created: 2026-09-30 01:12 ET - kept tests for the pack: the two engines, the three skill folders, and the pack's own ratchets. | Updated: 2026-09-30 04:05 ET - v1.3: red-first cases from the v1.2 review (bounded plan paths, stale plans, wrong-typed PULSE fields, CLI messages, copy numbers, sprawl across folders, pointer and version ratchets); comments read for a public reader; both engines checked for personal paths. | Updated: 2026-09-30 04:53 ET - red-first cases from the second v1.3 review: folder targets and rollback, backups read as the file they back up, unknown --approve ids, one folder given twice, an unparseable PULSE reported, signals only when true, protocol safety rule 4; the pointer check is an allow-list, so the test names no private skill. | Updated: 2026-09-30 05:37 ET - red-first cases from the third v1.3 review: --pulse when docs is a file, a PULSE holding no object, an approved item with no direction, an item with only an id named by its id, --plan beside --apply and --diff beside another action, a backup of a binary, backups with two markers; the pointer check reads what a pointer names, in any of its forms, rather than its first word. | Updated: 2026-09-30 06:09 ET - red-first cases from the fourth v1.3 review: a --plan or --json file that cannot be written, an item with no path in the --approve new listing; the pointer check reads the "X tool/helper/plugin" form, verbs beyond "use", possessives and subjects, loose names, Task/Need/Tool tables, wrapped clauses and a bare arrow's name, leaves slot words, counts and the pack's flows alone, and every allowed kind must be read from the pack. | Updated: 2026-09-30 07:28 ET - red-first cases from the fifth v1.3 review: the pointer check tells a skill name from English's own hyphenated words by form, with a short ratcheted list of lexicalized compounds, keeps a realistic-prose corpus green and reads a one-word name after a verb again; an empty --plan, --apply, --diff or --json name, a file named ARCHIVE, hand-edited plan ids and hashes, junctions and links, a folder that cannot be listed, and signals stamped with Z. | Updated: 2026-09-30 13:43 ET - v1.2: the pointer check's grammar reader is retired for two exact mechanisms, a vocabulary ratchet over every name-shaped token in the pack's Markdown and a private-name deny-list read from TRIAD_PRIVATE_NAMES, both driven on every form the reviews listed and on the a9f9b3a export; red-first cases from the sixth v1.3 review: a file that cannot be read (held by another process), a backup that fails midway, an exception in verification and a rollback that fails, ARCHIVE in any case and case-only name pairs where the file system folds case, line-ending-only differences and --diff outside the copies, links to files, PULSE stamps in every shape on every Python, plan paths in skipped folders, flag values and hand edits, same-size groups read once, --details below zero, a PULSE with a BOM. | Updated: 2026-09-30 14:32 ET - red-first cases from the seventh v1.3 review: the vocabulary ratchet reads CamelCase, dotted names, bare, dot-folder and Windows paths, hex letters with one digit, v8, x_y, a date in a name and any script (its 28 forms kept in REVIEW7_FORMS), the deny-list folds accents and every separator including none and a soft wrap, the stale check reads with the tokenizer and kinds of work have their own list; skipped folders folded where the file system folds case, mixed endings and a BOM named, Windows-reserved plan paths, links in a plan or --diff, already applied for two-sided items, any exception in the backup phase, a file unreadable at compare time, the capped --json proposal, the exact ISO-8601 grammar and LF output.
+"""Version 1.3 | Deps: stdlib; Skillshaper's validate_skill.py when present | Parent: The Triad (DevCom5 1.3, Synk182 3.3, Solid8 1.3) | Path: tests | Filename: test_triad.py | Created: 2026-09-30 01:12 ET - kept tests for the pack: the two engines, the three skill folders, and the pack's own ratchets. | Updated: 2026-09-30 04:05 ET - v1.3: red-first cases from the v1.2 review (bounded plan paths, stale plans, wrong-typed PULSE fields, CLI messages, copy numbers, sprawl across folders, pointer and version ratchets); comments read for a public reader; both engines checked for personal paths. | Updated: 2026-09-30 04:53 ET - red-first cases from the second v1.3 review: folder targets and rollback, backups read as the file they back up, unknown --approve ids, one folder given twice, an unparseable PULSE reported, signals only when true, protocol safety rule 4; the pointer check is an allow-list, so the test names no private skill. | Updated: 2026-09-30 05:37 ET - red-first cases from the third v1.3 review: --pulse when docs is a file, a PULSE holding no object, an approved item with no direction, an item with only an id named by its id, --plan beside --apply and --diff beside another action, a backup of a binary, backups with two markers; the pointer check reads what a pointer names, in any of its forms, rather than its first word. | Updated: 2026-09-30 06:09 ET - red-first cases from the fourth v1.3 review: a --plan or --json file that cannot be written, an item with no path in the --approve new listing; the pointer check reads the "X tool/helper/plugin" form, verbs beyond "use", possessives and subjects, loose names, Task/Need/Tool tables, wrapped clauses and a bare arrow's name, leaves slot words, counts and the pack's flows alone, and every allowed kind must be read from the pack. | Updated: 2026-09-30 07:28 ET - red-first cases from the fifth v1.3 review: the pointer check tells a skill name from English's own hyphenated words by form, with a short ratcheted list of lexicalized compounds, keeps a realistic-prose corpus green and reads a one-word name after a verb again; an empty --plan, --apply, --diff or --json name, a file named ARCHIVE, hand-edited plan ids and hashes, junctions and links, a folder that cannot be listed, and signals stamped with Z. | Updated: 2026-09-30 13:43 ET - v1.2: the pointer check's grammar reader is retired for two exact mechanisms, a vocabulary ratchet over every name-shaped token in the pack's Markdown and a private-name deny-list read from TRIAD_PRIVATE_NAMES, both driven on every form the reviews listed and on the a9f9b3a export; red-first cases from the sixth v1.3 review: a file that cannot be read (held by another process), a backup that fails midway, an exception in verification and a rollback that fails, ARCHIVE in any case and case-only name pairs where the file system folds case, line-ending-only differences and --diff outside the copies, links to files, PULSE stamps in every shape on every Python, plan paths in skipped folders, flag values and hand edits, same-size groups read once, --details below zero, a PULSE with a BOM. | Updated: 2026-09-30 14:32 ET - red-first cases from the seventh v1.3 review: the vocabulary ratchet reads CamelCase, dotted names, bare, dot-folder and Windows paths, hex letters with one digit, v8, x_y, a date in a name and any script (its 28 forms kept in REVIEW7_FORMS), the deny-list folds accents and every separator including none and a soft wrap, the stale check reads with the tokenizer and kinds of work have their own list; skipped folders folded where the file system folds case, mixed endings and a BOM named, Windows-reserved plan paths, links in a plan or --diff, already applied for two-sided items, any exception in the backup phase, a file unreadable at compare time, the capped --json proposal, the exact ISO-8601 grammar and LF output. | Updated: 2026-09-30 15:25 ET - red-first cases from the eighth v1.3 review: device names asked of the OS on either Windows version and --approve new exiting 1 on what it leaves out, a capitalized Build/ and a nested archive/ compared and synced, already applied at exit 0 with no sync_conflict, a BOM beside other differences, Solid8's comparisons past five on the terminal; the stale check is one function (_stale_entries) the goes-red case runs; the deny-list joins a name's parts across any whitespace and up to three other non-alphanumeric characters (em dash, minus, soft hyphen, zero-width space, middle dot, slash included), since the seventh's "every separator" missed those six; American spelling.
 
 Run from the pack folder:  python -B -m unittest discover -s tests -v
 
@@ -270,7 +270,7 @@ VOCABULARY_WORDS = frozenset("""
     three-tier trade-offs triad_private_names trifecta trifecta_protocol ultra-careful under-the-hood
     universal_template user-facing user-specified user-unique user_copy user_experience user_to_working
     utf-8 working-unique working_copy working_to_user wrong-typed yyyy-mm-dd
-    denserengine synkengine macos pulse.corrupt env.example v1 v2 byte-order near-duplicate lpt1
+    denserengine synkengine macos pulse.corrupt env.example v1 v2 byte-order near-duplicate build-output build dist
     comparisons_cap comparisons_left_out comparisons_total""".split())
 REMEDY = ("English or the pack's own word? add it to VOCABULARY_WORDS; a kind of work named in "
           "place of a skill? VOCABULARY_KINDS; a skill? it must be in the pack or public (VOCABULARY_NAMES)")
@@ -352,6 +352,18 @@ def _produced_tokens(root):
     return {tok for p in _markdown_files(root) for _, tok in _name_shaped_tokens(p.read_text(encoding="utf-8"))}
 
 
+def _stale_entries(root):
+    """Every vocabulary entry the pack's Markdown no longer produces, sorted: a list entry
+    not produced as a name-shaped token by the tokenizer (an English word such as in, path
+    or project goes stale when the one path example that produced it goes, however often
+    the plain word stays), and a plain public name not found whole-word."""
+    produced = _produced_tokens(root)
+    text = "\n".join(p.read_text(encoding="utf-8") for p in _markdown_files(root)).lower()
+    stale = [e for e in VOCABULARY_NAMES | VOCABULARY_KINDS | VOCABULARY_WORDS if e not in produced]
+    stale += [e for e in PLAIN_NAMES if not re.search(r"(?<![a-z0-9_])" + re.escape(e) + r"(?![a-z0-9_])", text)]
+    return sorted(stale)
+
+
 def _unknown_tokens(root):
     """'file:line: token' for every name-shaped token in the pack's Markdown that is in
     no vocabulary list, once per file and token."""
@@ -384,16 +396,19 @@ def _fold_text(text):
     return "".join(c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c)).lower()
 
 
-_JOIN = r"[-_‐‑‒–\s]*"
+# between a name's letters: any whitespace (a line break and its indent included) and at
+# most three other characters that are not letters or digits (a hyphen, an underscore, any
+# dash, a minus sign, a middle dot, a slash, a dot, and a soft hyphen or zero-width space,
+# which are invisible when rendered), or none
+_JOIN = r"\s*(?:[^a-z0-9\s]\s*){0,3}"
 
 
 def _private_name_pattern(name):
-    """Whole-word on folded text: the name's letters and digits in order, with any run of
-    hyphens, underscores, dashes or whitespace (a line break included) between them, or
-    none: private-notes matches privatenotes, private--notes, private notes and a soft
-    wrap; jotbook matches jot-book and jot book. A letter or digit joined to either end
-    (jotbooks, jotbook2) is another word."""
-    chars = [re.escape(c) for c in _fold_text(name) if c not in "-_‐‑‒–" and not c.isspace()]
+    """Whole-word on folded text: the name's letters and digits in order, with _JOIN between
+    them: private-notes matches privatenotes, private--notes, private notes, private—notes,
+    private−notes, private·notes, private/notes and a soft wrap; jotbook matches jot-book
+    and jot book. A letter or digit joined to either end (jotbooks, jotbook2) is another word."""
+    chars = [re.escape(c) for c in _fold_text(name) if c.isalnum()]
     return re.compile(r"(?<![a-z0-9])" + _JOIN.join(chars) + r"(?![a-z0-9])")
 
 
@@ -1042,6 +1057,20 @@ class Solid8Engine(unittest.TestCase):
         self.assertEqual(len(cluster["files"]), 15)
         self.assertEqual((len(cluster["comparisons"]), cluster["comparisons_total"], cluster["comparisons_left_out"]), (50, 105, 55))
         self.assertRegex(out.getvalue(), r"Proposal written: .*\(comparisons capped at 50 per cluster; 55 left out\)")
+        # and on the terminal without --json (the eighth v1.3 review, L9): --details shows a
+        # cluster's first five comparisons and says how many more it holds
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([self.tmp, "--details", "1"])
+        self.assertEqual(rc, 0)
+        self.assertIn("… and 100 more comparison(s) in this cluster", out.getvalue())
+        self.assertIn("write the proposal as JSON, comparisons capped at 50 per cluster", self._help())
+
+    def _help(self):
+        out = io.StringIO()
+        with redirect_stdout(out), self.assertRaises(SystemExit):
+            self.mod.main(["--help"])
+        return " ".join(out.getvalue().split())
 
 
 # ─────────────────────────────────────────────────────────────── synk182
@@ -1562,7 +1591,8 @@ class Synk182Engine(unittest.TestCase):
         # Break it catches: the --approve new listing naming a hand-edited item by
         # its path, so "path": null printed "Not in 'new': None (no path)" and ""
         # printed an empty name, while apply() names the same item "item 9" (found
-        # by the fourth v1.3 review). The rest of 'new' is still applied.
+        # by the fourth v1.3 review). The rest of 'new' is still applied; since the eighth
+        # review, an item 'new' leaves out is counted as refused and the run exits 1.
         _write(self.u, "new.txt", "brand new\n")
         with redirect_stdout(io.StringIO()):
             s = self.synk()
@@ -1574,7 +1604,8 @@ class Synk182Engine(unittest.TestCase):
         out = io.StringIO()
         with redirect_stdout(out):
             rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "new"])
-        self.assertEqual(rc, 0)
+        self.assertEqual(rc, 1)
+        self.assertIn("Synced: 1 | Rolled back: 0 | Refused: 2 ", out.getvalue())
         self.assertIn("Not in 'new': item 9 (no path)", out.getvalue())
         self.assertIn("Not in 'new': item 10 (no path)", out.getvalue())
         self.assertTrue((self.w / "new.txt").is_file())
@@ -2150,8 +2181,10 @@ class Synk182Engine(unittest.TestCase):
         out = io.StringIO()
         with redirect_stdout(out):
             rc = self.mod.main([str(self.u), str(self.w), "--apply", str(bom), "--approve", "new"])
-        self.assertEqual(rc, 1)
-        self.assertRegex(out.getvalue(), r"Refused a\.txt: already applied")
+        self.assertEqual(rc, 0, "already applied is nothing to do, not a failure (the eighth v1.3 review, L4)")
+        self.assertRegex(out.getvalue(), r"Already applied a\.txt: the working copy holds this content")
+        self.assertIn("Refused: 0 ", out.getvalue())
+        self.assertIn("Already applied: 2", out.getvalue())
         self.assertNotIn("re-plan", out.getvalue())
 
 
@@ -2226,6 +2259,51 @@ class Synk182Engine(unittest.TestCase):
                 self.assertIn(words, out.getvalue())
                 self.assertNotIn("encoding", out.getvalue())
 
+    def test_a_bom_beside_another_difference_is_named_too(self):
+        # Break it catches (the eighth v1.3 review, L5): a BOM that comes with another
+        # difference was never named, since endings were compared first and the line diff
+        # reads past it: BOM + CRLF against LF said "differ only in line endings"; a BOM
+        # alone against an empty file said "line_endings (user none, no final newline)";
+        # a BOM with one more line was a superset whose diff showed no trace of it. So
+        # applying either way copied or stripped the BOM without a word. The BOM is asked
+        # of every text pair that differs and named on the dashboard, in the plan and by
+        # --diff, whatever else differs; a BOM alone against an empty file is "bom".
+        _write(self.u, "both.txt", data=b"\xef\xbb\xbfone\r\ntwo\r\n")
+        _write(self.w, "both.txt", data=b"one\ntwo\n")
+        _write(self.u, "bomonly.txt", data=b"\xef\xbb\xbf")
+        _write(self.w, "bomonly.txt", data=b"")
+        _write(self.u, "bomedit.txt", data=b"\xef\xbb\xbfone\ntwo\nthree\n")
+        _write(self.w, "bomedit.txt", data=b"one\ntwo\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            s = self.synk()
+            r = s.scan_and_compare()
+            plan = {a["path"]: a for a in s.plan()}
+        dash = out.getvalue()
+        f = r["files"]
+        self.assertEqual((f["both.txt"]["status"], f["both.txt"]["endings"]), ("line_endings", {"user": "CRLF", "working": "LF"}))
+        self.assertEqual((f["bomonly.txt"]["status"], f["bomonly.txt"]["relationship"]), ("different", "bom"))
+        self.assertEqual((f["bomedit.txt"]["status"], f["bomedit.txt"]["relationship"]), ("superset", "a_superset"))
+        for rel in ("both.txt", "bomonly.txt", "bomedit.txt"):
+            with self.subTest(file=rel):
+                self.assertEqual(f[rel]["bom"], {"user": True, "working": False})
+                self.assertRegex(dash, re.escape(rel) + r".*byte-order mark.*user copy carries a UTF-8 BOM")
+                self.assertRegex(plan[rel]["note"], r"byte-order mark.*user copy carries a UTF-8 BOM")
+        self.assertNotIn("no final newline", dash)
+        self.assertNotIn("only in line endings", plan["both.txt"]["note"])
+        for rel, words in (("both.txt", "line endings differ: user CRLF, working LF; they differ in a byte-order mark too: "
+                                        "the user copy carries a UTF-8 BOM, the working copy none"),
+                           ("bomonly.txt", "differ only in a byte-order mark: the user copy carries a UTF-8 BOM"),
+                           ("bomedit.txt", "note: the user copy carries a UTF-8 BOM, the working copy none")):
+            with self.subTest(diff=rel):
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    rc = self.mod.main([str(self.u), str(self.w), "--diff", rel])
+                self.assertEqual(rc, 0)
+                self.assertIn(words, out.getvalue())
+                self.assertNotIn("only in line endings", out.getvalue())
+        self.assertIn("-three", out.getvalue())
+
     def test_plan_paths_in_forms_windows_reserves_are_refused_before_any_write(self):
         # Break it catches: a plan path "a.txt." applied as work/a.txt (Windows strips a
         # trailing dot, so the plan named one file and the copy wrote another, and the six
@@ -2234,10 +2312,28 @@ class Synk182Engine(unittest.TestCase):
         # (the seventh v1.3 review, S9). On Windows a path whose segment ends in a dot,
         # holds ':' or another character Windows forbids, or names a device, is refused
         # before any backup or write, like a trailing separator is.
+        # And the eighth review's high: a fixed device list refused con.txt, nul.txt, prn.md,
+        # com1.log, aux/ and Con/, which Windows 11 writes as ordinary files, and --approve
+        # new left nul.txt out at rc 0. Which names are devices is asked of the running OS,
+        # here as in the engine (os.path.abspath maps a device to \\.\), so this case holds
+        # on Windows 10, which maps con.txt, and on 11, which maps only a bare NUL; every
+        # candidate the OS calls ordinary syncs, and --approve new names each item it leaves
+        # out and exits 1.
         if os.name != "nt":
             self.skipTest("these forms are ordinary names outside Windows")
         _write(self.u, "a.txt", "a\n")
-        paths = ["a.txt.", "sub./a.txt", "a.txt:evil", "CON", "nul.txt", "sub/LPT1", "a<b.txt", "a|b.txt", "a?.txt"]
+
+        def device(rel):
+            parts = rel.split("/")
+            return any(os.path.abspath(os.path.join(str(self.u), *parts[:i])).startswith(("\\\\.\\", "\\\\?\\"))
+                       for i in range(1, len(parts) + 1))
+        candidates = ["NUL", "nul", "sub/NUL", "NUL/x.txt", "sub/CON", "con.txt", "nul.txt", "prn.md", "com1.log",
+                      "sub/LPT1", "aux/helpers.c", "Con/readme.md", "CONIN$", "COM\u00b9"]
+        devices = [p for p in candidates if device(p)]
+        ordinary = [p for p in candidates if not device(p)]
+        self.assertIn("NUL", devices, "a bare NUL is a device on every Windows")
+        forms = ["a.txt.", "sub./a.txt", "a.txt:evil", "a<b.txt", "a|b.txt", "a?.txt"]
+        paths = forms + devices
         plan = [{"id": i + 1, "path": p, "status": "user_only", "direction": "user_to_working"} for i, p in enumerate(paths)]
         plan_file = _write(self.tmp, "plan.json", json.dumps(plan))
         out = io.StringIO()
@@ -2251,6 +2347,33 @@ class Synk182Engine(unittest.TestCase):
         self.assertEqual(sorted(p.name for p in self.w.iterdir()), [])
         self.assertFalse((self.u / "ARCHIVE").exists())
         self.assertIsNone(self.synk().refusal("a.txt"))
+        for p in ordinary:
+            _write(self.u, p, f"notes in {p}\n")
+        if ordinary:  # one two-sided, for --diff
+            _write(self.w, ordinary[0], f"work notes in {ordinary[0]}\n")
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            plan = s.plan()
+        if ordinary:
+            out = io.StringIO()
+            with redirect_stdout(out):
+                rc = self.mod.main([str(self.u), str(self.w), "--diff", ordinary[0]])
+            self.assertEqual(rc, 0, out.getvalue())
+            self.assertIn(f"+work notes in {ordinary[0]}", out.getvalue())
+        plan += [{"id": 100 + i, "path": p, "status": "user_only", "direction": "user_to_working"} for i, p in enumerate(devices)]
+        plan_file = _write(self.tmp, "plan-new.json", json.dumps(plan))
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "new"])
+        self.assertEqual(rc, 1, "an item --approve new leaves out is not a clean run")
+        for p in devices:
+            with self.subTest(left_out=p):
+                self.assertRegex(out.getvalue(), re.escape(f"Not in 'new': {p} (") + r".*Windows reserves")
+        self.assertIn(f"Refused: {len(devices)} ", out.getvalue())
+        for p in ordinary[1:]:
+            with self.subTest(ordinary=p):
+                self.assertEqual((self.w / p).read_text(encoding="utf-8"), f"notes in {p}\n")
 
     def test_a_plan_item_naming_a_link_is_refused_and_diff_refuses_it_too(self):
         # Break it catches: the scan names a link to a file and does not follow it, but a
@@ -2301,7 +2424,8 @@ class Synk182Engine(unittest.TestCase):
         # though the destination held exactly the source (the seventh v1.3 review, S11);
         # only a one-sided item said "already applied". Whatever the status, a destination
         # that already holds the source's content is reported as already applied, as
-        # SKILL.md says.
+        # SKILL.md says. And since the eighth review (L4): at exit 0, with no sync_conflict
+        # sent to DevCom5 and no sync_completed either, since nothing was written.
         _write(self.u, "a.txt", "user\n")
         _write(self.w, "a.txt", "work\n")
         with redirect_stdout(io.StringIO()):
@@ -2317,10 +2441,11 @@ class Synk182Engine(unittest.TestCase):
         out = io.StringIO()
         with redirect_stdout(out):
             rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "1", "--pulse"])
-        self.assertEqual(rc, 1)
-        self.assertRegex(out.getvalue(), r"Refused a\.txt: already applied: the working copy holds this content")
+        self.assertEqual(rc, 0)
+        self.assertRegex(out.getvalue(), r"Already applied a\.txt: the working copy holds this content")
+        self.assertNotIn("Refused a.txt", out.getvalue())
         self.assertNotIn("re-plan", out.getvalue())
-        self.assertIn("already applied", self._pulse_signals().get("sync_conflict", ""))
+        self.assertEqual(self._pulse_signals(), {}, "no sync_conflict and no sync_completed")
         _write(self.w, "a.txt", "edited since\n")
         out = io.StringIO()
         with redirect_stdout(out):
@@ -2361,24 +2486,73 @@ class Synk182Engine(unittest.TestCase):
         self.assertEqual((self.w / "a.txt").read_text(encoding="utf-8"), "work a\n")
         self.assertIn("nothing written", out.getvalue())
 
-    def test_a_nested_archive_folder_is_named_as_a_folder_not_as_synks_own(self):
+    def test_a_nested_archive_folder_is_content_and_syncs_like_any_folder(self):
         # Break it catches: sub/archive/ at any depth named "Synk's ARCHIVE folder, spelled
-        # archive" (the seventh v1.3 review, S4), though Synk's folder lives only at the
-        # user copy's root; the skip itself stays, as ARCHIVE is skipped at every depth.
-        if not _folds_case(self.u):
-            self.skipTest("a case-sensitive file system: archive/ is a project folder there")
-        _write(self.u, "archive/root.txt", "x\n")
-        _write(self.u, "sub/archive/deep.txt", "x\n")
+        # archive" (the seventh v1.3 review, S4), and then, named as a folder, still never
+        # compared or synced on Windows or macOS, even by id ("path lies in a folder the scan
+        # skips"), while the same tree synced on Linux (the eighth review, M3), against
+        # SKILL.md's "a project's other archive-named folders are content and stay in sync".
+        # Only the root's archive/ is Synk's own; a nested one is compared, planned and
+        # synced like any folder on every file system.
+        _write(self.u, "sub/archive/deep.txt", "user\n")
+        _write(self.w, "sub/archive/deep.txt", "work\n")
+        _write(self.u, "docs/Archive/2019/z.md", "old notes\n")
         _write(self.u, "a.txt", "a\n")
+        folds = _folds_case(self.u)
+        if folds:
+            _write(self.u, "archive/root.txt", "x\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            s = self.synk()
+            r = s.scan_and_compare()
+            plan = {a["path"]: a for a in s.plan()}
+        self.assertEqual(sorted(r["files"]), ["a.txt", "docs/Archive/2019/z.md", "sub/archive/deep.txt"])
+        self.assertEqual(r["files"]["sub/archive/deep.txt"]["status"], "different")
+        reasons = {n["path"]: n["reason"] for n in r["not_compared"]}
+        self.assertEqual(sorted(reasons), ["archive"] if folds else [])
+        if folds:
+            self.assertIn("Synk's ARCHIVE folder", reasons["archive"])
+        self.assertIsNone(s.refusal("docs/Archive/2019/z.md"))
+        self.assertIsNone(s.refusal("sub/archive/deep.txt"))
+        item = plan["sub/archive/deep.txt"]
+        item["direction"] = "user_to_working"
+        with redirect_stdout(io.StringIO()):
+            report = s.apply(list(plan.values()), [item["id"], plan["docs/Archive/2019/z.md"]["id"]])
+        self.assertEqual(sorted(a["path"] for a in report["applied"]), ["docs/Archive/2019/z.md", "sub/archive/deep.txt"])
+        self.assertEqual((self.w / "sub/archive/deep.txt").read_text(encoding="utf-8"), "user\n")
+
+    def test_a_build_output_name_in_another_case_is_compared_like_any_folder(self):
+        # Break it catches: where the file system folds case, every skip name was folded, so
+        # a project's Build/, Dist/ and src/Bin/ vanished from the dashboard without a word
+        # (an all-zero line that reads as "in sync") and could not be synced even by id,
+        # where 11f65be listed them (the eighth v1.3 review, M2). Only .git, .hg, .svn,
+        # node_modules and the root's ARCHIVE fold; a build-output name is skipped only as
+        # spelled, so Build/ is compared and synced like any folder, and build/ still skipped.
+        _write(self.u, "Build/notes.md", "user\n")
+        _write(self.w, "Build/notes.md", "work\n")
+        _write(self.u, "Dist/x.txt", "x\n")
+        _write(self.u, "src/Bin/tool.sh", "echo\n")
+        _write(self.u, "docs/Build/guide.md", "guide\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            s = self.synk()
+            r = s.scan_and_compare()
+            plan = s.plan()
+        self.assertEqual(sorted(r["files"]), ["Build/notes.md", "Dist/x.txt", "docs/Build/guide.md", "src/Bin/tool.sh"])
+        self.assertEqual((r["different"], r["user_only"]), (1, 3))
+        self.assertRegex(out.getvalue(), r"different .*Build/notes\.md")
+        self.assertIsNone(s.refusal("docs/Build/guide.md"))
+        with redirect_stdout(io.StringIO()):
+            report = s.apply(plan, s.new_ids(plan))
+        self.assertEqual(sorted(a["path"] for a in report["applied"]), ["Dist/x.txt", "docs/Build/guide.md", "src/Bin/tool.sh"])
+        if _folds_case(self.u):  # the safety names still fold
+            self.assertRegex(s.refusal(".GIT/hooks/pre-commit") or "", "skips")
+            self.assertRegex(s.refusal("Node_Modules/x.js") or "", "skips")
+        shutil.rmtree(self.u / "Build")
+        _write(self.u, "build/out.o", "o\n")
         with redirect_stdout(io.StringIO()):
             r = self.synk().scan_and_compare()
-        reasons = {n["path"]: n["reason"] for n in r["not_compared"]}
-        self.assertEqual(sorted(reasons), ["archive", "sub/archive"])
-        self.assertIn("Synk's ARCHIVE folder", reasons["archive"])
-        self.assertTrue(reasons["sub/archive"].startswith("a folder named archive"), reasons["sub/archive"])
-        self.assertNotIn("Synk's ARCHIVE folder", reasons["sub/archive"])
-        self.assertIn("skipped as ARCHIVE is", reasons["sub/archive"])
-        self.assertEqual(sorted(r["files"]), ["a.txt"])
+        self.assertNotIn("build/out.o", r["files"], "build/ as spelled is still skipped")
 
     def test_every_file_the_engines_write_is_lf_on_every_platform(self):
         # Break it catches: on Windows every JSON and Markdown file the pack writes (the
@@ -2484,7 +2658,7 @@ class SkillFolders(unittest.TestCase):
         # Break it catches: the protocol's safety rule still saying "Corrupt/missing
         # PULSE → graceful fallback to standalone" while both engines create
         # docs/PULSE.json holding only cross_skill when none exists (found by the
-        # second v1.3 review). The engines' behaviour is driven here, so the rule
+        # second v1.3 review). The engines' behavior is driven here, so the rule
         # and the code move together.
         for rel in ("synk182/scripts/synk_engine.py", "solid8/scripts/denser_engine.py"):
             mod = _load(Path(rel).stem, rel)
@@ -2576,17 +2750,15 @@ class SkillFolders(unittest.TestCase):
         # one path example) goes stale the moment the text that produced it goes (the
         # seventh v1.3 review measured the whole-word check passing 106 plain uses of
         # "in"); the two plain public names are checked whole-word, since they have no
-        # shape. The lists are lowercase and disjoint.
-        produced = _produced_tokens(ROOT)
-        text = "\n".join(p.read_text(encoding="utf-8") for p in _markdown_files(ROOT)).lower()
+        # shape. The lists are lowercase and disjoint. The check is _stale_entries, which the
+        # goes-red case below runs on a modified copy, so a change to it is driven there.
         for entry in sorted(VOCABULARY_NAMES | VOCABULARY_KINDS | VOCABULARY_WORDS):
             with self.subTest(entry=entry):
                 self.assertEqual(entry, entry.lower().strip())
-                self.assertIn(entry, produced, "stale: the pack's text no longer produces it; remove it")
         for entry in PLAIN_NAMES:
             with self.subTest(entry=entry):
                 self.assertIsNone(_name_shaped(entry), "it has a shape: list it in VOCABULARY_NAMES")
-                self.assertRegex(text, r"(?<![a-z0-9_])" + re.escape(entry) + r"(?![a-z0-9_])", "stale; remove it")
+        self.assertEqual(_stale_entries(ROOT), [], "stale: the pack's text no longer produces these; remove them")
         lists = (VOCABULARY_NAMES, VOCABULARY_KINDS, VOCABULARY_WORDS, frozenset(PLAIN_NAMES))
         self.assertEqual(sum(map(len, lists)), len(frozenset().union(*lists)), "an entry sits in two lists")
 
@@ -2661,17 +2833,19 @@ class SkillFolders(unittest.TestCase):
         # cannot grow on a guess. Driven on a copy of the pack with one word's every use
         # removed, through the same tokenizer the ratchet test reads with; and an entry
         # that is also an English word (in, path, project: the one path example produces
-        # them) goes stale with that example, though the plain words stay everywhere.
+        # them) goes stale with that example, though the plain words stay everywhere. The
+        # ratchet's own check (_stale_entries) is what runs here, so a weaker check, such as
+        # plain-word presence again, goes red here (the eighth v1.3 review, L6: the earlier
+        # version recomputed the tokens itself and stayed green with the check reverted).
         tmp, _, _ = self._pack_copy()
+        self.assertEqual(_stale_entries(tmp), [], "the copy is green before the edit")
         for p in _markdown_files(tmp):
             p.write_text(p.read_text(encoding="utf-8").replace("re-plan", "plan again").replace("path/in/project.md", "sub/file.md"),
                          encoding="utf-8", newline="")
-        produced = _produced_tokens(tmp)
         text = "\n".join(p.read_text(encoding="utf-8") for p in _markdown_files(tmp)).lower()
+        self.assertEqual(_stale_entries(tmp), ["in", "path", "project", "re-plan"])
         for word in ("re-plan", "in", "path", "project"):
-            with self.subTest(entry=word):
-                self.assertIn(word, VOCABULARY_WORDS)
-                self.assertNotIn(word, produced)
+            self.assertIn(word, VOCABULARY_WORDS)
         self.assertRegex(text, r"(?<![a-z0-9_])in(?![a-z0-9_])", "the plain word stays; only the token is gone")
 
     def test_review7_pointer_forms_are_caught_by_the_mechanism_the_table_names(self):
@@ -2699,13 +2873,18 @@ class SkillFolders(unittest.TestCase):
 
     def test_deny_list_reads_one_name_per_line_and_finds_every_spelling(self):
         # Mechanism 2 driven on a made-up list: comments and blank lines are skipped; a
-        # listed name is found whole-word in any file (Markdown, a script, the licence),
-        # in any case, with accents folded, and with its parts joined by a hyphen, an
-        # underscore, a dash, one or more spaces, a tab, a no-break space, nothing, or a
-        # line break (a soft wrap, reported at its first line); a one-word name split by a
-        # hyphen or a space is found too. A longer word that contains it, a name with a
-        # digit added, .git and __pycache__ are not hits (the seventh v1.3 review's 27
-        # spellings: privatenotes, private--notes, jot-book and the soft wrap were misses).
+        # listed name is found whole-word in any file (Markdown, a script, the license),
+        # in any case, with accents folded, and with its parts joined by nothing, by any
+        # whitespace (spaces, a tab, a no-break space, a line break and its indent: a soft
+        # wrap, reported at its first line), or by up to three other characters that are
+        # not letters or digits (a hyphen, an underscore, any dash, a minus sign, a middle
+        # dot, a slash, a soft hyphen, a zero-width space). A one-word
+        # name split the same ways is found too. A longer word that contains it, a name with
+        # a digit added, .git and __pycache__ are not hits. The seventh v1.3 review's 27
+        # spellings had privatenotes, private--notes, jot-book and the soft wrap as misses;
+        # the eighth's six (em dash, minus, soft hyphen, zero-width space, middle dot,
+        # slash) are lines 13 to 18 below. Separators past three, such as a sentence
+        # between the parts, are not read as a join.
         tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, tmp, True)
         deny = _write(tmp, "names.txt", "# made-up names\n\njotbook\n  Private-Notes\n")
@@ -2718,14 +2897,19 @@ class SkillFolders(unittest.TestCase):
         _write(pack, ".git/config", "jotbook\n")
         _write(pack, "__pycache__/x.pyc", "jotbook\n")
         _write(pack, "docs/MORE.md", "privatenotes\nprivate--notes\nprivate  notes\nprivate\tnotes\nprivate notes\n"
-                                     "prívate-notes\njot-book\njot book\nsee private-\nnotes there\nnothing here\nprivate -notes\n")
+                                     "prívate-notes\njot-book\njot book\nsee private-\nnotes there\nnothing here\nprivate -notes\n"
+                                     "private—notes\nprivate−notes\nprivate­notes\nprivate​notes\n"
+                                     "private·notes\nprivate/notes\njot­book\nsee private-\n    notes, indented\n")
         self.assertEqual(_private_name_hits(pack, ["jotbook", "private-notes"]),
                          ["LICENSE:1: private-notes", "README.md:1: jotbook", "README.md:4: private-notes",
                           "README.md:5: private-notes", "README.md:6: private-notes",
                           "docs/MORE.md:1: private-notes", "docs/MORE.md:2: private-notes", "docs/MORE.md:3: private-notes",
                           "docs/MORE.md:4: private-notes", "docs/MORE.md:5: private-notes", "docs/MORE.md:6: private-notes",
                           "docs/MORE.md:7: jotbook", "docs/MORE.md:8: jotbook", "docs/MORE.md:9: private-notes",
-                          "docs/MORE.md:12: private-notes", "synk182/scripts/x.py:1: jotbook"])
+                          "docs/MORE.md:12: private-notes", "docs/MORE.md:13: private-notes", "docs/MORE.md:14: private-notes",
+                          "docs/MORE.md:15: private-notes", "docs/MORE.md:16: private-notes", "docs/MORE.md:17: private-notes",
+                          "docs/MORE.md:18: private-notes", "docs/MORE.md:19: jotbook", "docs/MORE.md:20: private-notes",
+                          "synk182/scripts/x.py:1: jotbook"])
     def test_private_names_from_the_deny_list_never_appear_in_the_pack(self):
         """Mechanism 2 on the pack itself: TRIAD_PRIVATE_NAMES names a file outside the
         repository, one private name per line (# comments); any whole-word occurrence of a
@@ -2764,7 +2948,7 @@ class SkillFolders(unittest.TestCase):
 
 # ─────────────────────────────────────────────────────────────── the pack
 class Pack(unittest.TestCase):
-    """The pack's own face: its name, its audience and its licence."""
+    """The pack's own face: its name, its audience and its license."""
 
     def readme(self):
         return (ROOT / "README.md").read_text(encoding="utf-8")

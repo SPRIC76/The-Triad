@@ -9,6 +9,7 @@ Updated: 2026-09-30 06:09 ET — an --json file that cannot be written is answer
 Updated: 2026-09-30 07:28 ET — a junction or link inside the target is named and not followed; an empty --json name is answered; a signal stamped with Z is pruned on every Python
 Updated: 2026-09-30 13:43 ET — a file that cannot be read is named with the reason and left out, never fingerprinted as empty; a link to a file is named and not followed, a dangling one as such; each candidate file is read once, so a same-size group of hundreds compares in seconds; PULSE stamps are read by one grammar on every Python, and a consumed signal whose stamp cannot be read is pruned with a note; a PULSE saved with a BOM is read; --details below zero is an error
 Updated: 2026-09-30 14:32 ET — a file that becomes unreadable between the scan and the compare is named with the reason; the --json proposal caps each cluster's comparisons at 50 and says how many were left out; the timestamp grammar is read exactly as the protocol pins it; everything written is LF
+Updated: 2026-09-30 15:25 ET — --details says how many comparisons a cluster holds past its first five; --json's help names the cap of 50 per cluster
 
 Fingerprints every file under a folder, compares likely redundant pairs across
 the full similarity spectrum, and builds a consolidation proposal. It never
@@ -638,7 +639,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="Solid8 Denser engine: consolidation analysis (read-only).")
     ap.add_argument("target", nargs="?", default=".")
     ap.add_argument("--details", type=int, default=0, metavar="N", help="show the top N clusters (0 or more)")
-    ap.add_argument("--json", metavar="OUT", help="write the full proposal as JSON")
+    ap.add_argument("--json", metavar="OUT", help="write the proposal as JSON, comparisons capped at 50 per cluster")
     ap.add_argument("--pulse", action="store_true", help="record the scan in TARGET/docs/PULSE.json")
     args = ap.parse_args(argv)
 
@@ -677,6 +678,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         _say(f"\n   [{c['tier']}] " + " | ".join(c["files"]))
         for comp in c["comparisons"][:5]:
             _say(f"       {comp['similarity']:.2f} {comp['relationship']}: {comp['delta']}")
+        if c["comparisons_total"] > 5:  # the terminal shows five; the rest are counted, never dropped silently
+            _say(f"       … and {c['comparisons_total'] - 5} more comparison(s) in this cluster")
     json_written = True
     if args.json is not None:  # an empty name ("--json ''", an empty shell variable) is still given
         try:

@@ -1,19 +1,19 @@
 ---
 name: devcom5
 description: >-
-  DevCom5 (Logger): project documentation and developer communications. Reads
-  a project to report its state, trajectory and gaps; writes and maintains a
+  DevCom5 (Logger): project documentation and developer communications.
+  Reports a project's state, trajectory and gaps; writes and maintains a
   five-document docs/ system (INDEX, ARCHITECTURE, USER_EXPERIENCE, PLANNING,
   HISTORY); and co-authors proposals, specs, decision docs, status reports, 3P
-  updates, newsletters, FAQs and incident reports. Use whenever the user says
+  updates, newsletters, FAQs and incident reports. Use when the user says
   devcom5, dc5 or logger; asks to document a project, update a README,
   changelog or docs, catch them up, or say where things stand or where we
-  were; is onboarding to an unfamiliar codebase, resuming after a break, or
-  preparing a handover; or asks for any structured document or internal
-  update - and proactively when a project's docs are missing or stale.
-  Standalone; works with Synk182 and Solid8 through docs/PULSE.json;
-  supersedes doc-coauthoring and internal-comms. Not for proving a change
-  works (verafox), the user's own knowledge outside a project (a
+  were; is onboarding to a codebase, resuming after a break, or preparing a
+  handover; or asks for one of those about a project - and proactively when a
+  project's docs are missing or stale. Pairs with Synk182 and Solid8 via
+  docs/PULSE.json; supersedes doc-coauthoring and internal-comms. Not for
+  office documents like a contract or slide deck (a document skill), proving a
+  change works (verafox), the user's knowledge outside a project (a
   knowledge-search skill), or rendering diagrams (a diagramming skill).
 license: Freeware
 metadata:
@@ -73,7 +73,7 @@ Tracked via `docs/PULSE.json`. Read first, write last, every interaction.
 }
 ```
 
-DevCom5 owns every key outside `cross_skill`. Inside it, write only DevCom5's signals and keep every key you do not recognise ([references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md)).
+DevCom5 owns every key outside `cross_skill`. Inside it, write only DevCom5's signals and keep every key you do not recognize ([references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md)).
 
 ### On Entry
 1. Read PULSE.json (missing = first encounter → Deep; unparseable → report it, rebuild the baseline, keep the broken file as `PULSE.corrupt.json`)
@@ -208,7 +208,7 @@ structured workflows.
 ### When Scribe Activates
 - "write/draft a proposal/spec/decision doc/RFC/PRD"
 - "write a 3P update / status report / newsletter / FAQ"
-- "help me write [any structured document]"
+- "help me write [a structured document about the project or its team]"
 - Any substantial writing task beyond simple doc maintenance
 
 ### Scribe Workflow: Co-Authored Documents
@@ -290,6 +290,6 @@ Full protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md
 
 ---
 
-*⁰ Formerly: project-docs (unnamed, pre-v1) → Logger v1.0 → DevCom5 v1.0 → DevCom5 v1.1 (2026-09-15: triggers moved into the description, Trifecta Protocol v3.0, existing doc systems respected) → DevCom5 v1.2 (2026-09-30: part of The Triad; the description says what it is not for beside its siblings; freeware) → DevCom5 v1.3 (2026-09-30: the not-for pointers name kinds of work rather than private skills, with verafox reachable in The Proof Pack; the PULSE template's pulse_version follows the protocol; the reference headers carry the skill's version).
+*⁰ Formerly: project-docs (unnamed, pre-v1) → Logger v1.0 → DevCom5 v1.0 → DevCom5 v1.1 (2026-09-15: triggers moved into the description, Trifecta Protocol v3.0, existing doc systems respected) → DevCom5 v1.2 (2026-09-30: part of The Triad; the description says what it is not for beside its siblings; freeware) → DevCom5 v1.3 (2026-09-30: the not-for pointers name kinds of work rather than private skills, with verafox reachable in The Proof Pack; the PULSE template's pulse_version follows the protocol; the reference headers carry the skill's version; updated 2026-09-30 15:25 ET: the description is bounded to documents about a project, and general office documents are named as not its domain).
 The "5" honors the five-document system at its core. DevCom5 supersedes
 the Anthropic example skills `doc-coauthoring` and `internal-comms`.*
