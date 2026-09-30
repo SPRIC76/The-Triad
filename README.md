@@ -1,6 +1,7 @@
-# Skills Trifecta — DevCom5, Synk182, Solid8
+<!-- Version 2.0 | Deps: none | Parent: The Triad (skills-trifecta README at 19a8722) | Path: . | Filename: README.md | Updated: 2026-09-30 01:15 ET — renamed The Triad; an agent skill pack for any host; freeware; versions named | Updated: 2026-09-30 01:37 ET — the address is SPRIC76/The-Triad; the MK1 Made footer -->
+# The Triad — DevCom5, Synk182, Solid8
 
-Three [Cursor](https://cursor.com) / Claude **agent skills** that keep projects **understood**, **in sync**, and **lean** — coordinated via `docs/PULSE.json`.
+An **agent skill pack**: three skills that keep projects **understood**, **in sync**, and **lean** — coordinated via `docs/PULSE.json`. Each skill is a folder in the Agent Skills format (`SKILL.md`, with `references/` and `scripts/` beside it), so it works in any agent host that reads one. Known until commit 19a8722 as *Skills Trifecta*.
 
 | Skill | Alias | Role | Core question |
 |-------|-------|------|----------------|
@@ -8,23 +9,31 @@ Three [Cursor](https://cursor.com) / Claude **agent skills** that keep projects 
 | **Synk182** | Symphonous Strategist | Agreement between two copies | Are the copies in agreement? |
 | **Solid8** | Denser / Shrinksmith | Consolidation | What can be unified without losing meaning? |
 
+**Versions:** DevCom5 1.2 · Synk182 3.2 · Solid8 1.2 · Trifecta Protocol 3.0.
+
 Full cross-skill protocol: [docs/TRIFECTA.md](docs/TRIFECTA.md)
 
 ## Install via skills.sh CLI
 
 ```bash
-npx skills add SPRIC76/skills-trifecta
+npx skills add SPRIC76/The-Triad
 ```
 
 **Badge snippet:**
 
 ```markdown
-[![skills.sh](https://skills.sh/b/SPRIC76/skills-trifecta)](https://skills.sh/SPRIC76/skills-trifecta)
+[![skills.sh](https://skills.sh/b/SPRIC76/The-Triad)](https://skills.sh/SPRIC76/The-Triad)
 ```
 
-## Install (Cursor)
+## Install by hand (any agent host)
 
-Copy each skill folder to **personal** skills (all projects) or **project** skills (repo-only):
+Copy `devcom5/`, `synk182/` and `solid8/` into the folder your agent reads skills from. Each folder stands alone; the three coordinate only through the project's own `docs/PULSE.json`.
+
+**Requirements:** Python 3.10+ optional, for `synk182/scripts/synk_engine.py` and `solid8/scripts/denser_engine.py` (standard library only).
+
+### Cursor
+
+**Personal** skills (all projects) or **project** skills (repo-only):
 
 ```text
 # Personal (~/.cursor/skills/)
@@ -35,13 +44,9 @@ solid8/
 # Project (.cursor/skills/<name>/)
 ```
 
-**Requirements:** Python 3.10+ optional, for `synk182/scripts/synk_engine.py` and `solid8/scripts/denser_engine.py` (standard library only).
-
-## Install (Claude)
-
 ### claude.ai and Claude Desktop
 
-1. Package each skill folder as `<name>.skill` — a zip archive with `<name>/SKILL.md` at its root. [SC2](https://github.com/SPRIC76/sc2)'s `package_dual.py` validates and packages in one step.
+1. Package each skill folder as `<name>.skill` — a zip archive with `<name>/SKILL.md` at its root. [Skillshaper (sc2)](https://github.com/SPRIC76/Skillshaper)'s `package_dual.py` validates and packages in one step.
 2. Upload each `.skill` in your skill settings, or drag it into Claude Desktop.
 3. Confirm the three skills appear in your skills.
 
@@ -49,19 +54,20 @@ solid8/
 
 Copy `devcom5/`, `synk182/` and `solid8/` into `~/.claude/skills/` (all projects) or `.claude/skills/` (one project).
 
-## IDE and agent compatibility
+## Host compatibility
 
-These skills are markdown instruction packs (`SKILL.md` + optional `references/` + optional `scripts/`), so they can work in most agent-capable environments:
+These skills are markdown instruction packs (`SKILL.md` + optional `references/` + optional `scripts/`), so they work wherever an agent reads skill folders:
 
-| Environment | Works? | How to use |
-|-------------|--------|------------|
+| Host | Works? | How to use |
+|------|--------|------------|
+| Any agent that reads Agent Skills folders | Yes | Copy each skill folder into its skills folder |
 | Cursor | Yes | Copy folders into `~/.cursor/skills/` or `.cursor/skills/` |
 | claude.ai / Claude Desktop | Yes | Upload or drag in a `.skill` package per skill |
 | Claude Code | Yes | Copy folders into `~/.claude/skills/` or `.claude/skills/` |
-| Other IDEs with skill/plugin support | Usually | Import/copy each skill folder according to that IDE's skill format |
+| Other IDEs and agents with skill or plugin support | Usually | Import or copy each skill folder according to that host's skill format |
 | Plain IDE with no agent skill system | Limited | Use docs/scripts manually; auto-trigger behavior will not apply |
 
-For non-Cursor, non-Claude IDEs, the critical requirement is support for instruction-based agent skills. If unsupported, you can still reuse the workflow docs and Python scripts manually.
+For any other host, the one requirement is support for instruction-based agent skills. Without it, you can still reuse the workflow docs and Python scripts by hand.
 
 ## Recommended workflows
 
@@ -94,7 +100,9 @@ These skills **guide an AI agent** — they do not auto-run destructive actions.
 - Maintains a project's existing documentation system instead of creating a parallel one
 - Status: `📡 DevCom5: [staleness] | Depth: … | Docs: [n/5]`
 
-**Triggers:** `devcom5`, `dc5`, `logger`, documentation, project status, catch-up, proposals, 3P updates, newsletters, and more (see the description in `devcom5/SKILL.md`).
+**Triggers:** `devcom5`, `dc5`, `logger`, documentation, project status, catch-up, README and changelog updates, proposals, 3P updates, newsletters, and more (see the description in `devcom5/SKILL.md`).
+
+**Not DevCom5:** proving a change works or grading its evidence, a person's own knowledge base outside a project, rendering diagrams — other skills do those (verafox, knowledge-query, archify).
 
 **References:** `devcom5/references/` — audit protocol, universal template, comms formats.
 
@@ -111,7 +119,7 @@ These skills **guide an AI agent** — they do not auto-run destructive actions.
 - Backs up every file before overwriting (`[project]/ARCHIVE/synk-[timestamp]/`, with manifest and rollback notes), applies only approved items, and rolls back any copy that fails verification
 - Status: `🔄` for scans, rigor shifts, completion
 
-**Not Synk:** Single-file edits, in-directory moves, redundancy consolidation (→ Solid8), git branch merges (→ git).
+**Not Synk:** Single-file edits, in-directory moves, redundancy consolidation (→ Solid8), git branch merges (→ git), repo and worktree rules (→ mk-repo-rules), what a version can do rather than what its files hold (→ verafox).
 
 **Script:**
 
@@ -131,10 +139,12 @@ python synk182/scripts/synk_engine.py USER_COPY WORKING_COPY --apply plan.json -
 
 **Highlights:**
 - Tier S–D similarity pipeline; three laws (no delete without approval, lossless merge, archive first)
-- Finds version (`_v2`), copy (`- Copy`, `(2)`) and backup (`.bak`, `.old`) sprawl; compares Markdown by section, JSON by structure, binaries by hash; treats archive and POTIMP folders as intentional
+- Finds version (`_v2`), copy (`- Copy`, `(2)`) and backup (`.bak`, `.old`) sprawl; compares Markdown by section, JSON by structure, binaries by hash; treats archive and POTIMP folders as intentional, and never proposes a merge inside one
 - **Solid8** = solid + ∞ rotated — tames endless project entropy
 - Formerly Denser v1.0
 - Status: `⚗️`
+
+**Not Solid8:** two copies of a project (→ Synk182), absorbing an outside tool as your own (→ verafox Mutate), memory notes (→ consolidate-memory).
 
 **Script:** `python solid8/scripts/denser_engine.py <target_dir> [--details N] [--json proposal.json]` (read-only analysis; archives before any change).
 
@@ -147,8 +157,15 @@ devcom5/     SKILL.md + references/
 synk182/     SKILL.md + references/ + scripts/
 solid8/      SKILL.md + references/ + scripts/
 docs/        TRIFECTA.md
+tests/       test_triad.py — kept tests for the engines, the skill folders and this pack (never shipped inside a skill)
 ```
+
+Run the tests from this folder: `python -B -m unittest discover -s tests -v`
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Copyright (c) 2025 SPRIC76.
+Freeware — see [LICENSE](LICENSE). Copyright (c) 2026 MK1 Enterprise. Free to download and use; please link to this repository rather than rehosting it. Versions up to commit 19a8722 were released under MIT and keep it.
+
+---
+
+The Triad · [Freeware](LICENSE) · [MK1 Made](https://mk1made.us)

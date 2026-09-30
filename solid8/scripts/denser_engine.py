@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Denser Engine v1.1 — Consolidation Analysis
-2026-09-15 | For: solid8 skill v1.1 (v1.0 2026-02-10)
+Denser Engine v1.2 — Consolidation Analysis
+2026-09-30 | For: solid8 skill v1.2 (v1.1 2026-09-15, v1.0 2026-02-10)
 
 Fingerprints every file under a folder, compares likely redundant pairs across
 the full similarity spectrum, and builds a consolidation proposal. It never
@@ -282,10 +282,11 @@ class DenserEngine:
             tier, delta = "-", ""
 
         # Archives and POTIMP are intentional: only an exact copy, or a protected
-        # file that a live file fully contains, is worth reporting.
+        # file that a LIVE file fully contains, is worth reporting. Two protected
+        # files, one inside the other, stay where they are (v1.2).
         if tier != "-" and (fp_a.protected or fp_b.protected):
-            subset_protected = (relationship == "a_superset" and fp_b.protected) or \
-                               (relationship == "b_superset" and fp_a.protected)
+            subset_protected = (relationship == "a_superset" and fp_b.protected and not fp_a.protected) or \
+                               (relationship == "b_superset" and fp_a.protected and not fp_b.protected)
             if not subset_protected:
                 return ComparisonResult(rel_a, rel_b, "-", similarity, relationship, "protected folder")
         return ComparisonResult(rel_a, rel_b, tier, similarity, relationship, delta)
