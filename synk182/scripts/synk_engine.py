@@ -12,6 +12,7 @@ Updated: 2026-09-30 14:32 ET — a skipped folder in any spelling the file syste
 Updated: 2026-09-30 15:25 ET — device names are asked of the running OS (os.path.abspath), never listed, so con.txt, aux/ and COM1 sync on Windows 11 and NUL is refused on every Windows; --approve new counts each item it refuses and exits 1; only .git, .hg, .svn, node_modules and the root's ARCHIVE fold case, so Build/ and a nested archive/ are compared and synced; an item already applied is reported as such at exit 0, with no sync_conflict; a byte-order mark is named beside any other difference; link answers are asked once per prefix, the destination hashed once and each refusal computed once
 Updated: 2026-09-30 15:58 ET — no link or refusal answer outlives the public call that asked it, and each destination's folders are asked again, uncached, just before its write, so a junction made after new_ids, refusal or the checks is refused; only \\\\.\\ is a device: roots given as \\\\?\\C:\\... are used in their plain form and sync; a folder skipped as spelled in one copy and spelled otherwise in the other is named, not offered; a nested ARCHIVE/ is content; --approve new with nothing left to approve exits 0; apply-report.json holds --approve new's refusals
 Updated: 2026-09-30 17:09 ET — nothing is written, backed up, restored or deleted through a junction or link: a user copy's ARCHIVE that is one is named on the dashboard and refuses the apply, the backup asks before each file it reads and writes, the source is asked beside the destination just before each write, a rollback asks again before it acts, and docs/PULSE.json is never written through one; an item under a folder the destination skips as spelled on disk is refused; a root given with the extended prefix whose plain form names another folder, or is too long, keeps its prefix; a device under a network-share root is refused before any backup; --approve new --pulse with nothing to approve records the run; the three rules are named as rules
+Updated: 2026-09-30 17:46 ET — just before each copy the destination is held against its backup (whether it existed, and its hash); one created, edited or removed since is refused, named, and left as it is
 
 Two copies: the USER copy (the one the user treats as authority) and the
 WORKING copy (a sandbox or upload, a mounted or cloud-synced folder, a git
@@ -374,6 +375,7 @@ class SynkEngine:
             if not plain or plain.startswith("\\\\"):
                 self._device_roots.append(os.path.abspath(os.sep))
         self._device_roots = list(dict.fromkeys(self._device_roots))
+        self._backed_up: Dict[str, Dict] = {}  # apply's manifest entries, by "side:path"
 
     def _folds_case(self, root: Path) -> bool:
         if root not in self._folds:
@@ -930,6 +932,7 @@ class SynkEngine:
                 entry["folder"] = True
             manifest["files"][f"{side}:{rel}"] = entry
         self._write_in_archive(manifest_path, json.dumps(manifest, indent=2, ensure_ascii=False))
+        self._backed_up = manifest["files"]  # what each destination held when its backup was taken
         lines = ["# Rollback", "", f"Archive created: {manifest['timestamp']}", "",
                  "To undo, copy each file under this folder's `user/` or `working/` back to the same",
                  "relative path in that copy, and delete any file listed as not having existed.", ""]
@@ -1046,6 +1049,7 @@ class SynkEngine:
                 report["refused"].append({"path": act["path"], "reason": f"no backup can be made: {e}"})
             _say(f"  ✗ Refused {len(todo)} item(s), nothing written: no backup can be made: {e}")
             return report
+        self._backed_up = {}
         try:
             for side, direction in (("working", "user_to_working"), ("user", "working_to_user")):
                 paths = [a["path"] for a in todo if a["direction"] == direction]
@@ -1074,7 +1078,15 @@ class SynkEngine:
                 report["refused"].append({"path": act["path"], "reason": why})
                 _say(f"  ✗ Refused {act['path']}: {why}")
                 continue
-            existed = dst.is_file()
+            # and the destination is held against its backup just before the copy: one created,
+            # edited or removed since the backup was taken would be lost with no backup
+            held, existed = self._backed_up.get(f"{side}:{act['path']}"), dst.is_file()
+            if held is None or existed != held.get("existed") or (existed and _hash(dst) != held.get("hash")):
+                why = (f"the {side} copy's {act['path']} changed after its backup was taken (created, edited or "
+                       f"removed); not overwritten: re-plan")
+                report["refused"].append({"path": act["path"], "reason": why})
+                _say(f"  ✗ Refused {act['path']}: {why}")
+                continue
             try:
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, dst)

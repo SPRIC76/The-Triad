@@ -1,13 +1,13 @@
-"""Version 1.3 | Deps: stdlib; Skillshaper's validate_skill.py when present | Parent: The Triad (DevCom5 1.3, Synk182 3.3, Solid8 1.3) | Path: tests | Filename: test_triad.py | Created: 2026-09-30 01:12 ET - kept tests for the pack: the two engines, the three skill folders, and the pack's own ratchets. | Updated: 2026-09-30 04:05 ET - v1.3: red-first cases from the v1.2 review (bounded plan paths, stale plans, wrong-typed PULSE fields, CLI messages, copy numbers, sprawl across folders, pointer and version ratchets); comments read for a public reader; both engines checked for personal paths. | Updated: 2026-09-30 04:53 ET - red-first cases from the second v1.3 review: folder targets and rollback, backups read as the file they back up, unknown --approve ids, one folder given twice, an unparseable PULSE reported, signals only when true, protocol safety rule 4; the pointer check is an allow-list, so the test names no private skill. | Updated: 2026-09-30 05:37 ET - red-first cases from the third v1.3 review: --pulse when docs is a file, a PULSE holding no object, an approved item with no direction, an item with only an id named by its id, --plan beside --apply and --diff beside another action, a backup of a binary, backups with two markers; the pointer check reads what a pointer names, in any of its forms, rather than its first word. | Updated: 2026-09-30 06:09 ET - red-first cases from the fourth v1.3 review: a --plan or --json file that cannot be written, an item with no path in the --approve new listing; the pointer check reads the "X tool/helper/plugin" form, verbs beyond "use", possessives and subjects, loose names, Task/Need/Tool tables, wrapped clauses and a bare arrow's name, leaves slot words, counts and the pack's flows alone, and every allowed kind must be read from the pack. | Updated: 2026-09-30 07:28 ET - red-first cases from the fifth v1.3 review: the pointer check tells a skill name from English's own hyphenated words by form, with a short ratcheted list of lexicalized compounds, keeps a realistic-prose corpus green and reads a one-word name after a verb again; an empty --plan, --apply, --diff or --json name, a file named ARCHIVE, hand-edited plan ids and hashes, junctions and links, a folder that cannot be listed, and signals stamped with Z. | Updated: 2026-09-30 13:43 ET - v1.2: the pointer check's grammar reader is retired for two exact mechanisms, a vocabulary ratchet over every name-shaped token in the pack's Markdown and a private-name deny-list read from TRIAD_PRIVATE_NAMES, both driven on every form the reviews listed and on the a9f9b3a export; red-first cases from the sixth v1.3 review: a file that cannot be read (held by another process), a backup that fails midway, an exception in verification and a rollback that fails, ARCHIVE in any case and case-only name pairs where the file system folds case, line-ending-only differences and --diff outside the copies, links to files, PULSE stamps in every shape on every Python, plan paths in skipped folders, flag values and hand edits, same-size groups read once, --details below zero, a PULSE with a BOM. | Updated: 2026-09-30 14:32 ET - red-first cases from the seventh v1.3 review: the vocabulary ratchet reads CamelCase, dotted names, bare, dot-folder and Windows paths, hex letters with one digit, v8, x_y, a date in a name and any script (its 28 forms kept in REVIEW7_FORMS), the deny-list folds accents and every separator including none and a soft wrap, the stale check reads with the tokenizer and kinds of work have their own list; skipped folders folded where the file system folds case, mixed endings and a BOM named, Windows-reserved plan paths, links in a plan or --diff, already applied for two-sided items, any exception in the backup phase, a file unreadable at compare time, the capped --json proposal, the exact ISO-8601 grammar and LF output. | Updated: 2026-09-30 15:25 ET - red-first cases from the eighth v1.3 review: device names asked of the OS on either Windows version and --approve new exiting 1 on what it leaves out, a capitalized Build/ and a nested archive/ compared and synced, already applied at exit 0 with no sync_conflict, a BOM beside other differences, Solid8's comparisons past five on the terminal; the stale check is one function (_stale_entries) the goes-red case runs; the deny-list joins a name's parts across any whitespace and up to three other non-alphanumeric characters (em dash, minus, soft hyphen, zero-width space, middle dot, slash included), since the seventh's "every separator" missed those six; American spelling. | Updated: 2026-09-30 15:59 ET - red-first cases from the ninth v1.3 review: link answers never outlive the call that asked them, and a junction made after the checks is refused before the write; roots given as \\\\?\\C:\\... sync and still refuse NUL, with the device test's expectation asked of the OS by opening and listing, not by the engine's own rule; a skipped folder spelled otherwise in the other copy is named, not offered; a nested ARCHIVE/ is content; --approve new with only the PULSE left out exits 0; apply-report.json holds --approve new's refusals; the deny-list joins only across dashes, underscores, invisible joiners, middle dots and slashes, never sentence punctuation. | Updated: 2026-09-30 17:09 ET - red-first cases from the tenth v1.3 review: nothing written, backed up, restored or deleted through a junction or link (an ARCHIVE or docs that is one, a backup, the source side, a rollback; Solid8's archive and PULSE too), an item under a folder the destination skips as spelled, a root whose plain form names another folder and a root past 260 characters, a device under a network-share root, --approve new --pulse with nothing to approve; the deny-list's joiners restored (invisible marks and separators, a horizontal bar, a hyphen bullet) with a plus sign and a backslash, sentence punctuation still out, every invisible character written as an escape; each skill stands alone for any agent: no SKILL.md names another skill outside its optional-integration section or names a host, no README heading names a host, and each skill works installed alone.
+"""Version 1.3 | Deps: stdlib; a skill validator's validate_skill.py when present | Parent: The Triad (DevCom5 1.3, Synk182 3.3, Solid8 1.3) | Path: tests | Filename: test_triad.py | Created: 2026-09-30 01:12 ET - kept tests for the pack: the two engines, the three skill folders, and the pack's own ratchets. | Updated: 2026-09-30 04:05 ET - v1.3: red-first cases from the v1.2 review (bounded plan paths, stale plans, wrong-typed PULSE fields, CLI messages, copy numbers, sprawl across folders, pointer and version ratchets); comments read for a public reader; both engines checked for personal paths. | Updated: 2026-09-30 04:53 ET - red-first cases from the second v1.3 review: folder targets and rollback, backups read as the file they back up, unknown --approve ids, one folder given twice, an unparseable PULSE reported, signals only when true, protocol safety rule 4; the pointer check is an allow-list, so the test names no private skill. | Updated: 2026-09-30 05:37 ET - red-first cases from the third v1.3 review: --pulse when docs is a file, a PULSE holding no object, an approved item with no direction, an item with only an id named by its id, --plan beside --apply and --diff beside another action, a backup of a binary, backups with two markers; the pointer check reads what a pointer names, in any of its forms, rather than its first word. | Updated: 2026-09-30 06:09 ET - red-first cases from the fourth v1.3 review: a --plan or --json file that cannot be written, an item with no path in the --approve new listing; the pointer check reads the "X tool/helper/plugin" form, verbs beyond "use", possessives and subjects, loose names, Task/Need/Tool tables, wrapped clauses and a bare arrow's name, leaves slot words, counts and the pack's flows alone, and every allowed kind must be read from the pack. | Updated: 2026-09-30 07:28 ET - red-first cases from the fifth v1.3 review: the pointer check tells a skill name from English's own hyphenated words by form, with a short ratcheted list of lexicalized compounds, keeps a realistic-prose corpus green and reads a one-word name after a verb again; an empty --plan, --apply, --diff or --json name, a file named ARCHIVE, hand-edited plan ids and hashes, junctions and links, a folder that cannot be listed, and signals stamped with Z. | Updated: 2026-09-30 13:43 ET - v1.2: the pointer check's grammar reader is retired for two exact mechanisms, a vocabulary ratchet over every name-shaped token in the pack's Markdown and a private-name deny-list read from TRIAD_PRIVATE_NAMES, both driven on every form the reviews listed and on the a9f9b3a export; red-first cases from the sixth v1.3 review: a file that cannot be read (held by another process), a backup that fails midway, an exception in verification and a rollback that fails, ARCHIVE in any case and case-only name pairs where the file system folds case, line-ending-only differences and --diff outside the copies, links to files, PULSE stamps in every shape on every Python, plan paths in skipped folders, flag values and hand edits, same-size groups read once, --details below zero, a PULSE with a BOM. | Updated: 2026-09-30 14:32 ET - red-first cases from the seventh v1.3 review: the vocabulary ratchet reads CamelCase, dotted names, bare, dot-folder and Windows paths, hex letters with one digit, v8, x_y, a date in a name and any script (its 28 forms kept in REVIEW7_FORMS), the deny-list folds accents and every separator including none and a soft wrap, the stale check reads with the tokenizer and kinds of work have their own list; skipped folders folded where the file system folds case, mixed endings and a BOM named, Windows-reserved plan paths, links in a plan or --diff, already applied for two-sided items, any exception in the backup phase, a file unreadable at compare time, the capped --json proposal, the exact ISO-8601 grammar and LF output. | Updated: 2026-09-30 15:25 ET - red-first cases from the eighth v1.3 review: device names asked of the OS on either Windows version and --approve new exiting 1 on what it leaves out, a capitalized Build/ and a nested archive/ compared and synced, already applied at exit 0 with no sync_conflict, a BOM beside other differences, Solid8's comparisons past five on the terminal; the stale check is one function (_stale_entries) the goes-red case runs; the deny-list joins a name's parts across any whitespace and up to three other non-alphanumeric characters (em dash, minus, soft hyphen, zero-width space, middle dot, slash included), since the seventh's "every separator" missed those six; American spelling. | Updated: 2026-09-30 15:59 ET - red-first cases from the ninth v1.3 review: link answers never outlive the call that asked them, and a junction made after the checks is refused before the write; roots given as \\\\?\\C:\\... sync and still refuse NUL, with the device test's expectation asked of the OS by opening and listing, not by the engine's own rule; a skipped folder spelled otherwise in the other copy is named, not offered; a nested ARCHIVE/ is content; --approve new with only the PULSE left out exits 0; apply-report.json holds --approve new's refusals; the deny-list joins only across dashes, underscores, invisible joiners, middle dots and slashes, never sentence punctuation. | Updated: 2026-09-30 17:09 ET - red-first cases from the tenth v1.3 review: nothing written, backed up, restored or deleted through a junction or link (an ARCHIVE or docs that is one, a backup, the source side, a rollback; Solid8's archive and PULSE too), an item under a folder the destination skips as spelled, a root whose plain form names another folder and a root past 260 characters, a device under a network-share root, --approve new --pulse with nothing to approve; the deny-list's joiners restored (invisible marks and separators, a horizontal bar, a hyphen bullet) with a plus sign and a backslash, sentence punctuation still out, every invisible character written as an escape; each skill stands alone for any agent: no SKILL.md names another skill outside its optional-integration section or names a host, no README heading names a host, and each skill works installed alone. | Updated: 2026-09-30 17:46 ET - red-first cases from the eleventh v1.3 review: Solid8's create_archive refuses a path outside the target, a device and a missing original before anything is made, and an archive folder outside the target that is, or lies under, a link; Synk182 refuses a destination created or edited after its backup was taken; the deny-list's joiners are decided by Unicode category (dashes, connectors, format characters, space separators) plus slash-, dot- and minus-like symbols and blanks, with the eleventh review's 24 misses as must-hit lines; the validator is named by its job.
 
 Run from the pack folder:  python -B -m unittest discover -s tests -v
 
 Root: the folder above tests/, or TRIAD_ROOT when set, so the same file runs
 against an older copy of the pack and shows which cases go red there.
-Validator: Skillshaper's, at SC2_VALIDATOR or ~/.agents/skills/sc2/scripts/validate_skill.py;
-its cases are skipped when it is absent.
+Validator: a strict skill validator (validate_skill.py), at SC2_VALIDATOR when set, else
+~/.agents/skills/sc2/scripts/validate_skill.py; its cases are skipped when it is absent.
 
-Lives outside the skill folders on purpose (Skillshaper, section 5): a tests/
+Lives outside the skill folders on purpose (a packaging rule for skills): a tests/
 folder inside a skill would make every deployed copy differ from the development
 copy. The engine cases came from the 2026-09-15 upgrade, where each one was a real
 defect first; the pack cases were written red on commit 19a8722 of skills-trifecta.
@@ -331,7 +331,7 @@ VOCABULARY_WORDS = frozenset("""
     universal_template user-facing user-unique user_copy user_experience user_to_working
     utf-8 working-unique working_copy working_to_user wrong-typed yyyy-mm-dd
     denserengine synkengine macos pulse.corrupt env.example v1 v2 byte-order near-duplicate build-output build dist
-    comparisons_cap comparisons_left_out comparisons_total self-contained agents linkrefused""".split())
+    comparisons_cap comparisons_left_out comparisons_total self-contained agents linkrefused valueerror filenotfounderror""".split())
 REMEDY = ("English or the pack's own word? add it to VOCABULARY_WORDS; a kind of work named in "
           "place of a skill? VOCABULARY_KINDS; a skill? it must be in the pack or public (VOCABULARY_NAMES)")
 EXTENSIONS = frozenset("""
@@ -458,23 +458,34 @@ def _fold_text(text):
 
 # between a name's parts: any whitespace (a line break and its indent included) and at most
 # three joiners, or none. The rule: a character joins when it stands for a space or a
-# separator inside a name and says nothing in a sentence. So a joiner is a hyphen-like dash
-# (hyphen-minus, hyphen, non-breaking hyphen, figure dash, en and em dash, horizontal bar,
-# hyphen bullet, minus sign), an underscore, a middle dot, a slash or a backslash (a path's
-# separators), a plus sign (a space in a URL's query), or any character that is invisible
-# when rendered: a soft hyphen, a zero-width space, non-joiner or joiner, a left-to-right or
-# right-to-left mark, a word joiner, the invisible function application, times, separator
-# and plus, and a zero-width no-break space. Sentence punctuation (. , ; : ! ?) and brackets
-# never join: "Keep it private. Notes go elsewhere." is two sentences, not a name. Listed by
-# code point, so no invisible character sits here.
-_JOINERS = "".join(map(chr, (0x2D, 0x2010, 0x2011, 0x2012, 0x2013, 0x2014, 0x2015, 0x2043, 0x2212,
-                             0x5F, 0xB7, 0x2F, 0x5C, 0x2B,
-                             0xAD, 0x200B, 0x200C, 0x200D, 0x200E, 0x200F,
-                             0x2060, 0x2061, 0x2062, 0x2063, 0x2064, 0xFEFF)))
+# separator inside a name and says nothing in a sentence. It is decided by Unicode category,
+# not by a list, so a character no review has named yet is covered: every dash (Pd),
+# connector (Pc: the underscore and its kin), format character (Cf: a soft hyphen, the
+# zero-width and direction marks, a word joiner, a byte-order mark, invisible operators)
+# and space separator (Zs); and, from other categories, the few that read as a separator:
+# slash-like (/ \ fraction slash, division slash, set minus, big solidus, fullwidth
+# solidus and reverse solidus), dot-like (middle dot, bullet, bullet operator, dot
+# operator, hyphenation point, katakana middle dot, Greek ano teleia, halfwidth katakana
+# middle dot), dash-like (hyphen bullet, minus sign, modifier minus, heavy minus), a plus sign (a space in
+# a URL's query), and characters drawn blank (Hangul fillers, the braille blank). Sentence
+# punctuation (. , ; : ! ?), quotes and brackets are other punctuation (Po, Ps, Pe, Pi, Pf)
+# and never join: "Keep it private. Notes go elsewhere." is two sentences, not a name.
+# Named by code point, so no invisible character sits here.
+_JOINER_CATEGORIES = ("Pd", "Pc", "Cf", "Zs")
+_JOINER_EXTRAS = (0x2F, 0x5C, 0x2044, 0x2215, 0x2216, 0x29F5, 0x29F8, 0x29F9, 0xFF0F, 0xFF3C,
+                  0xB7, 0x2022, 0x2219, 0x22C5, 0x2027, 0x30FB, 0x387, 0xFF65,
+                  0x2043, 0x2212, 0x2D7, 0x2796, 0x2B, 0xFF0B,
+                  0x115F, 0x1160, 0x3164, 0xFFA0, 0x2800)
+_JOINERS = "".join(c for c in map(chr, range(sys.maxunicode + 1))
+                   if unicodedata.category(c) in _JOINER_CATEGORIES) + "".join(map(chr, _JOINER_EXTRAS))
 SENTENCE_PUNCTUATION = ".,;:!?"
 # the joiners the tenth review found missed after the ninth round narrowed the list: each
 # must join a listed name's parts (the deny-list test writes one line per code point)
 REVIEW10_JOINERS = (0xFEFF, 0x200E, 0x200F, 0x2060, 0x2061, 0x2062, 0x2063, 0x2064, 0x2015, 0x2043, 0x2B, 0x5C)
+# the eleventh review's misses: slash-like, dot-like and dash-like symbols and blanks a
+# listed set left out (its probe's 24 characters)
+REVIEW11_JOINERS = (0x2044, 0x2215, 0x29F8, 0x2E3A, 0x2E3B, 0x2E17, 0x058A, 0x1806, 0x180E, 0x2027, 0x30FB, 0x2022,
+                    0x2219, 0x22C5, 0x3164, 0x115F, 0x2800, 0x3000, 0xFE58, 0xFE63, 0xFF0D, 0x02D7, 0x2E40, 0x1400)
 _JOIN = r"\s*(?:[" + re.escape(_JOINERS) + r"]\s*){0,3}"
 
 
@@ -1046,9 +1057,11 @@ class Solid8Engine(unittest.TestCase):
         # was made in it, to a folder outside the target that holds a folder of the same
         # name: the copy of an original, or manifest.json and rollback.md, went there (the
         # tenth review's N1, in Solid8). Each write into the archive asks first; on a link it
-        # raises LinkRefused and nothing is written outside the target.
-        for i, files in enumerate((["a.txt"], ["gone.txt"])):
-            with self.subTest(files=files):
+        # raises LinkRefused and nothing is written outside the target. The swap comes before
+        # the copy of the original (when create_archive first looks the file up, after the
+        # archive folder is made) or after it (when the copy is hashed, before manifest.json).
+        for i, when in enumerate(("before the copy", "before the manifest")):
+            with self.subTest(when=when):
                 target, outside = Path(self.tmp) / f"t{i}", Path(self.tmp) / f"o{i}"
                 _write(target, "a.txt", "a\n")
                 outside.mkdir()
@@ -1057,22 +1070,77 @@ class Solid8Engine(unittest.TestCase):
                     e.scan()
                 names, test = [], self
 
+                def swap():
+                    if not names:
+                        names.append(os.listdir(target / "ARCHIVE")[0])
+                        shutil.rmtree(target / "ARCHIVE")
+                        _write(outside / "ARCH" / names[0], "theirs.txt", "NOT THE ENGINE'S\n")
+                        if not _link_folder(target / "ARCHIVE", outside / "ARCH"):
+                            test.skipTest("this machine makes neither a junction nor a symbolic link")
+
                 class SwapOnFirstGet(dict):
-                    """Swaps ARCHIVE for a junction when create_archive first looks up a file,
-                    which it does only after the archive folder is made."""
                     def get(self, key, default=None):
-                        if not names:
-                            names.append(os.listdir(target / "ARCHIVE")[0])
-                            shutil.rmtree(target / "ARCHIVE")
-                            _write(outside / "ARCH" / names[0], "theirs.txt", "NOT THE ENGINE'S\n")
-                            if not _link_folder(target / "ARCHIVE", outside / "ARCH"):
-                                test.skipTest("this machine makes neither a junction nor a symbolic link")
+                        swap()
                         return dict.get(self, key, default)
-                e.fingerprints = SwapOnFirstGet(e.fingerprints)
+                if when == "before the copy":
+                    e.fingerprints = SwapOnFirstGet(e.fingerprints)
+                else:
+                    real_hash = e._hash_file
+                    e._hash_file = lambda p: (swap(), real_hash(p))[1]
+                files = ["a.txt"]
                 with self.assertRaises(self.mod.LinkRefused):
                     e.create_archive(files, target / "ARCHIVE", "test")
                 held = sorted(p.relative_to(outside).as_posix() for p in outside.rglob("*") if p.is_file())
                 self.assertEqual(held, [f"ARCH/{names[0]}/theirs.txt"], "nothing is written outside the target")
+
+    def test_create_archive_refuses_a_path_outside_the_target_and_a_missing_original(self):
+        # Break it catches: create_archive took any path it was given: "../../x.txt" read a
+        # file outside the project and wrote it over the project's own x.txt through
+        # solid8-ts/../.., a live file replaced with no backup; an absolute path did the
+        # same; a missing original was skipped, leaving an archive with no files (the
+        # eleventh review's finding 1). Every path is checked before the archive folder is
+        # made: one that is absolute, holds "..", or lies outside the target raises
+        # ValueError, a missing original FileNotFoundError, and nothing is written.
+        proj = Path(self.tmp) / "a" / "proj"
+        _write(proj, "x.txt", "LIVE PROJECT FILE\n")
+        _write(Path(self.tmp), "x.txt", "OUTSIDE\n")
+        e = self.mod.DenserEngine(proj)
+        with redirect_stdout(io.StringIO()):
+            e.scan()
+        for rel in ("../../x.txt", "sub/../../../x.txt", "sub/../x.txt", str(Path(self.tmp) / "x.txt"), "")\
+                + (("nul",) if os.name == "nt" else ()):  # a device: the OS puts it outside the target
+            with self.subTest(rel=rel):
+                with self.assertRaises(ValueError):
+                    e.create_archive([rel], proj / "ARCHIVE", "test")
+                self.assertFalse((proj / "ARCHIVE").exists(), "refused before the archive folder is made")
+                self.assertEqual((proj / "x.txt").read_text(encoding="utf-8"), "LIVE PROJECT FILE\n")
+        with self.assertRaises(FileNotFoundError):
+            e.create_archive(["x.txt", "gone.txt"], proj / "ARCHIVE", "test")
+        self.assertFalse((proj / "ARCHIVE").exists(), "a missing original refuses the whole archive")
+        dest = e.create_archive(["x.txt"], proj / "ARCHIVE", "test")
+        self.assertEqual((dest / "x.txt").read_text(encoding="utf-8"), "LIVE PROJECT FILE\n")
+
+    def test_an_archive_folder_outside_the_target_is_never_written_through_a_link(self):
+        # Break it catches: an archive folder the caller put outside the target was checked
+        # only below itself, so when it, or a folder above it, was a junction to somewhere
+        # else the originals, manifest.json and rollback.md went there (the eleventh review's
+        # finding 3). The folder itself and every folder above it are asked; a link raises
+        # LinkRefused and nothing is written.
+        target = Path(self.tmp) / "t"
+        _write(target, "a.txt", "a\n")
+        e = self.mod.DenserEngine(target)
+        with redirect_stdout(io.StringIO()):
+            e.scan()
+        for i, where in enumerate(("the folder itself", "a folder above it")):
+            with self.subTest(where=where):
+                outside = Path(self.tmp) / f"somewhere{i}"
+                outside.mkdir()
+                link = Path(self.tmp) / f"link{i}"
+                if not _link_folder(link, outside):
+                    self.skipTest("this machine makes neither a junction nor a symbolic link")
+                with self.assertRaises(self.mod.LinkRefused):
+                    e.create_archive(["a.txt"], link if i == 0 else link / "arch", "test")
+                self.assertEqual(os.listdir(outside), [], "nothing is written through the link")
 
     def test_pulse_prunes_old_consumed_signals_whatever_their_offset_form(self):
         # Same break as the Synk182 case: a month-old consumed signal stamped with Z
@@ -3038,6 +3106,40 @@ class Synk182Engine(unittest.TestCase):
         self.assertIn("apply-report.json not written", out.getvalue())
         self.assertFalse(list(outside.rglob("apply-report.json")), "the report is not written through the link")
 
+    def test_a_destination_that_changes_after_its_backup_is_never_overwritten(self):
+        # Break it catches: every backup was made first and nothing was asked again before
+        # each copy, so a destination file edited, or created, after its backup was taken
+        # was overwritten with no backup of what it then held, and a rollback could only
+        # restore the older content (the eleventh review's finding 2). Just before each
+        # copy the destination is held against its manifest entry (whether it existed, and
+        # its hash); if it differs the item is refused, named, and the file left as it is.
+        for case in ("edited", "created"):
+            with self.subTest(case=case):
+                shutil.rmtree(self.tmp)
+                for d in (self.u, self.w):
+                    d.mkdir(parents=True)
+                _write(self.u, "sub/a.txt", "user\n")
+                if case == "edited":
+                    _write(self.w, "sub/a.txt", "work\n")
+                with redirect_stdout(io.StringIO()):
+                    s = self.synk()
+                    s.scan_and_compare()
+                    plan = s.plan()
+                plan[0]["direction"] = "user_to_working"
+                real = s._backup_into
+
+                def backup_then_change(*a, **k):
+                    made = real(*a, **k)
+                    _write(self.w, "sub/a.txt", "WRITTEN AFTER THE BACKUP\n")
+                    return made
+                with mock.patch.object(s, "_backup_into", backup_then_change), redirect_stdout(io.StringIO()) as out:
+                    report = s.apply(plan, [1])
+                self.assertEqual(report["applied"], [])
+                self.assertEqual([x["path"] for x in report["refused"]], ["sub/a.txt"])
+                self.assertIn("changed after its backup", report["refused"][0]["reason"])
+                self.assertIn("Refused sub/a.txt", out.getvalue())
+                self.assertEqual((self.w / "sub/a.txt").read_text(encoding="utf-8"), "WRITTEN AFTER THE BACKUP\n")
+
     def test_the_pulse_is_never_written_through_a_docs_link(self):
         # Break it catches: the user copy's docs/ a junction to a folder outside both copies:
         # the dashboard named it "not followed", and --pulse then wrote PULSE.json there (the
@@ -3346,7 +3448,7 @@ REVIEW7_FORMS = {
 
 # ─────────────────────────────────────────────────────────────── the three folders
 class SkillFolders(unittest.TestCase):
-    """Each skill folder meets Skillshaper's bar, and its description is what makes it fire."""
+    """Each skill folder meets a strict skill validator's bar, and its description is what makes it fire."""
 
     def test_each_skill_validates_strict(self):
         if not VALIDATOR.is_file():
@@ -3700,7 +3802,7 @@ class SkillFolders(unittest.TestCase):
                                      "prívate-notes\njot-book\njot book\nsee private-\nnotes there\nnothing here\nprivate -notes\n"
                                      "private—notes\nprivate−notes\nprivate\u00adnotes\nprivate\u200bnotes\n"
                                      "private·notes\nprivate/notes\njot\u00adbook\nsee private-\n    notes, indented\n"
-                                     + "".join("private" + chr(cp) + "notes\n" for cp in REVIEW10_JOINERS))
+                                     + "".join("private" + chr(cp) + "notes\n" for cp in REVIEW10_JOINERS + REVIEW11_JOINERS))
         _write(pack, "docs/PROSE.md", "Keep it private. Notes go elsewhere.\nif not private:\n    # notes here\n"
                                       'names = ["private",\n         "notes-2026"]\nprivate, notes; private; notes\n'
                                       "private: notes\nprivate! Notes\nprivate? Notes\nprivate.notes\n"
@@ -3714,9 +3816,11 @@ class SkillFolders(unittest.TestCase):
                           "docs/MORE.md:12: private-notes", "docs/MORE.md:13: private-notes", "docs/MORE.md:14: private-notes",
                           "docs/MORE.md:15: private-notes", "docs/MORE.md:16: private-notes", "docs/MORE.md:17: private-notes",
                           "docs/MORE.md:18: private-notes", "docs/MORE.md:19: jotbook", "docs/MORE.md:20: private-notes"]
-                         + [f"docs/MORE.md:{22 + i}: private-notes" for i in range(len(REVIEW10_JOINERS))]
+                         + [f"docs/MORE.md:{22 + i}: private-notes" for i in range(len(REVIEW10_JOINERS + REVIEW11_JOINERS))]
                          + ["synk182/scripts/x.py:1: jotbook"])
-        self.assertFalse(set(_JOINERS) & set(SENTENCE_PUNCTUATION), "sentence punctuation never joins")
+        self.assertFalse(set(_JOINERS) & set(SENTENCE_PUNCTUATION + "()[]{}\"'"), "sentence punctuation never joins")
+        self.assertFalse([c for c in map(chr, range(0x80)) if c in _JOINERS and c not in " -_/\\+"],
+                         "in ASCII only a space and - _ / \\ + join")
     def test_private_names_from_the_deny_list_never_appear_in_the_pack(self):
         """Mechanism 2 on the pack itself: TRIAD_PRIVATE_NAMES names a file outside the
         repository, one private name per line (# comments); any whole-word occurrence of a
@@ -3784,14 +3888,15 @@ class Pack(unittest.TestCase):
 
     def test_readme_names_the_proof_pack_only_in_a_see_also_line(self):
         # The pack points at no outside skill; The Proof Pack may appear once, as a neutral
-        # "See also" line with its link, and no skill of it is named.
+        # "See also" line with its link, and no skill of it is named, anywhere in the README:
+        # its header comment included (the eleventh review found "verafox" there).
         lines = [l for l in self.readme().splitlines() if "proof pack" in l.lower() or PROOF_PACK in l]
-        body = [l for l in lines if not l.startswith("<!--")]  # the header's history may name it
+        body = [l for l in lines if not l.startswith("<!--")]  # the header's history may name the pack
         self.assertLessEqual(len(body), 1, body)
         for line in body:
             self.assertTrue(line.startswith("See also:") and PROOF_PACK in line, line)
-        self.assertNotRegex("\n".join(l for l in self.readme().splitlines() if not l.startswith("<!--")).lower(),
-                            r"(?<![a-z0-9])(?:verafox|mutate)(?![a-z0-9])")
+        skills = "|".join(re.escape(s) for s in OUTSIDE_SKILLS if s != "proof pack")
+        self.assertNotRegex(self.readme().lower(), r"(?<![a-z0-9])(?:" + skills + r")(?![a-z0-9])")
 
     def test_readme_names_the_current_versions(self):
         # Ties the README to the frontmatter, so a bump in one is a bump in both.

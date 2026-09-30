@@ -11,6 +11,7 @@ Updated: 2026-09-30 13:43 ET — a file that cannot be read is named with the re
 Updated: 2026-09-30 14:32 ET — a file that becomes unreadable between the scan and the compare is named with the reason; the --json proposal caps each cluster's comparisons at 50 and says how many were left out; the timestamp grammar is read exactly as the protocol pins it; everything written is LF
 Updated: 2026-09-30 15:25 ET — --details says how many comparisons a cluster holds past its first five; --json's help names the cap of 50 per cluster
 Updated: 2026-09-30 17:09 ET — nothing is archived or recorded through a junction or link: create_archive refuses an archive folder, or a folder on the way to it or to an original, that is one, and --pulse refuses a docs or PULSE.json that is one, each naming it
+Updated: 2026-09-30 17:46 ET — create_archive checks every path before anything is made (absolute, '..', outside the target or a device: ValueError; a missing original: FileNotFoundError), and asks an archive folder outside the target, and every folder above it, whether it is a link
 
 Fingerprints every file under a folder, compares likely redundant pairs across
 the full similarity spectrum, and builds a consolidation proposal. It never
@@ -566,12 +567,35 @@ class DenserEngine:
         """Law #3, archive before action: copy originals with a manifest and rollback notes.
         Nothing is written into, or read for, the archive through a junction or link: an
         archive folder, or a folder on the way to it or to an original, that is one raises
-        LinkRefused, naming it."""
+        LinkRefused, naming it; for an archive folder outside the target, the folder itself
+        and every folder above it are asked. Before anything is made, a path that is
+        absolute, holds '..' or lies outside the target raises ValueError, and a missing
+        original FileNotFoundError."""
         ts = datetime.now().strftime("%Y-%m-%dT%H%M%S")
+        # every path first, before anything is made: one that is absolute, holds "..", or lies
+        # outside the target is refused (ValueError), and a missing original too
+        # (FileNotFoundError), so an archive holds every file it names or does not exist
+        root = os.path.normcase(str(self.target_dir))
+        for rel in files:
+            p = Path(rel)
+            if not rel or rel == "." or p.is_absolute() or p.anchor or ".." in p.parts:
+                raise ValueError(f"{rel!r} is not a path inside {self.target_dir}; nothing archived")
+            where = os.path.normcase(os.path.abspath(self.target_dir / rel))
+            if not where.startswith(root.rstrip(os.sep) + os.sep):
+                raise ValueError(f"{rel!r} lies outside {self.target_dir}; nothing archived")
+            if not (self.target_dir / rel).is_file():
+                raise FileNotFoundError(f"{rel}: no such file under {self.target_dir}; nothing archived")
         archive_dir = Path(archive_dir).absolute()
         # an archive inside the target is checked from the target down; one the caller put
-        # elsewhere, from that folder down (where it lies is the caller's choice)
-        base = self.target_dir if archive_dir.is_relative_to(self.target_dir) else archive_dir
+        # elsewhere, from that folder down, and the folder itself and every folder above it
+        # are asked too (where it lies is the caller's choice, but never through a link)
+        if archive_dir.is_relative_to(self.target_dir):
+            base = self.target_dir
+        else:
+            base = archive_dir
+            for p in (archive_dir, *archive_dir.parents):
+                if _is_link(p):
+                    raise LinkRefused(f"{p} is a junction or link; an archive never goes through one")
         _no_link_between(base, archive_dir, "an archive")
         dest = archive_dir / f"solid8-{ts}"
         n = 1

@@ -91,7 +91,7 @@ Only where other tools share the project's `docs/PULSE.json`; see Optional integ
 
 ## Safety
 
-**Backup before every write:** each file an apply will overwrite is copied first into `[user copy]/ARCHIVE/synk-[timestamp]/<side>/` with `manifest.json`, `rollback.md` and `apply-report.json`. Files that did not exist are recorded so rollback deletes them.
+**Backup before every write:** each file an apply will overwrite is copied first into `[user copy]/ARCHIVE/synk-[timestamp]/<side>/` with `manifest.json`, `rollback.md` and `apply-report.json`. Files that did not exist are recorded so rollback deletes them. Just before each copy the destination is held against its backup; one created, edited or removed since the backup was taken is refused and left as it is.
 **Full-project backup:** before a large or first sync, copy the whole project aside first — the engine backs up per file, not per project.
 **Auto-rollback:** any item that fails a verification layer after copying — or raises anything while being verified — is restored from the backup on the spot, and reported; a rollback that fails is reported with the backup to restore by hand, and the run exits 1.
 **Never through a link:** nothing is written, deleted, restored or backed up through a junction or link, and no source is read through one; each is refused with the link named.
