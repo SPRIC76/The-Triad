@@ -8,6 +8,7 @@ Updated: 2026-09-30 05:37 ET — a backup of a binary is binary, every trailing 
 Updated: 2026-09-30 06:09 ET — an --json file that cannot be written is answered with the reason and exit 1, and --pulse still records the scan
 Updated: 2026-09-30 07:28 ET — a junction or link inside the target is named and not followed; an empty --json name is answered; a signal stamped with Z is pruned on every Python
 Updated: 2026-09-30 13:43 ET — a file that cannot be read is named with the reason and left out, never fingerprinted as empty; a link to a file is named and not followed, a dangling one as such; each candidate file is read once, so a same-size group of hundreds compares in seconds; PULSE stamps are read by one grammar on every Python, and a consumed signal whose stamp cannot be read is pruned with a note; a PULSE saved with a BOM is read; --details below zero is an error
+Updated: 2026-09-30 14:32 ET — a file that becomes unreadable between the scan and the compare is named with the reason; the --json proposal caps each cluster's comparisons at 50 and says how many were left out; the timestamp grammar is read exactly as the protocol pins it; everything written is LF
 
 Fingerprints every file under a folder, compares likely redundant pairs across
 the full similarity spectrum, and builds a consolidation proposal. It never
@@ -58,8 +59,9 @@ IO_REPARSE_TAG_MOUNT_POINT = 0xA0000003  # a Windows junction
 # ISO-8601, the date, T or a space, the time to the minute or the second, an optional
 # fraction, then an offset, Z or nothing. Read here, never by fromisoformat, whose reach
 # differs between Pythons (3.10 reads neither Z nor a basic-format stamp; 3.11 reads both).
-ISO_8601 = re.compile(r"^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:[.,](\d{1,9}))?)?"
-                      r"(Z|z|[+-]\d{2}:?\d{2})?$")
+ISO_8601 = re.compile(r"^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,9}))?)?"
+                      r"(Z|[+-]\d{2}:\d{2})?$")  # exactly as pinned: no z, no +0000, no comma fraction
+COMPARISONS_CAP = 50  # per cluster in the proposal, as the PULSE map is capped per tier
 
 
 def _say(text: str = "") -> None:
@@ -82,7 +84,7 @@ def _stamp(text, local: timezone) -> datetime:
     y, mo, d, h, mi, s, frac, off = m.groups()
     if off is None:
         tz = local
-    elif off in ("Z", "z"):
+    elif off == "Z":
         tz = timezone.utc
     else:
         delta = timedelta(hours=int(off[1:3]), minutes=int(off[-2:]))
@@ -167,6 +169,7 @@ class ConsolidationProposal:
     potential_reduction: float = 0.0
     name_sprawl: Dict[str, List[str]] = field(default_factory=dict)
     archive_sprawl: List[Dict] = field(default_factory=list)
+    comparisons_left_out: int = 0  # over every cluster, past COMPARISONS_CAP each
 
     def to_dict(self) -> Dict:
         return {
@@ -175,6 +178,7 @@ class ConsolidationProposal:
             "removable_duplicates": self.removable_duplicates,
             "potential_reduction_percent": round(self.potential_reduction, 1),
             "name_sprawl": self.name_sprawl, "archive_sprawl": self.archive_sprawl,
+            "comparisons_cap": COMPARISONS_CAP, "comparisons_left_out": self.comparisons_left_out,
             "clusters": self.clusters,
         }
 
@@ -387,12 +391,14 @@ class DenserEngine:
 
     def _cached_units(self, rel: str) -> Optional[Set[str]]:
         """The units of a fingerprinted file, read once per compare_all; None when it could
-        not be read (the pair is then reported as unreadable, and the file read no more)."""
+        not be read (held by another process since the scan): then it is named in
+        self.unreadable with the reason, once, and read no more; its pairs get no tier."""
         if rel not in self._units_of:
             try:
                 self._units_of[rel] = self._units(self.fingerprints[rel].path)
-            except OSError:
+            except OSError as e:
                 self._units_of[rel] = None
+                self.unreadable.append(f"{rel}: cannot be read ({e.strerror or e})")
         return self._units_of[rel]
 
     def _units(self, path: Path) -> Set[str]:
@@ -513,8 +519,12 @@ class DenserEngine:
                 g = groups.setdefault(find(c.file_a), {"tier": tier, "files": set(), "comparisons": []})
                 g["files"].update((c.file_a, c.file_b))
                 g["comparisons"].append(c.to_dict())
-            for g in groups.values():
-                proposal.clusters.append({"tier": tier, "files": sorted(g["files"]), "comparisons": g["comparisons"]})
+            for g in groups.values():  # a near-duplicate cluster of n files holds n(n-1)/2 comparisons: capped
+                total = len(g["comparisons"])
+                proposal.comparisons_left_out += max(0, total - COMPARISONS_CAP)
+                proposal.clusters.append({"tier": tier, "files": sorted(g["files"]),
+                                          "comparisons": g["comparisons"][:COMPARISONS_CAP],
+                                          "comparisons_total": total, "comparisons_left_out": max(0, total - COMPARISONS_CAP)})
 
         proposal.removable_duplicates = sum(len(g) - 1 for g in self._group_by_hash().values())
         total = len(self.fingerprints)
@@ -553,13 +563,13 @@ class DenserEngine:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, target)
                 manifest["files"][rel] = {"hash": self._hash_file(src), "size": src.stat().st_size, "action": reason}
-        (dest / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+        (dest / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8", newline="\n")
 
         lines = [f"# Rollback: {reason}", "", f"Archive created: {ts}", "",
                  "To restore, copy each file below from this folder back to the same relative path under:",
                  f"`{self.target_dir}`", ""]
         lines += [f"- `{rel}`" for rel in manifest["files"]]
-        (dest / "rollback.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        (dest / "rollback.md").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
         return dest
 
 
@@ -620,7 +630,7 @@ def update_pulse(project_dir, fields: Dict, signals: Iterable[Tuple[str, str, st
                      "details": details, "consumed": False})
     cs["pending_signals"] = kept
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
     return path
 
 
@@ -672,12 +682,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         try:
             if not args.json.strip():
                 raise OSError("no file name given")
-            Path(args.json).write_text(json.dumps(proposal.to_dict(), indent=2, ensure_ascii=False), encoding="utf-8")
+            Path(args.json).write_text(json.dumps(proposal.to_dict(), indent=2, ensure_ascii=False), encoding="utf-8", newline="\n")
         except OSError as e:  # a missing folder, a folder in its place, no permission to write
             _say(f"\n   ✗ Proposal not written ({e})")
             json_written = False
         else:
-            _say(f"\n   📋 Proposal written: {args.json}")
+            capped = (f" (comparisons capped at {COMPARISONS_CAP} per cluster; {proposal.comparisons_left_out} left out)"
+                      if proposal.comparisons_left_out else "")
+            _say(f"\n   📋 Proposal written: {args.json}{capped}")
     if args.pulse:  # the scan is still recorded; only the proposal file failed
         rmap: Dict[str, List[List[str]]] = {}
         for comp in engine.comparisons:

@@ -8,6 +8,7 @@ Updated: 2026-09-30 05:37 ET — an approved item with no direction exits 1 with
 Updated: 2026-09-30 06:09 ET — a --plan file that cannot be written is answered with the reason and exit 1, and --pulse still records the scan; the --approve new listing names an item with no path by its id
 Updated: 2026-09-30 07:28 ET — a junction or link inside either copy, a folder that cannot be listed and a file where ARCHIVE goes are named and not compared; apply refuses before any write when no backup can be made; a hand-edited plan (an id that is not a whole number, hashes that are not an object) is refused; an empty --plan, --apply or --diff name is answered; a signal stamped with Z is pruned on every Python
 Updated: 2026-09-30 13:43 ET — a file that cannot be read is named with the reason and left out of the comparison, never read as empty, and an item that names one is refused; a backup that fails refuses every item and leaves no archive; any exception in verification rolls the copy back, and a failed rollback names the backup; where the file system folds case, any spelling of ARCHIVE is Synk's folder and Readme.md / README.md are one file; copies that differ only in line endings are said so on the dashboard, in the plan and by --diff, which also refuses a path outside the copies and names a file it cannot read; a link to a file is named and not followed, a dangling one as such; PULSE stamps are read by one grammar on every Python, and a consumed signal whose stamp cannot be read is pruned with a note; a plan path in a folder the scan skips, one ending in a separator or a space, and a duplicate id are refused; --threshold outside 0..1 is an error; a plan or PULSE saved with a BOM is read; an already-applied item says so
+Updated: 2026-09-30 14:32 ET — a skipped folder in any spelling the file system folds, a link on either side, a form Windows reserves and an item already applied, whatever its status, are refused before any write; line endings that differ within a file and a byte-order mark alone are named as such, on the dashboard, in the plan and by --diff; anything raised while backing up refuses every item and leaves no archive; a nested archive/ is named as a folder, not as Synk's own; the timestamp grammar is read exactly as the protocol pins it; everything written is LF
 
 Two copies: the USER copy (the one the user treats as authority) and the
 WORKING copy (a sandbox or upload, a mounted or cloud-synced folder, a git
@@ -81,8 +82,13 @@ PULSE_UNTOUCHED = "  ⚠️ PULSE.json does not hold a JSON object; left untouch
 # ISO-8601, the date, T or a space, the time to the minute or the second, an optional
 # fraction, then an offset, Z or nothing. Read here, never by fromisoformat, whose reach
 # differs between Pythons (3.10 reads neither Z nor a basic-format stamp; 3.11 reads both).
-ISO_8601 = re.compile(r"^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:[.,](\d{1,9}))?)?"
-                      r"(Z|z|[+-]\d{2}:?\d{2})?$")
+ISO_8601 = re.compile(r"^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,9}))?)?"
+                      r"(Z|[+-]\d{2}:\d{2})?$")  # exactly as pinned: no z, no +0000, no comma fraction
+BOM = b"\xef\xbb\xbf"
+# names and characters Windows reserves in a path segment: a copy under such a name
+# lands somewhere else (a trailing dot or space is stripped), in a stream (a colon), or fails
+WINDOWS_DEVICES = {"CON", "PRN", "AUX", "NUL"} | {f"{d}{i}" for d in ("COM", "LPT") for i in range(1, 10)}
+WINDOWS_FORBIDDEN = set('<>:"|?*') | {chr(i) for i in range(32)}
 
 
 def _say(text: str = "") -> None:
@@ -110,7 +116,8 @@ def _is_binary(path: Path) -> bool:
 
 
 def _lines(path: Path) -> List[str]:
-    with open(path, "r", encoding="utf-8", errors="replace") as f:
+    """The text lines of a file, a leading UTF-8 BOM dropped (a mark, not a line)."""
+    with open(path, "r", encoding="utf-8-sig", errors="replace") as f:
         return f.read().splitlines()
 
 
@@ -122,6 +129,41 @@ def _ending(path: Path) -> str:
     kinds = [k for k, n in (("CRLF", crlf), ("LF", data.count(b"\n") - crlf), ("CR", data.count(b"\r") - crlf)) if n]
     kind = kinds[0] if len(kinds) == 1 else "mixed (" + " and ".join(kinds) + ")" if kinds else "none"
     return kind + (", no final newline" if data and not data.endswith((b"\n", b"\r")) else "")
+
+
+def _terminators(path: Path) -> List[bytes]:
+    """Each line's ending, in order, so two files that end their lines in the same mix can
+    still be told apart line by line (a\\r\\nb\\n against a\\nb\\r\\n)."""
+    return [re.search(rb"\r\n|\r|\n|$", line).group() for line in path.read_bytes().splitlines(keepends=True)]
+
+
+def _same_lines_differ(u: Path, w: Path) -> Dict:
+    """What tells two copies apart when a line diff shows nothing and the hashes differ:
+    their line endings by convention ("line_endings", each side's named), line endings
+    that differ line by line inside the same mix ("line_endings", within), only a UTF-8
+    byte-order mark ("bom", which side carries it), or bytes no line shows ("bytes")."""
+    eu, ew = _ending(u), _ending(w)
+    if eu != ew:
+        return {"relationship": "line_endings", "endings": {"user": eu, "working": ew}, "within": False}
+    if _terminators(u) != _terminators(w):
+        return {"relationship": "line_endings", "endings": {"user": eu, "working": ew}, "within": True}
+    bu, bw = u.read_bytes(), w.read_bytes()
+    if bu.startswith(BOM) != bw.startswith(BOM) and bu.removeprefix(BOM) == bw.removeprefix(BOM):
+        return {"relationship": "bom", "bom": {"user": bu.startswith(BOM), "working": bw.startswith(BOM)}}
+    return {"relationship": "bytes"}
+
+
+def _said_apart(rel: str, d: Dict) -> str:
+    """The one line --diff prints for a pair that holds the same lines."""
+    e = d.get("endings", {})
+    if d["relationship"] == "line_endings" and d["within"]:
+        return f"user/{rel} and working/{rel} hold the same lines; line endings differ within the file: user {e['user']}, working {e['working']}"
+    if d["relationship"] == "line_endings":
+        return f"user/{rel} and working/{rel} differ only in line endings: user {e['user']}, working {e['working']}"
+    if d["relationship"] == "bom":
+        carrier, other = ("user", "working") if d["bom"]["user"] else ("working", "user")
+        return f"user/{rel} and working/{rel} differ only in a byte-order mark: the {carrier} copy carries a UTF-8 BOM, the {other} copy none"
+    return f"user/{rel} and working/{rel} hold the same lines in different bytes (an encoding difference no line diff shows)"
 
 
 def _readable(path: Path) -> Optional[str]:
@@ -172,7 +214,7 @@ def _stamp(text, local: timezone) -> datetime:
     y, mo, d, h, mi, s, frac, off = m.groups()
     if off is None:
         tz = local
-    elif off in ("Z", "z"):
+    elif off == "Z":
         tz = timezone.utc
     else:
         delta = timedelta(hours=int(off[1:3]), minutes=int(off[-2:]))
@@ -230,6 +272,11 @@ class SynkEngine:
         the file system folds case (there archive/ and Archive/ ARE that folder)."""
         return name == "ARCHIVE" or (name.upper() == "ARCHIVE" and self._folds_case(root))
 
+    def _skipped(self, name: str, root: Path) -> bool:
+        """Whether name is a folder the scan skips in root: an exact skip name, or any spelling
+        of one where the file system folds case (there .GIT/ IS .git/, and a hook under it runs)."""
+        return name in self.skip_dirs or (self._folds_case(root) and name.lower() in {d.lower() for d in self.skip_dirs})
+
     def _archive_root(self) -> Path:
         """user_dir/ARCHIVE as it is on disk: where the file system folds case, an existing
         archive/ or Archive/ is that folder, and it is used and printed under its own spelling."""
@@ -270,7 +317,10 @@ class SynkEngine:
                 if d in self.skip_dirs:
                     continue
                 if "ARCHIVE" in self.skip_dirs and self._spells_archive(d, root):  # archive/ on Windows or macOS
-                    skip(here / d, f"Synk's ARCHIVE folder, spelled {d}, on a file system that folds case; skipped as ARCHIVE is")
+                    skip(here / d, f"Synk's ARCHIVE folder, spelled {d}, on a file system that folds case; skipped as ARCHIVE is"
+                         if here == root else f"a folder named {d}, skipped as ARCHIVE is at any depth; Synk's own is the root's")
+                elif self._skipped(d, root):  # .GIT/ or NODE_MODULES/ where the file system folds case
+                    continue
                 elif _is_link(here / d):  # a junction back into the copy loops; one elsewhere leaves it
                     skip(here / d, "a junction or link; not followed")
                 elif (here / d).resolve() != other_root:
@@ -358,14 +408,11 @@ class SynkEngine:
             return {"status": "different", "relationship": "binary", "similarity": 0.0,
                     "hash_match": False, "newer": newer, "layers": layers}
         lu, lw = _lines(u["path"]), _lines(w["path"])
-        if lu == lw:  # a line diff shows nothing: the copies differ in their line endings, or in bytes no line shows
-            eu, ew = _ending(u["path"]), _ending(w["path"])
+        if lu == lw:  # a line diff shows nothing: line endings, a byte-order mark, or bytes no line shows
             layers.update(line_count=True, content=False)
-            if eu != ew:
-                return {"status": "line_endings", "relationship": "line_endings", "similarity": 1.0, "hash_match": False,
-                        "newer": newer, "layers": layers, "endings": {"user": eu, "working": ew}}
-            return {"status": "different", "relationship": "bytes", "similarity": 1.0,
-                    "hash_match": False, "newer": newer, "layers": layers}
+            apart = _same_lines_differ(u["path"], w["path"])
+            status = "line_endings" if apart["relationship"] == "line_endings" else "different"
+            return {"status": status, "similarity": 1.0, "hash_match": False, "newer": newer, "layers": layers, **apart}
         layers.update(line_count=len(lu) == len(lw), content=False)
         similarity, relationship = self._calculate_extended_similarity(lu, lw)
         if relationship in ("a_superset", "b_superset"):
@@ -399,10 +446,13 @@ class SynkEngine:
              f"| ➕{r['user_only']} only in user copy | ➕{r['working_only']} only in working copy")
         for rel, a in r["files"].items():
             if a["status"] != "identical":
-                sim = f"{a['similarity']:.0%}" if a["relationship"] not in ("missing", "binary", "bytes") else a["relationship"]
+                sim = f"{a['similarity']:.0%}" if a["relationship"] not in ("missing", "binary", "bytes", "bom") else a["relationship"]
                 extra = f"  (newer: {a['newer']})" if a["newer"] else ""
                 if "endings" in a:
-                    extra += f"  (user {a['endings']['user']}, working {a['endings']['working']})"
+                    extra += ("  (line endings differ within the file: " if a.get("within") else "  (") + \
+                        f"user {a['endings']['user']}, working {a['endings']['working']})"
+                if "bom" in a:
+                    extra += f"  (only a byte-order mark: the {'user' if a['bom']['user'] else 'working'} copy carries a UTF-8 BOM)"
                 if "names" in a:
                     extra += f"  (same file, different case: working copy spells it {a['names']['working']})"
                 _say(f"   {a['status']:<13} {sim:>8}  {rel}{extra}")
@@ -416,10 +466,7 @@ class SynkEngine:
         u, w = self.user_dir / rel, self.working_dir / rel
         lu, lw = (_lines(u) if u.is_file() else []), (_lines(w) if w.is_file() else [])
         if lu == lw and u.is_file() and w.is_file() and _hash(u) != _hash(w):
-            eu, ew = _ending(u), _ending(w)
-            if eu != ew:
-                return f"user/{rel} and working/{rel} differ only in line endings: user {eu}, working {ew}"
-            return f"user/{rel} and working/{rel} hold the same lines in different bytes (an encoding difference no line diff shows)"
+            return _said_apart(rel, _same_lines_differ(u, w))
         return "\n".join(difflib.unified_diff(lu, lw, f"user/{rel}", f"working/{rel}", lineterm=""))
 
     # ── Plan ───────────────────────────────────────────────────────────
@@ -443,6 +490,12 @@ class SynkEngine:
             direction, review, note = notes[a["status"]]
             if "endings" in a:
                 note = note.replace("ENDINGS", f"user {a['endings']['user']}, working {a['endings']['working']}")
+                if a.get("within"):
+                    note = note.replace("the copies differ only in line endings", "line endings differ within the file")
+            if "bom" in a:
+                review, note = "STANDARD", (f"identical text; only a byte-order mark differs (the "
+                                            f"{'user' if a['bom']['user'] else 'working'} copy carries a UTF-8 BOM): "
+                                            "choose the convention the file keeps, then set the direction")
             if "names" in a:
                 note += f"; same file, different case: the working copy spells it {a['names']['working']}"
             actions.append({"id": n, "path": rel, "status": a["status"], "relationship": a["relationship"],
@@ -459,10 +512,14 @@ class SynkEngine:
         """Why a plan path may not be written, or None when it names a file inside the copies.
 
         A plan file is data the user may have edited by hand: the path must be relative,
-        with no '..', drive, UNC or root prefix, must not end in a separator or a space,
-        must resolve under each copy, must not lie in a folder the scan skips (so nothing
-        is written where nothing is compared), and must not name a folder in either copy
-        ('sub', or '.' for the copy itself)."""
+        with no '..', drive, UNC or root prefix, must not end in a separator or a space, on
+        Windows must hold no form Windows reserves (a segment ending in a dot or a space, a
+        ':' stream, <>"|?*, a device name such as CON or LPT1: the copy would land under
+        another name, in a stream, or fail after the backup was made), must resolve under
+        each copy, must not lie in a folder the scan skips in any spelling the file system
+        folds (so nothing is written where nothing is compared), must not pass through or
+        name a junction or link on either side (the scan never follows one), and must not
+        name a folder in either copy ('sub', or '.' for the copy itself)."""
         if not isinstance(rel, str) or not rel.strip():
             return "no path"
         if rel != rel.strip() or rel[-1] in "/\\":
@@ -472,11 +529,17 @@ class SynkEngine:
             return "absolute, drive-relative or UNC path"
         if any(part in ("..", "") for part in win.parts):
             return "path leaves the copy ('..')"
-        folds = self._folds_case(self.user_dir) or self._folds_case(self.working_dir)
+        if os.name == "nt":
+            for part in win.parts:
+                if part[-1] in ". " or set(part) & WINDOWS_FORBIDDEN or part.split(".")[0].upper() in WINDOWS_DEVICES:
+                    return f"path holds a form Windows reserves ({part!r}: a segment ending in a dot or a space, a ':' stream, <>\"|?*, or a device name)"
         for part in win.parts[:-1]:
-            if part in self.skip_dirs or (folds and "ARCHIVE" in self.skip_dirs and part.upper() == "ARCHIVE"):
+            if any(self._skipped(part, root) for root in (self.user_dir, self.working_dir)):
                 return f"path lies in a folder the scan skips ({part})"
         for root in (self.user_dir, self.working_dir):
+            for i in range(1, len(win.parts) + 1):
+                if _is_link(root.joinpath(*win.parts[:i])):
+                    return f"a junction or link on the {'user' if root == self.user_dir else 'working'} side ({'/'.join(win.parts[:i])}); never followed"
             try:
                 (root / rel).resolve().relative_to(root)
             except ValueError:
@@ -502,10 +565,10 @@ class SynkEngine:
         to_working = act["direction"] == "user_to_working"
         side = "working" if to_working else "user"
         dst = (self.working_dir if to_working else self.user_dir) / act["path"]
+        src = (self.user_dir if to_working else self.working_dir) / act["path"]
+        if dst.is_file() and src.is_file() and _hash(dst) == _hash(src):  # whatever the item's status
+            return f"already applied: the {side} copy holds this content; nothing to do"
         if act.get("status") in ("user_only", "working_only") and dst.exists():
-            src = (self.user_dir if to_working else self.working_dir) / act["path"]
-            if dst.is_file() and src.is_file() and _hash(dst) == _hash(src):
-                return f"already applied: the {side} copy holds this content; nothing to do"
             return f"the {side} copy now has this file; re-plan"
         if "hashes" in act:  # plans written before v2.1 carry no hashes
             if act["hashes"] is not None and not isinstance(act["hashes"], dict):  # a hand edit
@@ -565,7 +628,7 @@ class SynkEngine:
             elif src.exists():  # a folder: not backed up, and never listed for deletion
                 entry["folder"] = True
             manifest["files"][f"{side}:{rel}"] = entry
-        manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+        manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8", newline="\n")
         lines = ["# Rollback", "", f"Archive created: {manifest['timestamp']}", "",
                  "To undo, copy each file under this folder's `user/` or `working/` back to the same",
                  "relative path in that copy, and delete any file listed as not having existed.", ""]
@@ -575,7 +638,7 @@ class SynkEngine:
             how = ("restore from `" + f"{side_name}/{rel}`" if e["existed"] else
                    "a folder, not a file: leave it as it is" if e.get("folder") else "did not exist: delete it")
             lines.append(f"- `{root_name / rel}` — {how}")
-        (dest / "rollback.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        (dest / "rollback.md").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
     def backup(self, paths: List[str], side: str) -> Path:
         """Copy the named files of one side ('user' or 'working') into a new archive folder;
@@ -589,7 +652,7 @@ class SynkEngine:
         dest, created = self._new_archive_dir()
         try:
             self._backup_into(dest, paths, side)
-        except OSError:
+        except Exception:  # anything raised (a MemoryError included): an archive holds its manifest or does not exist
             self._discard_archive(dest, created)
             raise
         return dest
@@ -666,11 +729,12 @@ class SynkEngine:
                 paths = [a["path"] for a in todo if a["direction"] == direction]
                 if paths:
                     self._backup_into(dest, paths, side)
-        except OSError as e:  # a file that could not be backed up: with no complete backup, nothing is written
+        except Exception as e:  # anything raised while backing up: with no complete backup, nothing is written
+            why = f"{e}" if isinstance(e, OSError) else f"{type(e).__name__}: {e}"
             left = self._discard_archive(dest, created_root)
             for act in todo:
-                report["refused"].append({"path": act["path"], "reason": f"no backup could be made: {e}"})
-            _say(f"  ✗ Refused {len(todo)} item(s), nothing written: no backup could be made ({e}){left}")
+                report["refused"].append({"path": act["path"], "reason": f"no backup could be made: {why}"})
+            _say(f"  ✗ Refused {len(todo)} item(s), nothing written: no backup could be made ({why}){left}")
             return report
         report["archive"] = str(dest)
         for act in todo:
@@ -709,7 +773,7 @@ class SynkEngine:
                                           "created": not existed, "verified": list(LAYERS)})
                 _say(f"  ✓ {act['direction']}: {act['path']} (six layers verified)")
         try:
-            (dest / "apply-report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+            (dest / "apply-report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8", newline="\n")
         except OSError as e:
             _say(f"  ⚠️ apply-report.json not written ({e}); the lines above are the record")
         return report
@@ -773,7 +837,7 @@ def update_pulse(project_dir, fields: Dict, signals: Iterable[Tuple[str, str, st
                      "details": details, "consumed": False})
     cs["pending_signals"] = kept
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
     return path
 
 
@@ -906,7 +970,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         try:
             if not args.plan.strip():
                 raise OSError("no file name given")
-            Path(args.plan).write_text(json.dumps(plan, indent=2, ensure_ascii=False), encoding="utf-8")
+            Path(args.plan).write_text(json.dumps(plan, indent=2, ensure_ascii=False), encoding="utf-8", newline="\n")
         except OSError as e:  # a missing folder, a folder in its place, no permission to write
             _say(f"✗ Plan not written ({e})")
             plan_written = False

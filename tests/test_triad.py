@@ -1,4 +1,4 @@
-"""Version 1.2 | Deps: stdlib; Skillshaper's validate_skill.py when present | Parent: The Triad (DevCom5 1.3, Synk182 3.3, Solid8 1.3) | Path: tests | Filename: test_triad.py | Created: 2026-09-30 01:12 ET - kept tests for the pack: the two engines, the three skill folders, and the pack's own ratchets. | Updated: 2026-09-30 04:05 ET - v1.3: red-first cases from the v1.2 review (bounded plan paths, stale plans, wrong-typed PULSE fields, CLI messages, copy numbers, sprawl across folders, pointer and version ratchets); comments read for a public reader; both engines checked for personal paths. | Updated: 2026-09-30 04:53 ET - red-first cases from the second v1.3 review: folder targets and rollback, backups read as the file they back up, unknown --approve ids, one folder given twice, an unparseable PULSE reported, signals only when true, protocol safety rule 4; the pointer check is an allow-list, so the test names no private skill. | Updated: 2026-09-30 05:37 ET - red-first cases from the third v1.3 review: --pulse when docs is a file, a PULSE holding no object, an approved item with no direction, an item with only an id named by its id, --plan beside --apply and --diff beside another action, a backup of a binary, backups with two markers; the pointer check reads what a pointer names, in any of its forms, rather than its first word. | Updated: 2026-09-30 06:09 ET - red-first cases from the fourth v1.3 review: a --plan or --json file that cannot be written, an item with no path in the --approve new listing; the pointer check reads the "X tool/helper/plugin" form, verbs beyond "use", possessives and subjects, loose names, Task/Need/Tool tables, wrapped clauses and a bare arrow's name, leaves slot words, counts and the pack's flows alone, and every allowed kind must be read from the pack. | Updated: 2026-09-30 07:28 ET - red-first cases from the fifth v1.3 review: the pointer check tells a skill name from English's own hyphenated words by form, with a short ratcheted list of lexicalized compounds, keeps a realistic-prose corpus green and reads a one-word name after a verb again; an empty --plan, --apply, --diff or --json name, a file named ARCHIVE, hand-edited plan ids and hashes, junctions and links, a folder that cannot be listed, and signals stamped with Z. | Updated: 2026-09-30 13:43 ET - v1.2: the pointer check's grammar reader is retired for two exact mechanisms, a vocabulary ratchet over every name-shaped token in the pack's Markdown and a private-name deny-list read from TRIAD_PRIVATE_NAMES, both driven on every form the reviews listed and on the a9f9b3a export; red-first cases from the sixth v1.3 review: a file that cannot be read (held by another process), a backup that fails midway, an exception in verification and a rollback that fails, ARCHIVE in any case and case-only name pairs where the file system folds case, line-ending-only differences and --diff outside the copies, links to files, PULSE stamps in every shape on every Python, plan paths in skipped folders, flag values and hand edits, same-size groups read once, --details below zero, a PULSE with a BOM.
+"""Version 1.3 | Deps: stdlib; Skillshaper's validate_skill.py when present | Parent: The Triad (DevCom5 1.3, Synk182 3.3, Solid8 1.3) | Path: tests | Filename: test_triad.py | Created: 2026-09-30 01:12 ET - kept tests for the pack: the two engines, the three skill folders, and the pack's own ratchets. | Updated: 2026-09-30 04:05 ET - v1.3: red-first cases from the v1.2 review (bounded plan paths, stale plans, wrong-typed PULSE fields, CLI messages, copy numbers, sprawl across folders, pointer and version ratchets); comments read for a public reader; both engines checked for personal paths. | Updated: 2026-09-30 04:53 ET - red-first cases from the second v1.3 review: folder targets and rollback, backups read as the file they back up, unknown --approve ids, one folder given twice, an unparseable PULSE reported, signals only when true, protocol safety rule 4; the pointer check is an allow-list, so the test names no private skill. | Updated: 2026-09-30 05:37 ET - red-first cases from the third v1.3 review: --pulse when docs is a file, a PULSE holding no object, an approved item with no direction, an item with only an id named by its id, --plan beside --apply and --diff beside another action, a backup of a binary, backups with two markers; the pointer check reads what a pointer names, in any of its forms, rather than its first word. | Updated: 2026-09-30 06:09 ET - red-first cases from the fourth v1.3 review: a --plan or --json file that cannot be written, an item with no path in the --approve new listing; the pointer check reads the "X tool/helper/plugin" form, verbs beyond "use", possessives and subjects, loose names, Task/Need/Tool tables, wrapped clauses and a bare arrow's name, leaves slot words, counts and the pack's flows alone, and every allowed kind must be read from the pack. | Updated: 2026-09-30 07:28 ET - red-first cases from the fifth v1.3 review: the pointer check tells a skill name from English's own hyphenated words by form, with a short ratcheted list of lexicalized compounds, keeps a realistic-prose corpus green and reads a one-word name after a verb again; an empty --plan, --apply, --diff or --json name, a file named ARCHIVE, hand-edited plan ids and hashes, junctions and links, a folder that cannot be listed, and signals stamped with Z. | Updated: 2026-09-30 13:43 ET - v1.2: the pointer check's grammar reader is retired for two exact mechanisms, a vocabulary ratchet over every name-shaped token in the pack's Markdown and a private-name deny-list read from TRIAD_PRIVATE_NAMES, both driven on every form the reviews listed and on the a9f9b3a export; red-first cases from the sixth v1.3 review: a file that cannot be read (held by another process), a backup that fails midway, an exception in verification and a rollback that fails, ARCHIVE in any case and case-only name pairs where the file system folds case, line-ending-only differences and --diff outside the copies, links to files, PULSE stamps in every shape on every Python, plan paths in skipped folders, flag values and hand edits, same-size groups read once, --details below zero, a PULSE with a BOM. | Updated: 2026-09-30 14:32 ET - red-first cases from the seventh v1.3 review: the vocabulary ratchet reads CamelCase, dotted names, bare, dot-folder and Windows paths, hex letters with one digit, v8, x_y, a date in a name and any script (its 28 forms kept in REVIEW7_FORMS), the deny-list folds accents and every separator including none and a soft wrap, the stale check reads with the tokenizer and kinds of work have their own list; skipped folders folded where the file system folds case, mixed endings and a BOM named, Windows-reserved plan paths, links in a plan or --diff, already applied for two-sided items, any exception in the backup phase, a file unreadable at compare time, the capped --json proposal, the exact ISO-8601 grammar and LF output.
 
 Run from the pack folder:  python -B -m unittest discover -s tests -v
 
@@ -22,6 +22,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import unicodedata
 import unittest
 from contextlib import redirect_stdout
 from datetime import datetime, timedelta
@@ -199,27 +200,49 @@ def _frontmatter(skill):
 # or a public one (the v1.2 review found four private names). Two exact mechanisms catch
 # a private name, neither reading grammar (five rounds of grammar never converged):
 #   1. A vocabulary ratchet over the pack's own text: every name-shaped token in every
-#      tracked .md file must be in VOCABULARY_NAMES (where a pointer may point) or in
-#      VOCABULARY_WORDS (every other name-shaped token the pack's text uses); an unknown
-#      token fails with file:line and REMEDY. Every entry must still occur in the pack
-#      (a stale entry fails), so the lists hold only what is used.
+#      tracked .md file must be in VOCABULARY_NAMES (where a pointer may point),
+#      VOCABULARY_KINDS (a kind of work the pack names in place of a skill: "a
+#      knowledge-search skill") or VOCABULARY_WORDS (every other name-shaped token the
+#      pack's text uses); an unknown token fails with file:line and REMEDY. Every entry
+#      must still be produced by the tokenizer from the pack's text (a stale entry
+#      fails), so the lists hold only what is used; PLAIN_NAMES are the two public
+#      targets with no shape (git, verafox), checked as whole words instead.
 #   2. A private-name deny-list read from outside the repository: the file named by
 #      TRIAD_PRIVATE_NAMES (one name per line, # comments), matched whole-word and
-#      case-insensitive in every file of the pack, a hyphen in a name matching a hyphen,
-#      an underscore, a dash or one space, so every spelling of it is found. It catches
-#      the one-word names no shape can; unset, its test is skipped with a visible reason.
-#      Nothing in the repository names a private name or says where the list lives.
-# Name-shaped (_name_shaped): a token with an internal hyphen or underscore, or letters
-# and digits mixed, once a file extension is dropped, a dash of any kind read as a hyphen
-# and case folded; a version (v1.3), a commit hash, a date, a time, an all-digit range
-# (60-99) and a run of one-letter parts (A-C) are not names. Each segment of a path or a
-# URL is a token too (`/docs`, `docs/PULSE.json`, `github.com/x/y`), so an unmarked name
-# in a path is caught; a slash in prose (read/comprehend) is not a path.
+#      case-insensitive in every file of the pack, with accents folded (prívate reads
+#      private) and any run of hyphens, underscores, dashes, spaces, tabs, no-break
+#      spaces or line breaks between the name's letters, or none at all (privatenotes,
+#      private--notes, jot book, a soft wrap), so every spelling of it is found (a dot is
+#      part of a name, not a separator: list private.notes as such; a letter or digit
+#      joined to either end, jotbooks or jotbook2, is another word). It
+#      catches the one-word names no shape can; unset, its test is skipped with a
+#      visible reason. Nothing in the repository names a private name or says where the
+#      list lives. The example names in this file (jotbook, notetaker, private-notes,
+#      memo-sweeper, notes2go, memo7, the rest of POINTER_FORMS and REVIEW7_FORMS) are
+#      made up; a real deny-list must never list one of them, since this file is scanned
+#      too: a collision is a red on tests/test_triad.py, and the example is what gets
+#      renamed.
+# Name-shaped (_name_shaped), after a dash of any kind is read as a hyphen, the case is
+# folded and edge punctuation and every known file extension (EXTENSIONS: cfg.json.bak
+# reads cfg) are dropped: a token with an internal hyphen or underscore (x_y included),
+# letters and digits mixed (notes2go, v8, face2face), a dotted token with letters on both
+# sides of a dot (private.notes, notes.v2, mk1made.us), a token with an internal
+# lower-to-upper case change before folding (NoteTaker, jotBook), a name holding a date
+# (notes-2026-09-30) and a name in any script (café-notes). Not names: a version with a
+# dot (v1.3), a commit hash (7 to 40 hex characters holding a letter and two or more
+# digits: 19a8722; one digit among hex letters is a name, face2face), a date or time
+# standing alone, an all-digit range (60-99), and one-letter parts joined by hyphens or
+# dots (A-C, e.g.). Each segment of a path is a token too, so an unmarked name in a path
+# is caught: a run is a path when it holds a backslash (C:\Users\me\.agents\skills\x), or
+# a slash with a trailing slash, a leading /, ./, ../ or ~/, a segment holding a dot (a
+# file name, a dot-folder: .agents/skills/x, .cursor/skills/x) or a segment naming a
+# skills folder (SKILL_HOMES: skills/x); a slash in prose (read/comprehend) is not a path.
 VOCABULARY_NAMES = frozenset("""
-    devcom5 synk182 solid8 dc5 s8 s182 the-triad skills-trifecta spric76 mk1 mk1made
-    git verafox the-proof-pack github skillshaper sc2 package_dual doc-coauthoring internal-comms
-    cursor claude
-    knowledge-search diagramming repo-rules memory-consolidation""".split())
+    devcom5 synk182 solid8 dc5 s8 s182 the-triad skills-trifecta spric76 mk1 mk1made.us
+    the-proof-pack github.com skillshaper sc2 package_dual doc-coauthoring internal-comms
+    cursor claude claude.ai""".split())
+VOCABULARY_KINDS = frozenset("knowledge-search repo-rules memory-consolidation".split())
+PLAIN_NAMES = ("git", "verafox")
 VOCABULARY_WORDS = frozenset("""
     2-second 24h 3p 5-doc anti-patterns append-only apply-report architecture_changed archive
     archive-named archive_dir archive_recommended at-risk audit_protocol auto-downshift auto-execute
@@ -246,36 +269,60 @@ VOCABULARY_WORDS = frozenset("""
     synk_last_run target_dir team-specific template-stamp template-stamping test_triad tests
     three-tier trade-offs triad_private_names trifecta trifecta_protocol ultra-careful under-the-hood
     universal_template user-facing user-specified user-unique user_copy user_experience user_to_working
-    utf-8 working-unique working_copy working_to_user wrong-typed yyyy-mm-dd""".split())
-REMEDY = ("English or the pack's own word? add it to VOCABULARY_WORDS; "
-          "a skill? it must be in the pack or public (VOCABULARY_NAMES)")
+    utf-8 working-unique working_copy working_to_user wrong-typed yyyy-mm-dd
+    denserengine synkengine macos pulse.corrupt env.example v1 v2 byte-order near-duplicate lpt1
+    comparisons_cap comparisons_left_out comparisons_total""".split())
+REMEDY = ("English or the pack's own word? add it to VOCABULARY_WORDS; a kind of work named in "
+          "place of a skill? VOCABULARY_KINDS; a skill? it must be in the pack or public (VOCABULARY_NAMES)")
+EXTENSIONS = frozenset("""
+    md markdown json py txt zip skill sh bak old orig backup yml yaml html htm css js ts pdf png jpg
+    jpeg gif svg csv log lock toml ini cfg xml exe dll so pyc tar gz 7z docx xlsx pptx mp3 mp4 wav
+    mov woff woff2 ttf otf sqlite db ico bmp webp""".split())
+SKILL_HOMES = frozenset("skills plugins agents commands extensions".split())
 
 _DASHES = str.maketrans(dict.fromkeys("‐‑‒–", "-"))
-_STAMP = re.compile(r"\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?"
-                    r"|(?<!\d)\d{1,2}:\d{2}(?::\d{2})?(?!\d)")
-_RUN = re.compile(r"[A-Za-z0-9_.\-/~]+")
-_EXT = re.compile(r"(?<=[a-z0-9])\.[a-z0-9]{1,5}$")
-_VERSION_TOKEN = re.compile(r"v\d+(?:\.\d+)*\+?")
-_COMMIT = re.compile(r"[0-9a-f]{7,40}")
+# a date or time standing alone (not glued to a name by a letter, digit or hyphen)
+_STAMP = re.compile(r"(?<![\w-])(?:\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?"
+                    r"|\d{1,2}:\d{2}(?::\d{2})?)(?![\w-])")
+_RUN = re.compile(r"[\w.\-/~\\]+")
+_CAMEL = re.compile(r"[a-z][A-Z][A-Za-z]")
+_VERSION_TOKEN = re.compile(r"v\d+(?:\.\d+)+\+?")
+_HEX = re.compile(r"[0-9a-f]{7,40}")
 
 
 def _fold(segment):
     """A token as the vocabulary spells it: dashes as hyphens, case folded, edge
-    punctuation and a file extension dropped."""
-    return _EXT.sub("", segment.translate(_DASHES).lower().strip("_.-~"))
+    punctuation and every trailing known file extension dropped (cfg.json.bak reads cfg)."""
+    tok = segment.translate(_DASHES).lower().strip("_.-~")
+    while True:
+        stem, dot, ext = tok.rpartition(".")
+        if not (dot and stem and ext in EXTENSIONS):
+            return tok
+        tok = stem.rstrip(".")
 
 
 def _name_shaped(segment):
     """The name a token spells when its shape is a name's (the block above), else None."""
     tok = _fold(segment)
-    if not re.search(r"[a-z]", tok) or " " in tok:
+    if not any(c.isalpha() for c in tok) or " " in tok:
         return None
-    if _VERSION_TOKEN.fullmatch(tok) or (_COMMIT.fullmatch(tok) and re.search(r"\d", tok)):
+    if _VERSION_TOKEN.fullmatch(tok) or (_HEX.fullmatch(tok) and len(re.findall(r"\d", tok)) >= 2):
         return None
-    parts = re.split(r"[-_]", tok)
+    if _CAMEL.search(segment.translate(_DASHES).strip("_.-~")) or "_" in tok:
+        return tok
+    parts = re.split(r"[-.]", tok)
     if len(parts) > 1:
         return None if all(p.isdigit() for p in parts) or all(len(p) <= 1 for p in parts) else tok
     return tok if re.search(r"\d", tok) else None
+
+
+def _is_path(run, before):
+    """Whether a run of path characters is a path (the block above) rather than prose."""
+    segs = re.split(r"[/\\]", run)
+    return "\\" in run or ("/" in run and (
+        run.endswith("/") or any("." in s.strip(".") or (s.startswith(".") and len(s) > 1) for s in segs)
+        or any(s.lower() in SKILL_HOMES for s in segs)
+        or (before in " \t(`[\"'<:" and re.match(r"(?:\.{0,2}|~)/", run) is not None)))
 
 
 def _name_shaped_tokens(text):
@@ -285,26 +332,30 @@ def _name_shaped_tokens(text):
     for n, line in enumerate(text.split("\n"), 1):
         for m in _RUN.finditer(line):
             run, before = m.group(), line[m.start() - 1] if m.start() else " "
-            is_path = "/" in run and (run.endswith("/") or any("." in s.strip(".") for s in run.split("/"))
-                                      or (before in " \t(`[\"'<:" and re.match(r"(?:\.{0,2}|~)/", run) is not None))
-            for seg in run.split("/"):
+            is_path = _is_path(run, before)
+            for seg in re.split(r"[/\\]", run):
                 tok = _name_shaped(seg)
                 if tok is None and is_path:
                     seg = _fold(seg)
-                    tok = seg if len(seg) > 1 and re.search(r"[a-z]", seg) else None
+                    tok = seg if len(seg) > 1 and any(c.isalpha() for c in seg) else None
                 if tok:
                     found.append((n, tok))
     return found
 
 
 def _markdown_files(root):
-    return [p for p in sorted(Path(root).rglob("*.md")) if ".git" not in p.parts]
+    return [p for p in sorted(Path(root).rglob("*.md"), key=Path.as_posix) if ".git" not in p.parts]
+
+
+def _produced_tokens(root):
+    """Every name-shaped token the pack's Markdown produces, as a set."""
+    return {tok for p in _markdown_files(root) for _, tok in _name_shaped_tokens(p.read_text(encoding="utf-8"))}
 
 
 def _unknown_tokens(root):
     """'file:line: token' for every name-shaped token in the pack's Markdown that is in
-    neither vocabulary list, once per file and token."""
-    known = VOCABULARY_NAMES | VOCABULARY_WORDS
+    no vocabulary list, once per file and token."""
+    known = VOCABULARY_NAMES | VOCABULARY_KINDS | VOCABULARY_WORDS | set(PLAIN_NAMES)
     out = []
     for p in _markdown_files(root):
         seen = set()
@@ -317,7 +368,7 @@ def _unknown_tokens(root):
 
 def _pack_files(root):
     """Every file of the pack (a git export has no .git): all but .git, __pycache__ and bytecode."""
-    return [p for p in sorted(Path(root).rglob("*")) if p.is_file() and p.suffix not in (".pyc", ".pyo")
+    return [p for p in sorted(Path(root).rglob("*"), key=Path.as_posix) if p.is_file() and p.suffix not in (".pyc", ".pyo")
             and not {".git", "__pycache__"} & set(p.parts)]
 
 
@@ -327,23 +378,37 @@ def _read_private_names(path):
     return [l.lower() for l in lines if l and not l.startswith("#")]
 
 
+def _fold_text(text):
+    """Text as the deny-list reads it: compatibility-decomposed (NFKD), combining marks
+    dropped (prívate reads private, a ligature reads its letters), case folded."""
+    return "".join(c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c)).lower()
+
+
+_JOIN = r"[-_‐‑‒–\s]*"
+
+
 def _private_name_pattern(name):
-    """Whole-word and case-insensitive on a lowercased line; the name's hyphens, underscores
-    and spaces each match a hyphen, an underscore, a dash or one space."""
-    parts = [re.escape(p) for p in re.split(r"[-_\s]+", name.lower()) if p]
-    return re.compile(r"(?<![a-z0-9])" + r"[-_‐-– ]".join(parts) + r"(?![a-z0-9])")
+    """Whole-word on folded text: the name's letters and digits in order, with any run of
+    hyphens, underscores, dashes or whitespace (a line break included) between them, or
+    none: private-notes matches privatenotes, private--notes, private notes and a soft
+    wrap; jotbook matches jot-book and jot book. A letter or digit joined to either end
+    (jotbooks, jotbook2) is another word."""
+    chars = [re.escape(c) for c in _fold_text(name) if c not in "-_‐‑‒–" and not c.isspace()]
+    return re.compile(r"(?<![a-z0-9])" + _JOIN.join(chars) + r"(?![a-z0-9])")
 
 
 def _private_name_hits(root, names):
-    """'file:line: name' for every listed name found in any file of the pack."""
-    patterns = [(n, _private_name_pattern(n)) for n in names]
-    out = []
-    for p in _pack_files(root):
-        for i, line in enumerate(p.read_bytes().decode("utf-8", "replace").lower().splitlines(), 1):
-            out += [f"{p.relative_to(root).as_posix()}:{i}: {n}" for n, pat in patterns if pat.search(line)]
-    return out
-
-
+    """'file:line: name' for every listed name found in any file of the pack, once per
+    file, line and name (a name wrapped over two lines is reported at the first)."""
+    patterns = [(i, n, _private_name_pattern(n)) for i, n in enumerate(names)]
+    out = set()
+    for fi, p in enumerate(_pack_files(root)):
+        text = _fold_text(p.read_bytes().decode("utf-8", "replace"))
+        rel = p.relative_to(root).as_posix()
+        for i, n, pat in patterns:
+            for m in pat.finditer(text):
+                out.add((fi, rel, text.count("\n", 0, m.start()) + 1, i, n))
+    return [f"{rel}:{line}: {n}" for _, rel, line, _, n in sorted(out)]
 # Every pointer form an earlier review or probe listed (the v1.2 to sixth v1.3 reviews:
 # arrows, tables under many headers, clauses, headings, labels, links, paths, code spans,
 # every spelling and dash), each with the made-up names it holds. Injected into a copy of
@@ -928,6 +993,55 @@ class Solid8Engine(unittest.TestCase):
         self.assertFalse(raw.startswith(b"\xef\xbb\xbf"))
         self.assertEqual(json.loads(raw.decode("utf-8"))["project"], "X")
         self.assertIn("solid8_last_run", raw.decode("utf-8"))
+
+
+    def test_a_file_unreadable_at_compare_time_is_named_not_dropped_without_a_word(self):
+        # Break it catches: a file readable at the scan and unreadable at the compare (held
+        # by another process between the two) swallowed into a "-" tier and dropped from
+        # the comparisons with engine.unreadable empty, so the CLI printed unreadable for
+        # nothing (the seventh v1.3 review, probe7_solid8b). It is named with the OS reason,
+        # once, like a file unreadable at the scan.
+        body = "".join(f"shared line {i:02d}\n" for i in range(10))
+        for name, tail in (("a.txt", "only in a\n"), ("b.txt", "only in b\n"), ("c.txt", "only in c\n")):
+            _write(self.tmp, name, body + tail)
+        e = self.mod.DenserEngine(self.tmp)
+        e.scan()
+        real = e._units
+
+        def units(path):
+            if path.name == "c.txt":
+                raise PermissionError(13, "Permission denied", str(path))
+            return real(path)
+        with mock.patch.object(e, "_units", units):
+            e.compare_all()
+        self.assertEqual(e.unreadable, ["c.txt: cannot be read (Permission denied)"])
+        self.assertEqual([(c.file_a, c.file_b, c.tier) for c in e.comparisons], [("a.txt", "b.txt", "B")])
+        out = io.StringIO()
+        with mock.patch.object(self.mod.DenserEngine, "_units", lambda self_, p: units(p)), redirect_stdout(out):
+            rc = self.mod.main([self.tmp])
+        self.assertEqual(rc, 0)
+        self.assertRegex(out.getvalue(), r"unreadable: 1\n\s+c\.txt: cannot be read \(Permission denied\)")
+
+    def test_json_proposal_caps_comparisons_per_cluster_and_says_how_many_were_left_out(self):
+        # Break it catches: a near-duplicate cluster of 700 files writing 244,650
+        # comparisons, a 59 MB proposal.json (the seventh v1.3 review, T3c), while --pulse's
+        # map was capped at 50 pairs per tier. A cluster's comparisons are capped at the
+        # same 50, the proposal states the cap and each capped cluster says how many were
+        # left out, in the file and on the terminal.
+        for i in range(15):
+            _write(self.tmp, f"dup-{i:02d}.txt", "same\n")
+        out_file = Path(self.tmp) / "proposal.json"
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([self.tmp, "--json", str(out_file)])
+        self.assertEqual(rc, 0)
+        data = json.loads(out_file.read_text(encoding="utf-8"))
+        self.assertEqual(data["comparisons_cap"], 50)
+        self.assertEqual(data["tier_counts"]["S"], 105)
+        cluster, = data["clusters"]
+        self.assertEqual(len(cluster["files"]), 15)
+        self.assertEqual((len(cluster["comparisons"]), cluster["comparisons_total"], cluster["comparisons_left_out"]), (50, 105, 55))
+        self.assertRegex(out.getvalue(), r"Proposal written: .*\(comparisons capped at 50 per cluster; 55 left out\)")
 
 
 # ─────────────────────────────────────────────────────────────── synk182
@@ -1900,6 +2014,9 @@ class Synk182Engine(unittest.TestCase):
                    ("consumed-string-false", old + "Z", "false"), ("consumed-0", old + "Z", 0),
                    ("consumed-1", old + "Z", 1), ("empty", "", True), ("number", 1700000000, True),
                    ("month-13", old[:5] + "13" + old[7:], True),
+                   # the grammar exactly as docs/TRIFECTA.md pins it: no lower-case z, no offset
+                   # without a colon, no comma fraction (the seventh v1.3 review, S7)
+                   ("lower-z", old + "z", True), ("compact-off", old + "+0000", True), ("comma-frac", old + ",5Z", True),
                    ("unconsumed-old", old + "Z", False), ("unconsumed-bad", "yesterday", False)]
         pulse = {"cross_skill": {"pending_signals": [
             {"from": "devcom5", "signal": n, "to": "x", "timestamp": t, "consumed": c} for n, t, c in signals] + ["not an object"]}}
@@ -1915,7 +2032,7 @@ class Synk182Engine(unittest.TestCase):
                 self.assertEqual([s["signal"] if isinstance(s, dict) else s for s in kept],
                                  ["aware-9999", "naive-9999", "consumed-string-false", "consumed-0", "consumed-1",
                                   "unconsumed-old", "unconsumed-bad", "not an object"])
-                for name in ("basic-z", "empty", "number", "month-13"):
+                for name in ("basic-z", "empty", "number", "month-13", "lower-z", "compact-off", "comma-frac"):
                     self.assertRegex(out.getvalue(), rf"pruned.*{name}.*not .*ISO-8601")
                 self.assertNotIn("not written", out.getvalue())
 
@@ -2038,6 +2155,310 @@ class Synk182Engine(unittest.TestCase):
         self.assertNotIn("re-plan", out.getvalue())
 
 
+    def test_a_plan_path_in_a_skipped_folder_in_another_case_is_refused_where_the_file_system_folds_case(self):
+        # Break it catches: --approve on hand-edited items .GIT/hooks/pre-commit,
+        # NODE_MODULES/evil.js and Node_Modules/evil.js written into the working copy,
+        # "six layers verified", while .git/x and node_modules/x were refused (the seventh
+        # v1.3 review, S4d): on a file system that folds case those ARE the skipped
+        # folders, and a hook under .git/hooks runs at the next commit. Where the file
+        # system folds case, every skipped name is folded, in the refusal and in the scan.
+        if not _folds_case(self.u):
+            self.skipTest("a case-sensitive file system: .GIT is another folder there")
+        _write(self.u, ".git/hooks/pre-commit", "#!/bin/sh\necho hooked\n")
+        _write(self.u, "node_modules/evil.js", "x\n")
+        _write(self.u, "keep.txt", "one\n")
+        _write(self.w, ".GIT/config", "[core]\n")
+        _write(self.w, "NODE_MODULES/evil.js", "x\n")
+        _write(self.w, "Node_Modules/other.js", "y\n")
+        paths = [".GIT/hooks/pre-commit", "NODE_MODULES/evil.js", "Node_Modules/evil.js"]
+        plan = [{"id": i + 1, "path": p, "status": "user_only", "direction": "user_to_working"} for i, p in enumerate(paths)]
+        plan_file = _write(self.tmp, "plan.json", json.dumps(plan))
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "1,2,3"])
+        self.assertEqual(rc, 1)
+        for p in paths:
+            with self.subTest(path=p):
+                self.assertRegex(out.getvalue(), rf"Refused {re.escape(p)}: .*skips")
+        self.assertFalse((self.w / ".git" / "hooks").exists())
+        self.assertEqual(sorted(p.name.lower() for p in self.w.iterdir()), [".git", "node_modules"])
+        with redirect_stdout(io.StringIO()):
+            r = self.synk().scan_and_compare()
+        self.assertEqual(sorted(r["files"]), ["keep.txt"], "the scan folds the skipped names too")
+
+    def test_same_lines_in_mixed_endings_or_with_a_bom_are_named_as_such(self):
+        # Break it catches: user a\r\nb\n against working a\nb\r\n reported "different bytes"
+        # with the plan note "low similarity or binary" and --diff calling it an encoding
+        # difference, and a UTF-8 BOM on one side of a two-line file reported "different
+        # 33%" (the seventh v1.3 review, S5). The first is line endings differing within
+        # the file, said so on the dashboard, in the plan and by --diff, each side's mix
+        # named; the second is identical text with only a byte-order mark, said so too.
+        _write(self.u, "mixed.txt", data=b"a\r\nb\n")
+        _write(self.w, "mixed.txt", data=b"a\nb\r\n")
+        _write(self.u, "bom.txt", data=b"\xef\xbb\xbfline 1\nline 2\n")
+        _write(self.w, "bom.txt", data=b"line 1\nline 2\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            s = self.synk()
+            r = s.scan_and_compare()
+            plan = {a["path"]: a for a in s.plan()}
+        m = r["files"]["mixed.txt"]
+        self.assertEqual((m["status"], m["relationship"], m["similarity"]), ("line_endings", "line_endings", 1.0))
+        self.assertEqual(m["endings"], {"user": "mixed (CRLF and LF)", "working": "mixed (CRLF and LF)"})
+        self.assertTrue(m["within"])
+        self.assertRegex(out.getvalue(), r"line_endings.*mixed\.txt.*line endings differ within the file.*user mixed \(CRLF and LF\)")
+        self.assertIn("line endings differ within the file", plan["mixed.txt"]["note"])
+        self.assertIn("user mixed (CRLF and LF), working mixed (CRLF and LF)", plan["mixed.txt"]["note"])
+        b = r["files"]["bom.txt"]
+        self.assertEqual((b["status"], b["relationship"], b["similarity"]), ("different", "bom", 1.0))
+        self.assertEqual(b["bom"], {"user": True, "working": False})
+        self.assertRegex(out.getvalue(), r"different.*bom.*bom\.txt.*only a byte-order mark.*user copy carries")
+        self.assertIn("only a byte-order mark", plan["bom.txt"]["note"])
+        self.assertNotIn("low similarity", plan["bom.txt"]["note"])
+        self.assertEqual((r["line_endings"], r["different"], r["merge"]), (1, 1, 0))
+        for rel, words in (("mixed.txt", "line endings differ within the file: user mixed (CRLF and LF), working mixed (CRLF and LF)"),
+                           ("bom.txt", "differ only in a byte-order mark: the user copy carries a UTF-8 BOM, the working copy none")):
+            with self.subTest(diff=rel):
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    rc = self.mod.main([str(self.u), str(self.w), "--diff", rel])
+                self.assertEqual(rc, 0)
+                self.assertIn(words, out.getvalue())
+                self.assertNotIn("encoding", out.getvalue())
+
+    def test_plan_paths_in_forms_windows_reserves_are_refused_before_any_write(self):
+        # Break it catches: a plan path "a.txt." applied as work/a.txt (Windows strips a
+        # trailing dot, so the plan named one file and the copy wrote another, and the six
+        # layers passed through the same stripped name), and "a.txt:evil" (an NTFS stream)
+        # creating an archive folder with a manifest and then rolling back on WinError 2
+        # (the seventh v1.3 review, S9). On Windows a path whose segment ends in a dot,
+        # holds ':' or another character Windows forbids, or names a device, is refused
+        # before any backup or write, like a trailing separator is.
+        if os.name != "nt":
+            self.skipTest("these forms are ordinary names outside Windows")
+        _write(self.u, "a.txt", "a\n")
+        paths = ["a.txt.", "sub./a.txt", "a.txt:evil", "CON", "nul.txt", "sub/LPT1", "a<b.txt", "a|b.txt", "a?.txt"]
+        plan = [{"id": i + 1, "path": p, "status": "user_only", "direction": "user_to_working"} for i, p in enumerate(paths)]
+        plan_file = _write(self.tmp, "plan.json", json.dumps(plan))
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve",
+                                ",".join(str(a["id"]) for a in plan)])
+        self.assertEqual(rc, 1)
+        for p in paths:
+            with self.subTest(path=p):
+                self.assertRegex(out.getvalue(), re.escape(f"Refused {p}: ") + r".*Windows reserves")
+        self.assertEqual(sorted(p.name for p in self.w.iterdir()), [])
+        self.assertFalse((self.u / "ARCHIVE").exists())
+        self.assertIsNone(self.synk().refusal("a.txt"))
+
+    def test_a_plan_item_naming_a_link_is_refused_and_diff_refuses_it_too(self):
+        # Break it catches: the scan names a link to a file and does not follow it, but a
+        # hand-edited plan item naming one was copied through as a regular file holding
+        # the target's content, a dangling one made an archive folder and then rolled back,
+        # and --diff of a link printed the target's diff at rc 0 (the seventh v1.3 review,
+        # S6). A link anywhere in an item's path, on either side, is refused before any
+        # backup or write, as the scan refuses to read it; --diff answers the same.
+        _write(self.u, "real/a.txt", "a\n")
+        _write(self.w, "real/a.txt", "b\n")
+        if not _link_folder(self.u / "jn", self.u / "real"):
+            self.skipTest("this machine makes neither a junction nor a symbolic link")
+        items = {"jn/a.txt": "a folder link inside the copy"}
+        try:
+            os.symlink(self.u / "real" / "a.txt", self.u / "link.txt")
+            os.symlink(self.u / "no-such.txt", self.w / "dangling.txt")
+            items.update({"link.txt": "a file link", "dangling.txt": "a dangling link on the working side"})
+        except OSError:
+            pass  # no file symlinks without Developer Mode; the junction case still runs
+        plan = [{"id": i + 1, "path": p, "status": "merge", "direction": "user_to_working",
+                 "hashes": {"user": None, "working": None}} for i, p in enumerate(items)]
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            report = s.apply(plan, [a["id"] for a in plan])
+        self.assertEqual(report["applied"], [])
+        self.assertEqual(sorted(x["path"] for x in report["refused"]), sorted(items))
+        for x in report["refused"]:
+            with self.subTest(path=x["path"]):
+                self.assertIn("link", x["reason"])
+        self.assertIsNone(report["archive"])
+        self.assertFalse((self.u / "ARCHIVE").exists())
+        self.assertEqual((self.w / "real" / "a.txt").read_text(encoding="utf-8"), "b\n")
+        self.assertFalse((self.w / "link.txt").exists())
+        for rel in items:
+            with self.subTest(diff=rel):
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    rc = self.mod.main([str(self.u), str(self.w), "--diff", rel])
+                self.assertEqual(rc, 1)
+                self.assertIn("link", out.getvalue())
+                self.assertNotIn("---", out.getvalue())
+
+    def test_an_item_applied_twice_is_reported_as_already_applied_whatever_its_status(self):
+        # Break it catches: a two-sided item (a merge or a different pair, hand-directed)
+        # applied once, then --approve'd again from the same plan, answered "the working
+        # copy changed since the plan; re-plan" at rc 1, with a sync_conflict signal,
+        # though the destination held exactly the source (the seventh v1.3 review, S11);
+        # only a one-sided item said "already applied". Whatever the status, a destination
+        # that already holds the source's content is reported as already applied, as
+        # SKILL.md says.
+        _write(self.u, "a.txt", "user\n")
+        _write(self.w, "a.txt", "work\n")
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            plan = s.plan()
+        plan[0]["direction"] = "user_to_working"
+        plan_file = _write(self.tmp, "plan.json", json.dumps(plan))
+        with redirect_stdout(io.StringIO()):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "1"])
+        self.assertEqual(rc, 0)
+        self.assertEqual((self.w / "a.txt").read_text(encoding="utf-8"), "user\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "1", "--pulse"])
+        self.assertEqual(rc, 1)
+        self.assertRegex(out.getvalue(), r"Refused a\.txt: already applied: the working copy holds this content")
+        self.assertNotIn("re-plan", out.getvalue())
+        self.assertIn("already applied", self._pulse_signals().get("sync_conflict", ""))
+        _write(self.w, "a.txt", "edited since\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "1"])
+        self.assertEqual(rc, 1)
+        self.assertIn("re-plan", out.getvalue())
+
+    def test_any_exception_in_the_backup_phase_refuses_everything_and_leaves_no_archive(self):
+        # Break it catches: a MemoryError (anything but an OSError) raised while backing up
+        # escaping apply() with ARCHIVE/synk-<stamp>/ left behind without manifest.json and
+        # no report returned, so the CLI would have died in a traceback (the seventh v1.3
+        # review, injected); the OSError path was right. Any exception in the backup phase
+        # refuses every item, leaves no archive folder, and the report is returned; the
+        # same for backup() called on its own.
+        _write(self.u, "a.txt", "user a\n")
+        _write(self.w, "a.txt", "work a\n")
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            plan = s.plan()
+        plan[0]["direction"] = "user_to_working"
+        real = shutil.copy2
+
+        def copy2(src, dst, *a, **k):
+            if "ARCHIVE" in Path(dst).parts:
+                raise MemoryError("injected")
+            return real(src, dst, *a, **k)
+        out = io.StringIO()
+        with mock.patch.object(self.mod.shutil, "copy2", copy2), redirect_stdout(out):
+            report = s.apply(plan, [1])
+            with self.assertRaises(MemoryError):
+                s.backup(["a.txt"], side="working")
+        self.assertEqual(report["applied"], [])
+        self.assertEqual([x["path"] for x in report["refused"]], ["a.txt"])
+        self.assertIn("MemoryError", report["refused"][0]["reason"])
+        self.assertIsNone(report["archive"])
+        self.assertFalse((self.u / "ARCHIVE").exists(), "an archive holds its manifest or does not exist")
+        self.assertEqual((self.w / "a.txt").read_text(encoding="utf-8"), "work a\n")
+        self.assertIn("nothing written", out.getvalue())
+
+    def test_a_nested_archive_folder_is_named_as_a_folder_not_as_synks_own(self):
+        # Break it catches: sub/archive/ at any depth named "Synk's ARCHIVE folder, spelled
+        # archive" (the seventh v1.3 review, S4), though Synk's folder lives only at the
+        # user copy's root; the skip itself stays, as ARCHIVE is skipped at every depth.
+        if not _folds_case(self.u):
+            self.skipTest("a case-sensitive file system: archive/ is a project folder there")
+        _write(self.u, "archive/root.txt", "x\n")
+        _write(self.u, "sub/archive/deep.txt", "x\n")
+        _write(self.u, "a.txt", "a\n")
+        with redirect_stdout(io.StringIO()):
+            r = self.synk().scan_and_compare()
+        reasons = {n["path"]: n["reason"] for n in r["not_compared"]}
+        self.assertEqual(sorted(reasons), ["archive", "sub/archive"])
+        self.assertIn("Synk's ARCHIVE folder", reasons["archive"])
+        self.assertTrue(reasons["sub/archive"].startswith("a folder named archive"), reasons["sub/archive"])
+        self.assertNotIn("Synk's ARCHIVE folder", reasons["sub/archive"])
+        self.assertIn("skipped as ARCHIVE is", reasons["sub/archive"])
+        self.assertEqual(sorted(r["files"]), ["a.txt"])
+
+    def test_every_file_the_engines_write_is_lf_on_every_platform(self):
+        # Break it catches: on Windows every JSON and Markdown file the pack writes (the
+        # plan, manifest.json, rollback.md, apply-report.json, docs/PULSE.json, Solid8's
+        # proposal and archive) written CRLF through write_text, so a PULSE that arrived LF
+        # was rewritten with every line changed for the other machine's diff (the seventh
+        # v1.3 review, T4). Everything the engines write is LF wherever they run.
+        _write(self.u, "a.txt", "user\n")
+        _write(self.w, "a.txt", "work\n")
+        _write(self.u, "new.txt", "new\n")
+        _write(self.u, "docs/PULSE.json", data=b'{"project": "X", "cross_skill": {"pending_signals": []}}\n')
+        plan_file = Path(self.tmp) / "plan.json"
+        with redirect_stdout(io.StringIO()):
+            self.assertEqual(self.mod.main([str(self.u), str(self.w), "--plan", str(plan_file), "--pulse"]), 0)
+            plan_bytes = plan_file.read_bytes()
+            plan = json.loads(plan_bytes.decode("utf-8"))
+            for act in plan:
+                act["direction"] = "user_to_working"
+            plan_file.write_text(json.dumps(plan), encoding="utf-8")
+            self.assertEqual(self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "1,2", "--pulse"]), 0)
+        archive = next((self.u / "ARCHIVE").iterdir())
+        written = {"plan.json": plan_bytes, "PULSE.json": self.u / "docs" / "PULSE.json",
+                   "manifest.json": archive / "manifest.json", "rollback.md": archive / "rollback.md",
+                   "apply-report.json": archive / "apply-report.json"}
+        solid8 = _load("denser_engine", "solid8/scripts/denser_engine.py")
+        target = Path(self.tmp) / "s8"
+        _write(target, "a.txt", "same\n")
+        _write(target, "a - Copy.txt", "same\n")
+        proposal = Path(self.tmp) / "proposal.json"
+        with redirect_stdout(io.StringIO()):
+            self.assertEqual(solid8.main([str(target), "--json", str(proposal), "--pulse"]), 0)
+            e = solid8.DenserEngine(target)
+            e.scan()
+            dest = e.create_archive(["a.txt"], target / "ARCHIVE", "test")
+        written.update({"proposal.json": proposal, "solid8 PULSE.json": target / "docs" / "PULSE.json",
+                        "solid8 manifest.json": dest / "manifest.json", "solid8 rollback.md": dest / "rollback.md"})
+        for name, path in written.items():
+            with self.subTest(file=name):
+                data = path if isinstance(path, bytes) else path.read_bytes()
+                self.assertTrue(data, name)
+                self.assertNotIn(b"\r", data, f"{name} is not LF")
+
+# The seventh v1.3 review's 28 pointer forms, each with its made-up name and the token
+# mechanism 1 reports for it, or None where the form is the deny-list's job: a one-word
+# name in a code span or a link has no shape (the link's host is red instead). Every
+# other form is red through the vocabulary: CamelCase, a dotted name, a bare, dot-folder
+# or Windows path to a skill folder, hex letters with one digit, v8, x_y, a date in a
+# name, a name in any script, and the hyphenated and digit-bearing names of before.
+REVIEW7_FORMS = {
+    'Not for notes; use NoteTaker.': ('notetaker', 'notetaker'),
+    'Not for notes; use jotBook for those.': ('jotbook', 'jotbook'),
+    '| Ask | Skill |\n|---|---|\n| Notes | MemoSweeper |': ('memosweeper', 'memosweeper'),
+    'Not for notes; use private.notes.': ('private.notes', 'private.notes'),
+    'Not for notes; run org.notes.skill.': ('org.notes', 'org.notes'),
+    'Not for notes; the notes.v2 skill does those.': ('notes.v2', 'notes.v2'),
+    'Not for notes; see skills/jotbook.': ('jotbook', 'jotbook'),
+    'Not for notes; see skills/jotbook for those.': ('jotbook', 'jotbook'),
+    'Not for notes; it lives in .agents/skills/jotbook.': ('jotbook', 'jotbook'),
+    'Not for notes; it lives in .cursor/skills/jotbook.': ('jotbook', 'jotbook'),
+    'Not for notes; see C:\\Users\\me\\.agents\\skills\\jotbook\\SKILL.md.': ('jotbook', 'jotbook'),
+    'Not for notes; see %USERPROFILE%\\.agents\\skills\\jotbook.': ('jotbook', 'jotbook'),
+    'Not for notes; use face2face.': ('face2face', 'face2face'),
+    'Not for notes; use decaf5.': ('decaf5', 'decaf5'),
+    'Not for notes; use cab2bed for those.': ('cab2bed', 'cab2bed'),
+    'Not for notes; use bad1dea.': ('bad1dea', 'bad1dea'),
+    'Not for notes; use v8.': ('v8', 'v8'),
+    'Not for notes; use x_y.': ('x_y', 'x_y'),
+    'Not for notes; use notes-2026-09-30.': ('notes-2026-09-30', 'notes-2026-09-30'),
+    'Not for notes; use 2026-09-30-notes.': ('2026-09-30-notes', '2026-09-30-notes'),
+    'Not for notes; use caf\u00e9-notes.': ('caf\u00e9-notes', 'caf\u00e9-notes'),
+    'Not for notes; use na\u00efve-notes.': ('na\u00efve-notes', 'na\u00efve-notes'),
+    'Not for notes; use `jotbook`.': ('jotbook', None),
+    'Not for notes; use [jotbook](https://example.org/x).': ('jotbook', None),
+    'Not for release-notes (DevCom5).': ('release-notes', 'release-notes'),
+    'Not for notes; use private-notes.': ('private-notes', 'private-notes'),
+    'Not for notes; use notes2go.': ('notes2go', 'notes2go'),
+    'Not for notes; use 0xdeadbeef1.': ('0xdeadbeef1', '0xdeadbeef1'),
+}
+
+
 # ─────────────────────────────────────────────────────────────── the three folders
 class SkillFolders(unittest.TestCase):
     """Each skill folder meets Skillshaper's bar, and its description is what makes it fire."""
@@ -2149,34 +2570,57 @@ class SkillFolders(unittest.TestCase):
         self.assertEqual(unknown, [], "\n" + "\n".join(unknown) + "\n" + REMEDY)
 
     def test_vocabulary_holds_only_what_the_pack_uses(self):
-        # The ratchet: every entry of both lists must still occur in the pack's Markdown,
-        # whole-word (git, verafox and diagramming carry no mark and occur as plain words),
-        # so a list only ever holds what the pack uses; the lists are lowercase and disjoint.
-        text = "\n".join(p.read_text(encoding="utf-8") for p in _markdown_files(ROOT)).translate(_DASHES).lower()
-        for entry in sorted(VOCABULARY_NAMES | VOCABULARY_WORDS):
+        # The ratchet's other edge, by the same tokenizer the check reads with: every entry
+        # of the three lists must be produced as a name-shaped token from the pack's
+        # Markdown, so an entry that is also an English word (in, path, project, from the
+        # one path example) goes stale the moment the text that produced it goes (the
+        # seventh v1.3 review measured the whole-word check passing 106 plain uses of
+        # "in"); the two plain public names are checked whole-word, since they have no
+        # shape. The lists are lowercase and disjoint.
+        produced = _produced_tokens(ROOT)
+        text = "\n".join(p.read_text(encoding="utf-8") for p in _markdown_files(ROOT)).lower()
+        for entry in sorted(VOCABULARY_NAMES | VOCABULARY_KINDS | VOCABULARY_WORDS):
             with self.subTest(entry=entry):
                 self.assertEqual(entry, entry.lower().strip())
-                self.assertRegex(text, r"(?<![a-z0-9_])" + re.escape(entry) + r"(?![a-z0-9_])",
-                                 "stale: the pack no longer uses it; remove it")
-        self.assertEqual(VOCABULARY_NAMES & VOCABULARY_WORDS, frozenset())
+                self.assertIn(entry, produced, "stale: the pack's text no longer produces it; remove it")
+        for entry in PLAIN_NAMES:
+            with self.subTest(entry=entry):
+                self.assertIsNone(_name_shaped(entry), "it has a shape: list it in VOCABULARY_NAMES")
+                self.assertRegex(text, r"(?<![a-z0-9_])" + re.escape(entry) + r"(?![a-z0-9_])", "stale; remove it")
+        lists = (VOCABULARY_NAMES, VOCABULARY_KINDS, VOCABULARY_WORDS, frozenset(PLAIN_NAMES))
+        self.assertEqual(sum(map(len, lists)), len(frozenset().union(*lists)), "an entry sits in two lists")
 
     def test_name_shape_is_what_the_vocabulary_block_says(self):
         # Pins the shape rule, one case per clause of the block above, so a change to it is
-        # a change here first.
+        # a change here first. The seventh v1.3 review wrote 28 pointer forms before reading
+        # the discriminator and 21 passed it: CamelCase folded away, a dotted name read as
+        # an extension, any hex letters with a digit read as a commit, v8 as a version, x_y
+        # as one-letter parts, a date blanked out of a name, a non-ASCII letter splitting a
+        # run, and a bare, dot-folder or Windows path not read as a path (REVIEW7_FORMS).
         for token, name in (("Private-Notes", "private-notes"), ("private_notes", "private_notes"),
-                            ("private‑notes", "private-notes"), ("private–notes", "private-notes"),
+                            ("private\u2011notes", "private-notes"), ("private\u2013notes", "private-notes"),
                             ("notes2go", "notes2go"), ("memo7", "memo7"), ("utf-8", "utf-8"), ("3P", "3p"),
-                            ("--dry-run", "dry-run"), ("synk_engine.py", "synk_engine"), ("mk1made.us", "mk1made"),
-                            ("release-notes.", "release-notes"), ("v1.3", None), ("v2", None), ("19a8722", None),
-                            ("2026-09-30", None), ("60-99", None), ("A-C", None), ("e.g.", None), ("PULSE.json", None),
-                            ("notes", None), ("Docker", None), ("private notes", None)):
+                            ("--dry-run", "dry-run"), ("synk_engine.py", "synk_engine"), ("mk1made.us", "mk1made.us"),
+                            ("release-notes.", "release-notes"), ("cfg.json.bak.old", None), ("skills.sh", None),
+                            ("NoteTaker", "notetaker"), ("jotBook", "jotbook"), ("macOS", "macos"), ("PULSE.corrupt.json", "pulse.corrupt"),
+                            ("private.notes", "private.notes"), ("org.notes.skill", "org.notes"), ("notes.v2", "notes.v2"),
+                            ("face2face", "face2face"), ("decaf5", "decaf5"), ("cab2bed", "cab2bed"), ("abcdef1", "abcdef1"),
+                            ("v8", "v8"), ("v2", "v2"), ("x_y", "x_y"), ("caf\u00e9-notes", "caf\u00e9-notes"),
+                            ("notes-2026-09-30", "notes-2026-09-30"), ("0xdeadbeef1", "0xdeadbeef1"),
+                            ("v1.3", None), ("v3.3+", None), ("19a8722", None), ("a9f9b3a", None), ("deadbeef", None),
+                            ("2026-09-30", None), ("60-99", None), ("A-C", None), ("e.g.", None), ("i.e.", None),
+                            ("PULSE.json", None), ("README.md", None), ("notes", None), ("Docker", None),
+                            ("private notes", None), ("\u2070", None)):
             with self.subTest(token=token):
                 self.assertEqual(_name_shaped(token), name)
         text = ("see /jotbook, jotbook/SKILL.md and `skills/jotbook/`; read/comprehend it at 14:12 on "
-                "2026-09-30T14:12:00Z; docs/PULSE.json; https://github.com/someone/x; (D/M/C); 1-2 ¶/section")
+                "2026-09-30T14:12:00Z; docs/PULSE.json; https://github.com/someone/x; (D/M/C); 1-2 \u00b6/section; "
+                "CI/CD; skills/jotbook; .agents/skills/jotbook; C:\\Users\\me\\.cursor\\skills\\jotbook\\SKILL.md; "
+                "notes-2026-09-30 and 2026-09-30-notes, on 2026-09-30 at 13:45:34 -0400; v1.3; v8")
         self.assertEqual([t for _, t in _name_shaped_tokens(text)],
-                         ["jotbook", "jotbook", "skill", "skills", "jotbook", "docs", "pulse", "github", "someone"])
-
+                         ["jotbook", "jotbook", "skill", "skills", "jotbook", "docs", "pulse", "github.com", "someone",
+                          "skills", "jotbook", "agents", "skills", "jotbook", "users", "me", "cursor", "skills", "jotbook", "skill",
+                          "notes-2026-09-30", "2026-09-30-notes", "v8"])
     def _pack_copy(self):
         """A copy of the pack's Markdown to inject into; README.md's text and line count."""
         tmp = Path(tempfile.mkdtemp())
@@ -2215,21 +2659,53 @@ class SkillFolders(unittest.TestCase):
     def test_a_stale_vocabulary_entry_goes_red(self):
         # The ratchet's other edge: an entry the pack stops using fails, so the lists
         # cannot grow on a guess. Driven on a copy of the pack with one word's every use
-        # removed, through the same check the ratchet test makes.
+        # removed, through the same tokenizer the ratchet test reads with; and an entry
+        # that is also an English word (in, path, project: the one path example produces
+        # them) goes stale with that example, though the plain words stay everywhere.
         tmp, _, _ = self._pack_copy()
-        word = "re-plan"
         for p in _markdown_files(tmp):
-            p.write_text(p.read_text(encoding="utf-8").replace(word, "plan again"), encoding="utf-8", newline="")
+            p.write_text(p.read_text(encoding="utf-8").replace("re-plan", "plan again").replace("path/in/project.md", "sub/file.md"),
+                         encoding="utf-8", newline="")
+        produced = _produced_tokens(tmp)
         text = "\n".join(p.read_text(encoding="utf-8") for p in _markdown_files(tmp)).lower()
-        self.assertIn(word, VOCABULARY_WORDS)
-        self.assertNotRegex(text, r"(?<![a-z0-9_])" + re.escape(word) + r"(?![a-z0-9_])")
+        for word in ("re-plan", "in", "path", "project"):
+            with self.subTest(entry=word):
+                self.assertIn(word, VOCABULARY_WORDS)
+                self.assertNotIn(word, produced)
+        self.assertRegex(text, r"(?<![a-z0-9_])in(?![a-z0-9_])", "the plain word stays; only the token is gone")
+
+    def test_review7_pointer_forms_are_caught_by_the_mechanism_the_table_names(self):
+        # Break it catches: the seventh v1.3 review's 28 forms, written before reading the
+        # discriminator, 21 of which passed mechanism 1 on 11f65be. Each form is appended
+        # to a copy of the pack's README: where REVIEW7_FORMS names a token, mechanism 1
+        # reports exactly it at a line past the original; where it names None, the form is
+        # the deny-list's job (a one-word name in a code span or a link has no shape), and
+        # the deny-list finds the name there. Every listed name is a deny-list hit.
+        tmp, base, n = self._pack_copy()
+        self.assertEqual(_unknown_tokens(tmp), [])
+        for p in _markdown_files(tmp):
+            if p != tmp / "README.md":
+                p.unlink()
+        for text, (name, token) in REVIEW7_FORMS.items():
+            with self.subTest(form=text):
+                (tmp / "README.md").write_text(base + text + "\n", encoding="utf-8", newline="")
+                found = {f.split(": ", 1)[1] for f in _unknown_tokens(tmp) if int(f.split(":")[1]) > n}
+                self.assertEqual(found, {f.split(": ", 1)[1] for f in _unknown_tokens(tmp)}, "red only past the original")
+                if token:
+                    self.assertIn(token, found)
+                hits = _private_name_hits(tmp, [name])
+                self.assertEqual([h.split(": ", 1)[1] for h in hits], [name], hits)
+                self.assertGreater(int(hits[0].split(":")[1]), n)
 
     def test_deny_list_reads_one_name_per_line_and_finds_every_spelling(self):
         # Mechanism 2 driven on a made-up list: comments and blank lines are skipped; a
         # listed name is found whole-word in any file (Markdown, a script, the licence),
-        # in any case, with a hyphen written as a hyphen, an underscore, a dash or a
-        # space; a longer word that contains it, a name with a digit added, .git and
-        # __pycache__ are not hits.
+        # in any case, with accents folded, and with its parts joined by a hyphen, an
+        # underscore, a dash, one or more spaces, a tab, a no-break space, nothing, or a
+        # line break (a soft wrap, reported at its first line); a one-word name split by a
+        # hyphen or a space is found too. A longer word that contains it, a name with a
+        # digit added, .git and __pycache__ are not hits (the seventh v1.3 review's 27
+        # spellings: privatenotes, private--notes, jot-book and the soft wrap were misses).
         tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, tmp, True)
         deny = _write(tmp, "names.txt", "# made-up names\n\njotbook\n  Private-Notes\n")
@@ -2241,10 +2717,15 @@ class SkillFolders(unittest.TestCase):
         _write(pack, "LICENSE", "Private-Notes\n")
         _write(pack, ".git/config", "jotbook\n")
         _write(pack, "__pycache__/x.pyc", "jotbook\n")
+        _write(pack, "docs/MORE.md", "privatenotes\nprivate--notes\nprivate  notes\nprivate\tnotes\nprivate notes\n"
+                                     "prívate-notes\njot-book\njot book\nsee private-\nnotes there\nnothing here\nprivate -notes\n")
         self.assertEqual(_private_name_hits(pack, ["jotbook", "private-notes"]),
                          ["LICENSE:1: private-notes", "README.md:1: jotbook", "README.md:4: private-notes",
-                          "README.md:5: private-notes", "README.md:6: private-notes", "synk182/scripts/x.py:1: jotbook"])
-
+                          "README.md:5: private-notes", "README.md:6: private-notes",
+                          "docs/MORE.md:1: private-notes", "docs/MORE.md:2: private-notes", "docs/MORE.md:3: private-notes",
+                          "docs/MORE.md:4: private-notes", "docs/MORE.md:5: private-notes", "docs/MORE.md:6: private-notes",
+                          "docs/MORE.md:7: jotbook", "docs/MORE.md:8: jotbook", "docs/MORE.md:9: private-notes",
+                          "docs/MORE.md:12: private-notes", "synk182/scripts/x.py:1: jotbook"])
     def test_private_names_from_the_deny_list_never_appear_in_the_pack(self):
         """Mechanism 2 on the pack itself: TRIAD_PRIVATE_NAMES names a file outside the
         repository, one private name per line (# comments); any whole-word occurrence of a
