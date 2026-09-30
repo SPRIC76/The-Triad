@@ -1,4 +1,4 @@
-"""Version 1.1 | Deps: stdlib; Skillshaper's validate_skill.py when present | Parent: The Triad (DevCom5 1.3, Synk182 3.3, Solid8 1.3) | Path: tests | Filename: test_triad.py | Created: 2026-09-30 01:12 ET - kept tests for the pack: the two engines, the three skill folders, and the pack's own ratchets. | Updated: 2026-09-30 04:05 ET - v1.3: red-first cases from the v1.2 review (bounded plan paths, stale plans, wrong-typed PULSE fields, CLI messages, copy numbers, sprawl across folders, pointer and version ratchets); comments read for a public reader; both engines checked for personal paths. | Updated: 2026-09-30 04:53 ET - red-first cases from the second v1.3 review: folder targets and rollback, backups read as the file they back up, unknown --approve ids, one folder given twice, an unparseable PULSE reported, signals only when true, protocol safety rule 4; the pointer check is an allow-list, so the test names no private skill. | Updated: 2026-09-30 05:37 ET - red-first cases from the third v1.3 review: --pulse when docs is a file, a PULSE holding no object, an approved item with no direction, an item with only an id named by its id, --plan beside --apply and --diff beside another action, a backup of a binary, backups with two markers; the pointer check reads what a pointer names, in any of its forms, rather than its first word. | Updated: 2026-09-30 06:09 ET - red-first cases from the fourth v1.3 review: a --plan or --json file that cannot be written, an item with no path in the --approve new listing; the pointer check reads the "X tool/helper/plugin" form, verbs beyond "use", possessives and subjects, loose names, Task/Need/Tool tables, wrapped clauses and a bare arrow's name, leaves slot words, counts and the pack's flows alone, and every allowed kind must be read from the pack. | Updated: 2026-09-30 07:28 ET - red-first cases from the fifth v1.3 review: the pointer check tells a skill name from English's own hyphenated words by form, with a short ratcheted list of lexicalized compounds, keeps a realistic-prose corpus green and reads a one-word name after a verb again; an empty --plan, --apply, --diff or --json name, a file named ARCHIVE, hand-edited plan ids and hashes, junctions and links, a folder that cannot be listed, and signals stamped with Z.
+"""Version 1.2 | Deps: stdlib; Skillshaper's validate_skill.py when present | Parent: The Triad (DevCom5 1.3, Synk182 3.3, Solid8 1.3) | Path: tests | Filename: test_triad.py | Created: 2026-09-30 01:12 ET - kept tests for the pack: the two engines, the three skill folders, and the pack's own ratchets. | Updated: 2026-09-30 04:05 ET - v1.3: red-first cases from the v1.2 review (bounded plan paths, stale plans, wrong-typed PULSE fields, CLI messages, copy numbers, sprawl across folders, pointer and version ratchets); comments read for a public reader; both engines checked for personal paths. | Updated: 2026-09-30 04:53 ET - red-first cases from the second v1.3 review: folder targets and rollback, backups read as the file they back up, unknown --approve ids, one folder given twice, an unparseable PULSE reported, signals only when true, protocol safety rule 4; the pointer check is an allow-list, so the test names no private skill. | Updated: 2026-09-30 05:37 ET - red-first cases from the third v1.3 review: --pulse when docs is a file, a PULSE holding no object, an approved item with no direction, an item with only an id named by its id, --plan beside --apply and --diff beside another action, a backup of a binary, backups with two markers; the pointer check reads what a pointer names, in any of its forms, rather than its first word. | Updated: 2026-09-30 06:09 ET - red-first cases from the fourth v1.3 review: a --plan or --json file that cannot be written, an item with no path in the --approve new listing; the pointer check reads the "X tool/helper/plugin" form, verbs beyond "use", possessives and subjects, loose names, Task/Need/Tool tables, wrapped clauses and a bare arrow's name, leaves slot words, counts and the pack's flows alone, and every allowed kind must be read from the pack. | Updated: 2026-09-30 07:28 ET - red-first cases from the fifth v1.3 review: the pointer check tells a skill name from English's own hyphenated words by form, with a short ratcheted list of lexicalized compounds, keeps a realistic-prose corpus green and reads a one-word name after a verb again; an empty --plan, --apply, --diff or --json name, a file named ARCHIVE, hand-edited plan ids and hashes, junctions and links, a folder that cannot be listed, and signals stamped with Z. | Updated: 2026-09-30 13:43 ET - v1.2: the pointer check's grammar reader is retired for two exact mechanisms, a vocabulary ratchet over every name-shaped token in the pack's Markdown and a private-name deny-list read from TRIAD_PRIVATE_NAMES, both driven on every form the reviews listed and on the a9f9b3a export; red-first cases from the sixth v1.3 review: a file that cannot be read (held by another process), a backup that fails midway, an exception in verification and a rollback that fails, ARCHIVE in any case and case-only name pairs where the file system folds case, line-ending-only differences and --diff outside the copies, links to files, PULSE stamps in every shape on every Python, plan paths in skipped folders, flag values and hand edits, same-size groups read once, --details below zero, a PULSE with a BOM.
 
 Run from the pack folder:  python -B -m unittest discover -s tests -v
 
@@ -41,11 +41,6 @@ CALL_WORDS = {"devcom5": ("devcom5", "dc5", "logger"),
 # Skills a "not for" may name: the pack's own, and verafox, which is public in The
 # Proof Pack. Anything else is described as a kind of work, never named.
 SIBLINGS = ("verafox", "DevCom5", "Synk182", "Solid8")
-# The words a pointer may name: the siblings, git, and the kinds of work the pack
-# describes ("a diagramming skill"). A new kind is added here on purpose; any other
-# skill-shaped word in a pointer names a skill the reader cannot reach.
-POINTER_NAMES = {s.lower() for s in SIBLINGS} | {"git"}
-POINTER_KINDS = {"knowledge-search", "diagramming", "repo-rules", "memory-consolidation"}
 PROOF_PACK = "https://github.com/SPRIC76/The-Proof-Pack"
 
 
@@ -114,6 +109,46 @@ def _old_signals(consumed_by):
         for s, t in stamps.items()]}})
 
 
+def _folds_case(folder):
+    """True where the file system folds case at folder (Windows, default macOS): the folder's
+    own name in another case reaches the same entry. Asked of the folder, not of the OS, so a
+    case-sensitive volume mounted on Windows answers for itself."""
+    other = Path(folder).with_name(Path(folder).name.swapcase())
+    try:
+        return other.exists() and os.path.samefile(other, folder)
+    except OSError:
+        return False
+
+
+def _hold_unreadable(test, path, sweep):
+    """Make path unreadable to this process for real, the way the sixth v1.3 review drove it:
+    on Windows another process holds an exclusive byte-range lock on it, so a read fails with
+    Permission denied (an ACL deny fails the same way, at open; a kept test does not change a
+    machine's ACLs); elsewhere its mode is 000 (skipped as root, who reads anything). Undone
+    when the test ends, and sweep (the test's temp folder, which tearDown could not empty while
+    the file was held) is removed then."""
+    path = Path(path)
+    if os.name == "nt":
+        scratch = Path(tempfile.mkdtemp())
+        locker = _write(scratch, "locker.py", "import msvcrt, sys, time\nf = open(sys.argv[1], 'r+b')\n"
+                        "msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1 << 20)\nprint('locked', flush=True)\n"
+                        "time.sleep(120)\n")
+        p = subprocess.Popen([sys.executable, "-B", str(locker), str(path)], stdout=subprocess.PIPE)
+        test.addCleanup(shutil.rmtree, sweep, True)
+        test.addCleanup(shutil.rmtree, scratch, True)
+        test.addCleanup(p.wait)
+        test.addCleanup(p.kill)
+        test.assertEqual(p.stdout.readline().strip(), b"locked")
+    else:
+        if getattr(os, "geteuid", lambda: 1)() == 0:
+            test.skipTest("running as root: every file is readable")
+        os.chmod(path, 0)
+        test.addCleanup(shutil.rmtree, sweep, True)
+        test.addCleanup(os.chmod, path, 0o644)
+    with test.assertRaises(OSError):
+        path.read_bytes()
+
+
 def _frontmatter(skill):
     """The raw frontmatter of a SKILL.md, read the way a strict host reads it.
 
@@ -159,379 +194,338 @@ def _frontmatter(skill):
     return out
 
 
-# An Agent Skills name is lowercase letters, digits and hyphens, so a capitalised word
-# (GitHub, Verafox) is never one; where a pointer is certain, a hyphenated or underscored
-# name written loosely (Private-Notes, private_notes) is read as the name it spells.
-_SKILL_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
-_LOOSE_NAME = re.compile(r"[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)+")
-_HYPHENATED = r"[a-z0-9]+(?:-[a-z0-9]+)+"
+# ── the pack's own vocabulary ────────────────────────────────────────────────
+# The pack's Markdown may name a skill only when a reader can reach it: the pack's own,
+# or a public one (the v1.2 review found four private names). Two exact mechanisms catch
+# a private name, neither reading grammar (five rounds of grammar never converged):
+#   1. A vocabulary ratchet over the pack's own text: every name-shaped token in every
+#      tracked .md file must be in VOCABULARY_NAMES (where a pointer may point) or in
+#      VOCABULARY_WORDS (every other name-shaped token the pack's text uses); an unknown
+#      token fails with file:line and REMEDY. Every entry must still occur in the pack
+#      (a stale entry fails), so the lists hold only what is used.
+#   2. A private-name deny-list read from outside the repository: the file named by
+#      TRIAD_PRIVATE_NAMES (one name per line, # comments), matched whole-word and
+#      case-insensitive in every file of the pack, a hyphen in a name matching a hyphen,
+#      an underscore, a dash or one space, so every spelling of it is found. It catches
+#      the one-word names no shape can; unset, its test is skipped with a visible reason.
+#      Nothing in the repository names a private name or says where the list lives.
+# Name-shaped (_name_shaped): a token with an internal hyphen or underscore, or letters
+# and digits mixed, once a file extension is dropped, a dash of any kind read as a hyphen
+# and case folded; a version (v1.3), a commit hash, a date, a time, an all-digit range
+# (60-99) and a run of one-letter parts (A-C) are not names. Each segment of a path or a
+# URL is a token too (`/docs`, `docs/PULSE.json`, `github.com/x/y`), so an unmarked name
+# in a path is caught; a slash in prose (read/comprehend) is not a path.
+VOCABULARY_NAMES = frozenset("""
+    devcom5 synk182 solid8 dc5 s8 s182 the-triad skills-trifecta spric76 mk1 mk1made
+    git verafox the-proof-pack github skillshaper sc2 package_dual doc-coauthoring internal-comms
+    cursor claude
+    knowledge-search diagramming repo-rules memory-consolidation""".split())
+VOCABULARY_WORDS = frozenset("""
+    2-second 24h 3p 5-doc anti-patterns append-only apply-report architecture_changed archive
+    archive-named archive_dir archive_recommended at-risk audit_protocol auto-downshift auto-execute
+    auto-flag auto-resolve auto-resolved auto-resolving auto-rollback auto-run auto-trigger
+    auto-upshift bin blink182 broken-incomplete byte-comparing byte-identical carry-forward catch-up
+    cloud-synced co-author co-authored co-authors comms_formats company-wide compare_all config-first
+    consolidation_complete context-dependent create_archive cross-check cross-skill cross_skill
+    data-driven deep-read denser_engine deny-list deploy-aware depth-appropriate depth_actual depth_requested
+    digest_history doc-reality doc-worthy docs docs_created docs_exist docs_missing docs_stale
+    dot-prefixed drift_detected drift_flags drive-relative end-of-session entry-point
+    environment_diverged evidence-based files_consolidated five-document full-doc full-project
+    generate_proposal hand-edited handover-first hash-duplicate high-urgency highest-value in
+    in-directory in-progress info-dumps instruction-based iso-8601 iso-8601-et key-value last_audit
+    last_context last_depth last_mode last_seen line-ending-only line-set line_endings matter-of-fact
+    maturity-based meta-context mid-edit mid-operation mid-scan multi-tier name-shaped near-dupes
+    near-duplicates new_files_synced new_ids
+    node_modules non-identical not-for obj one-line one-paragraph one-sentence one-sided p0-p3 path
+    pending_signals per-component per-file per-tier pre-v1 private-name project project-docs pulse
+    pulse-depth pulse-level pulse_version quick-start re-plan read-only recommended_next redundancy_found
+    references repo-only same-size scan_and_compare scripts section-aware session_count sha-256 single-file
+    six-layer skill skills skip-to-action small_team solid8_files_consolidated solid8_last_run
+    solid8_redundancy_map stale_project start-end step-by-step stream-of-consciousness sub-agents
+    sub-bullet sync_completed sync_conflict synk_drift_detected synk_engine synk_files_changed
+    synk_last_run target_dir team-specific template-stamp template-stamping test_triad tests
+    three-tier trade-offs triad_private_names trifecta trifecta_protocol ultra-careful under-the-hood
+    universal_template user-facing user-specified user-unique user_copy user_experience user_to_working
+    utf-8 working-unique working_copy working_to_user wrong-typed yyyy-mm-dd""".split())
+REMEDY = ("English or the pack's own word? add it to VOCABULARY_WORDS; "
+          "a skill? it must be in the pack or public (VOCABULARY_NAMES)")
 
-# A skill name is a kebab-case identifier: it hyphenates where English writes a space
-# ("private notes" is private-notes). English hyphenates its own words by a few forms,
-# so a hyphenated word is English when one of them explains it: a prefix, particle or
-# number first (re-plan, co-maintainer, on-call, back-end, third-party); a particle last
-# (follow-up, sign-off, check-ins); a linker inside (end-to-end, point-in-time); a
-# participle last (self-contained, spell-checking); a modifier head last (read-only,
-# high-level, domain-specific, long-term); a one-letter or all-digit part (e-mail,
-# utf-8). The forms are closed classes of English, so a compound nobody listed is still
-# known by its form. What no form marks is kept as data in _ENGLISH_COMPOUNDS, which a
-# test keeps free of anything a form marks and of every allowed name.
-_PARTICLES = frozenset("up off in out on over back down by away through about around along apart ahead".split())
-_LEADS = _PARTICLES | frozenset(
-    "re co sub self non pre post anti multi cross semi de un ex mid under inter intra meta auto bi tri mono "
-    "poly pseudo quasi super ultra well ill half all counter micro macro mini mega hyper per zero one two "
-    "three four five six seven eight nine ten hundred first second third fourth fifth last single double "
-    "triple many few".split())
-_LINKERS = frozenset("to and or of the a an in on for at as by n".split())
-_HEADS = frozenset(
-    "only level specific based aware free safe wide side time term party purpose platform source way like "
-    "friendly proof ready facing bound driven oriented centric agnostic compatible dependent independent "
-    "sensitive insensitive native first worthy style scale grade class alone".split())
-_PARTICIPLE = re.compile(r"[a-z]{3,}(?:ed|ing)|known|written|built|made|driven|grown|drawn|given|taken"
-                         r"|broken|hidden|proven|shown|done|held|kept")
-_ENGLISH_COMPOUNDS = frozenset("""
-    ad-hoc best-effort brute-force camel-case check-box cherry-pick code-base code-review command-line
-    copy-paste data-set dead-end dead-lock dry-run end-point end-user fact-check file-name file-system
-    front-end front-matter go-to hard-link hot-fix how-to kebab-case key-value life-cycle load-test man-page
-    merge-request must-have no-op peer-review plain-text pull-request real-world rich-text round-trip
-    run-book sanity-check side-effect snake-case spell-check time-stamp to-do tool-chain
-    unit-test web-hook what-if wild-card work-flow work-tree""".split())
-
-
-def _english_by_form(word):
-    """True when one of English's own hyphenating forms explains a hyphenated word."""
-    parts = word.split("-")
-    return (parts[0] in _LEADS or parts[-1] in _PARTICLES or parts[-1] in _HEADS
-            or bool(_PARTICIPLE.fullmatch(parts[-1])) or any(p in _LINKERS for p in parts[1:-1])
-            or any(len(p) == 1 or p.isdigit() for p in parts))
-
-
-def _english(word):
-    """True when a hyphenated word is English's own, as it stands or as a plural."""
-    forms = {word, word[:-1] if word.endswith("s") else word, word[:-2] if word.endswith("es") else word}
-    return any(_english_by_form(w) or w in _ENGLISH_COMPOUNDS for w in forms if "-" in w)
-
-
-# One word is a name by its slot and its shape. Where the slot is certain (an arrow
-# group, a Skill cell) a word is read unless its ending marks ordinary English (manual,
-# optional); in prose, where "use caution" and "use notetaker" share a slot, a word is
-# read only with a name's mark: a digit inside it (notes2go), or an agent's or a
-# coiner's ending (notetaker, jotify), a count noun English never uses bare.
-_ORDINARY = re.compile(r"[a-z]+(?:ly|al|ive|ous|able|ible|ful|less|tion|sion|ment|ness|ity|ance|ence|wise|wards?)")
-_NAME_MARK = re.compile(r"[a-z]{2,}\d+[a-z][a-z0-9]*|[a-z]{3,}(?:er|or|ify)")
-# English's closed classes (pronouns, determiners, quantifiers, a few adverbs) fill a
-# pointer's slot ('use yours instead') but name nothing; nor do counts and versions.
-_CLOSED = frozenset("""
-    it its this that them they these those one ones both each either neither any some none all another other
-    others such same yours mine ours theirs his hers whichever whatever whoever however whenever wherever
-    something anything nothing everything someone anyone nobody everyone somebody anybody everybody here there
-    now later soon again instead elsewhere nowhere anywhere everywhere somewhere above below never ever rather
-    further together whether""".split())
-_NUMBERED = re.compile(r"[a-z]?\d+")
-# A name takes no article: "the follow-up" is a common noun, except before the noun a
-# kind is described by ("the X skill"). A word after "git" is git's own (git filter-repo).
-_NOT_BEFORE_A_NAME = frozenset("a an the this that these those each every any some no your our their its his her my "
-                               "git".split())
-
-_NOUN = r"(?:skills?|tools?|helpers?|plugins?)"
-_SUBJECT_VERB = (r"(?:is|are|was|does|do|can|will|should|may|must|handles?|covers?|owns?|takes?|keeps?|exists?"
-                 r"|holds?|manages?|writes?|runs?|tracks?|stores?|deals?|works?|lives?|belongs?)")
-# A name ends its phrase: punctuation, a version, a function word, a skill noun ("the X
-# skill"), or the verb it is the subject of; a word a noun follows is describing it
-# ("read-only mode", "zip-file backups"), and a dot before a letter is a file's extension.
-_ENDS = (r"(?![\w-])(?=\s*(?:$|[,;:!?)(`'\"*_|+—–]|\.(?!\w)|→|->)"
-         r"|\s+(?:instead|for|to|when|if|here|there|first|or|and|which|but|then|v?\d[\w.]*|"
-         + _NOUN + "|" + _SUBJECT_VERB + r")\b)")
-_EDGE = r"(?<![\w\-./\\])"
-_ENDING = re.compile(_EDGE + "(" + _HYPHENATED + ")" + _ENDS)
-_KIND = re.compile(r"\b(?:a|an|the|your)\s+([a-z0-9][a-z0-9-]*)\s+(" + _NOUN + r")\b")
-_VERB = r"(?:[Uu]se|[Ss]ee|[Tt]ry|[Ll]oad|[Rr]un|[Aa]sk|[Cc]all|[Ii]nvoke|[Oo]pen|[Pp]refer|[Ii]nstall)"
-_VERB_OBJECT = re.compile(r"\b" + _VERB + r"\s+([a-z][a-z0-9]*)" + _ENDS)
-_BACKTICKED = re.compile(r"\b" + _VERB + r"\s+(?:(?:the|a|an|your)\s+)?`([a-z0-9][a-z0-9-]*)`")
-_BARE_OWNER = re.compile(_EDGE + r"([a-z][a-z0-9]*)(?='s\b|\s+" + _SUBJECT_VERB + r"\b)")
-_SENTENCE_CASE = re.compile(r"(?:^|(?<=[.!?;:]\s))([A-Z][a-z0-9]*(?:-[a-z0-9]+)+)(?![\w-])")
-_ARROW = re.compile(r"\((?:→|->)\s*((?:[^()]|\([^()]*\))*)\)")
-# A bare arrow is the pack's flow notation ('backup → copy → verify'); it points at a
-# skill only when a hyphenated name follows it and ends the line or the clause.
-_BARE_ARROW = re.compile(r"(?<!\()(?:→|->)[ \t]*(" + _HYPHENATED + r")(?=[ \t]*(?:$|[.,;)]))", re.M)
-_PAREN = re.compile(r"\((?:→|->)?\s*((?:[^()]|\([^()]*\))*)\)")
-_PARTS = re.compile(r",|\s+(?:or|and)\s+")
-_VERSION = re.compile(r"\s+v?\d+(?:\.\d+)*\+?$")
-_NOT_FOR = re.compile(r"(?i)\bnot (?:(?:meant|intended|designed|built|made|used|suited) )?for\b|\bout of scope\b"
-                      r"|\*\*not [^*\n]+:\*\*")
-_NOT_FOR_LABEL = re.compile(r"(?i)^\s*(?:#{1,6}\s+)?[*_]*(?:[a-z' ]*\s)?(?:not (?:\w+ )?for|out of scope)[*_:\s]*$")
+_DASHES = str.maketrans(dict.fromkeys("‐‑‒–", "-"))
+_STAMP = re.compile(r"\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?"
+                    r"|(?<!\d)\d{1,2}:\d{2}(?::\d{2})?(?!\d)")
+_RUN = re.compile(r"[A-Za-z0-9_.\-/~]+")
+_EXT = re.compile(r"(?<=[a-z0-9])\.[a-z0-9]{1,5}$")
+_VERSION_TOKEN = re.compile(r"v\d+(?:\.\d+)*\+?")
+_COMMIT = re.compile(r"[0-9a-f]{7,40}")
 
 
-def _free(text, start):
-    """True when the word before start is neither an article nor git (_NOT_BEFORE_A_NAME)."""
-    before = re.search(r"([A-Za-z]+)[ \t]+$", text[max(0, start - 40):start])
-    return not before or before.group(1).lower() not in _NOT_BEFORE_A_NAME
+def _fold(segment):
+    """A token as the vocabulary spells it: dashes as hyphens, case folded, edge
+    punctuation and a file extension dropped."""
+    return _EXT.sub("", segment.translate(_DASHES).lower().strip("_.-~"))
 
 
-def _opens(text, start):
-    """True when a lone word at start opens its phrase: after the clause's start or its
-    punctuation, or after 'is', so 'a schema-aware editor does' names nothing."""
-    return bool(re.search(r"(?:^|[.,;:(—–→]|\b(?:is|are|was|were))\s*$", text[max(0, start - 40):start]))
+def _name_shaped(segment):
+    """The name a token spells when its shape is a name's (the block above), else None."""
+    tok = _fold(segment)
+    if not re.search(r"[a-z]", tok) or " " in tok:
+        return None
+    if _VERSION_TOKEN.fullmatch(tok) or (_COMMIT.fullmatch(tok) and re.search(r"\d", tok)):
+        return None
+    parts = re.split(r"[-_]", tok)
+    if len(parts) > 1:
+        return None if all(p.isdigit() for p in parts) or all(len(p) <= 1 for p in parts) else tok
+    return tok if re.search(r"\d", tok) else None
 
 
-def _kinds(text, one_word):
-    """'a/an/the/your X skill|tool|helper|plugin': X when it is hyphenated, or when one_word
-    and the noun is skill ('a diagramming skill'); 'a diff tool' describes, never names."""
-    return [x for x, noun in _KIND.findall(text) if "-" in x or (one_word and noun.startswith("skill"))]
+def _name_shaped_tokens(text):
+    """(line number, token) for every name-shaped token in a Markdown text, in order."""
+    text = _STAMP.sub(" ", text.replace("\r\n", "\n").translate(_DASHES))
+    found = []
+    for n, line in enumerate(text.split("\n"), 1):
+        for m in _RUN.finditer(line):
+            run, before = m.group(), line[m.start() - 1] if m.start() else " "
+            is_path = "/" in run and (run.endswith("/") or any("." in s.strip(".") for s in run.split("/"))
+                                      or (before in " \t(`[\"'<:" and re.match(r"(?:\.{0,2}|~)/", run) is not None))
+            for seg in run.split("/"):
+                tok = _name_shaped(seg)
+                if tok is None and is_path:
+                    seg = _fold(seg)
+                    tok = seg if len(seg) > 1 and re.search(r"[a-z]", seg) else None
+                if tok:
+                    found.append((n, tok))
+    return found
 
 
-def _part_names(part, certain):
-    """The names one part of a pointer names: its whole text, bare of parentheses, a
-    version and markup, when that is a skill name (a lone word by its slot, above), and
-    a kind. certain: the part is surely a pointer (an arrow group or a Skill cell), so a
-    loosely written name and a hyphenated word ending its phrase anywhere in it count."""
-    part = _VERSION.sub("", re.sub(r"\([^()]*\)", "", part).strip()).strip("`*_ ")
-    names = []
-    if _SKILL_NAME.fullmatch(part):
-        if "-" in part or (not _ORDINARY.fullmatch(part) if certain else _NAME_MARK.fullmatch(part)):
-            names.append(part)
-    elif certain and _LOOSE_NAME.fullmatch(part):
-        names.append(part.lower().replace("_", "-"))
-    if certain:
-        names += [m.group(1) for m in _ENDING.finditer(part) if _free(part, m.start())]
-    return names + _kinds(part, one_word=True)
+def _markdown_files(root):
+    return [p for p in sorted(Path(root).rglob("*.md")) if ".git" not in p.parts]
 
 
-def _prose_names(text):
-    """Names in the prose of a pointer clause: a hyphenated word that ends its phrase with
-    no article or git before it (a sentence's capital aside); a lone word after a verb, or
-    opening its phrase to own or do something ("notetaker's job", "notetaker handles
-    those"), when it bears a name's mark; a backticked word after a verb; and "a/the/your
-    X-Y skill"."""
-    text = _SENTENCE_CASE.sub(lambda m: m.group(1).lower(), text)
-    names = [m.group(1) for m in _ENDING.finditer(text) if _free(text, m.start())]
-    names += [m.group(1) for m in _VERB_OBJECT.finditer(text) if _NAME_MARK.fullmatch(m.group(1))]
-    names += [m.group(1) for m in _BARE_OWNER.finditer(text)
-              if _NAME_MARK.fullmatch(m.group(1)) and _opens(text, m.start())]
-    return names + _BACKTICKED.findall(text) + _kinds(text, one_word=False)
+def _unknown_tokens(root):
+    """'file:line: token' for every name-shaped token in the pack's Markdown that is in
+    neither vocabulary list, once per file and token."""
+    known = VOCABULARY_NAMES | VOCABULARY_WORDS
+    out = []
+    for p in _markdown_files(root):
+        seen = set()
+        for n, tok in _name_shaped_tokens(p.read_text(encoding="utf-8")):
+            if tok not in known and tok not in seen:
+                seen.add(tok)
+                out.append(f"{p.relative_to(root).as_posix()}:{n}: {tok}")
+    return out
 
 
-def _clause_names(line):
-    """The names a pointer clause names: its parentheses up to '. ' or ';', each part read
-    by _part_names, and the prose of its sentence and the next."""
-    clause = re.split(r"\.\s|;", line, maxsplit=1)[0]
-    names = [n for group in _PAREN.findall(clause) for part in group.split(",")
-             for n in _part_names(part, certain=False)]
-    return names + _prose_names(" ".join(re.split(r"(?<=\.)\s+", line, maxsplit=2)[:2]))
+def _pack_files(root):
+    """Every file of the pack (a git export has no .git): all but .git, __pycache__ and bytecode."""
+    return [p for p in sorted(Path(root).rglob("*")) if p.is_file() and p.suffix not in (".pyc", ".pyo")
+            and not {".git", "__pycache__"} & set(p.parts)]
 
 
-def _skill_column(headers):
-    """The column of a table that names skills: one whose header says skill (Skill, Skill to
-    use, Which skill), or a Use, Tool or Handled by column beside a request (Ask, Need,
-    When); -1 when there is none. Beside a Task or a Version, a Tool column lists programs
-    ('| Lint | ruff |'), and 'How to use' is not a Use column."""
-    for i, h in enumerate(headers):
-        if re.search(r"\bskills?\b", h):
-            return i
-    if {"ask", "need", "when", "request"} & set(headers):
-        for i, h in enumerate(headers):
-            if h in ("use", "tool", "tools", "handled by", "handler", "owner"):
-                return i
-    return -1
+def _read_private_names(path):
+    """The deny-list: one name per line, blank lines and # comments skipped, case folded."""
+    lines = (l.strip() for l in Path(path).read_text(encoding="utf-8-sig").splitlines())
+    return [l.lower() for l in lines if l and not l.startswith("#")]
 
 
-def _pointers_read(text):
-    """Every skill-shaped name a Markdown text's pointers name, once each, in order.
-
-    The pointers read are:
-      - '(→ ...)' and '(-> ...)' groups, anywhere, and a bare arrow's name (_BARE_ARROW);
-      - a table's skill column (_skill_column);
-      - a clause after 'not for', 'not meant/intended/designed/built/made/used/suited for',
-        'out of scope' or '**Not X:**', up to the line's end, and each line of the list
-        under a heading or label that says one of them ('## Not for', '**Not for:**').
-    A paragraph wrapped mid-sentence reads as one line, a link as its text, CRLF as LF and
-    a curly apostrophe as a straight one. Arrow groups and table cells are split on ',',
-    'or' and 'and', a clause's parentheses on ',' only, and each part is read by
-    _part_names; a clause's prose by _prose_names. A word read is dropped when English
-    writes it itself (_english, _CLOSED) or it is a count or a version.
-    Not read, by design, each with a kept green case or a reason:
-      - a hyphenated word after an article ('see the release-train'), or describing a noun
-        ('zip-file backups'): a name takes no article and heads its phrase;
-      - a word right after 'git' ('git filter-repo'): git's own;
-      - any other word after a bare arrow: the pack's flows ('backup → copy → verify');
-      - a lone word in prose without a name's mark ('use rebase.', 'use jotbook.'): English
-        cannot tell a mass noun from a one-word name by shape;
-      - a lone word opening a sentence ('Jotbook keeps those.'): a sentence's capital and
-        a product's own (Docker) look the same;
-      - a Tool column beside a Task or a Version: it lists programs, not skills.
-    Read, by design: a lone lowercase word alone in an arrow group or a Skill cell, unless
-    its ending marks it ordinary ('(→ upstream)' reads as a name: write '(→ the upstream
-    project)'); and a public tool in a pointer's slot ('use docker.', 'run `pytest`'),
-    which is added to POINTER_NAMES on purpose, as git is. A review that finds a private
-    name passing adds its form here with a kept red case.
-    """
-    text = text.replace("\r\n", "\n").replace("’", "'")
-    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)  # a Markdown link reads as its text
-    text = re.sub(r"\n[ \t]+", " ", text)  # a folded frontmatter description reads as one line
-    text = re.sub(r"(?<=[^\s|])\n(?=[a-z(])", " ", text)  # so does a paragraph wrapped mid-sentence
-    named = [n for group in _ARROW.findall(text) for part in _PARTS.split(group)
-             for n in _part_names(part, certain=True)]
-    named += _BARE_ARROW.findall(text)
-    lines = text.splitlines()
-    col, in_table = -1, False
-    for line in lines:
-        if not line.lstrip().startswith("|"):
-            in_table = False
-            continue
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if not in_table:  # a table's first row is its header
-            in_table, col = True, _skill_column([c.strip("*_: ").lower() for c in cells])
-        elif 0 <= col < len(cells) and cells[col].strip("-: "):
-            named += [n for part in _PARTS.split(cells[col]) for n in _part_names(part, certain=True)]
-    for m in _NOT_FOR.finditer(text):
-        named += _clause_names(text[m.end():].split("\n", 1)[0])
-    for i, line in enumerate(lines):
-        if _NOT_FOR_LABEL.match(line):  # the list under it, after any blank lines, to a blank line or heading
-            rest = lines[i + 1:]
-            while rest and not rest[0].strip():
-                rest = rest[1:]
-            for item in rest:
-                if not item.strip() or item.lstrip().startswith("#"):
-                    break
-                named += _clause_names(item)
-    return list(dict.fromkeys(n for n in named if n not in _CLOSED and not _NUMBERED.fullmatch(n)
-                              and not ("-" in n and _english(n))))
+def _private_name_pattern(name):
+    """Whole-word and case-insensitive on a lowercased line; the name's hyphens, underscores
+    and spaces each match a hyphen, an underscore, a dash or one space."""
+    parts = [re.escape(p) for p in re.split(r"[-_\s]+", name.lower()) if p]
+    return re.compile(r"(?<![a-z0-9])" + r"[-_‐-– ]".join(parts) + r"(?![a-z0-9])")
 
 
-def _unlisted_pointers(text):
-    """The names _pointers_read finds that are neither a sibling, git nor an allowed kind."""
-    allowed = POINTER_NAMES | POINTER_KINDS
-    return [n for n in _pointers_read(text) if n not in allowed]
+def _private_name_hits(root, names):
+    """'file:line: name' for every listed name found in any file of the pack."""
+    patterns = [(n, _private_name_pattern(n)) for n in names]
+    out = []
+    for p in _pack_files(root):
+        for i, line in enumerate(p.read_bytes().decode("utf-8", "replace").lower().splitlines(), 1):
+            out += [f"{p.relative_to(root).as_posix()}:{i}: {n}" for n, pat in patterns if pat.search(line)]
+    return out
 
 
-# Realistic skill prose that points at no skill outside the pack: the fifth v1.3
-# review's paragraphs (all but its '(→ upstream)', a limit named in _pointers_read),
-# then fresh ones naming public tools and ordinary hyphenated words. Each must read
-# nothing; a grammar change that reads one of them is a false red.
-REALISTIC_PROSE = (
-    # the fifth v1.3 review
-    "description: >-\n  Synk182 compares two copies of a project and applies what you approve.\n"
-    "  Not for merging branches (use git). A command-line tool that never writes\n  until you approve a plan.",
-    "Not for secrets or credentials; use a third-party tool for those.",
-    "Not for licence checks. Use an open-source tool such as licensee.",
-    "Not for three-way merges; git's built-in tool does those.",
-    "Not for CI pipelines. Each engine is a stand-alone tool.",
-    "Not for scripting; it is not a general-purpose helper.",
-    "Not for IDE integration (that is a first-party plugin's job).",
-    "**Not Solid8:** archiving to tape. It is a cross-platform tool, nothing more.",
-    "Not for legal review; use a domain-specific skill.",
-    "Not for the back-end or the front-end; only the docs.",
-    "Not for the command-line. Use the engine from a script.",
-    "Not for live copies; use a dry-run first.",
-    "Not for history rewrites; use a cherry-pick or a rebase.",
-    "Not for one-off edits via copy-paste.",
-    "Not for onboarding; see the write-up in docs/.",
-    "Not for scheduling; see the follow-up.",
-    "Not for the day-to-day, only releases.",
-    "Not for the pull-request; see git.",
-    "Not for the post-mortem; DevCom5 writes those.",
-    "The engine is not for the faint-hearted.",
-    "Not for the end-user's machine; that copy is theirs.",
-    "Not for hot-fixes; on-call handles those.",
-    "Not for cleanup; a follow-up covers that.",
-    "Not for merges in a work-tree.",
-    "| x | merges (→ git cherry-pick) |",
-    "| x | later (→ a follow-up) |",
-    "| x | notes (→ by hand, copy-paste) |",
-    "changed since the plan → re-plan.",
-    "verify fails → roll-back; verify holds → log",
-    "review → sign-off.",
-    "scan → compare → plan → back-up → apply → verify.",
-    "| Tool | Version |\n|---|---|\n| python | 3.10+ |\n| git | any |",
-    "| Tools | Purpose |\n|---|---|\n| ruff | lint |\n| pytest | tests |",
-    "| Task | Tool |\n|---|---|\n| Lint | ruff |\n| Diff | git |\n| Merge | by hand |",
-    "Not for a shared copy; use yours instead.",
-    "Not for both copies; use either for the plan.",
-    "Not for writes; it is a read-only tool.",
-    "Not for a first run; run the dry-run first.",
-    "Not for releases; ask a co-maintainer.",
-    "Not for edits in the sub-folder.",
-    "Not for parsing; that is a lower-level tool's job.",
-    "Not for the high-level; see the low-level.",
-    "Not for bundles. Each skill is a self-contained tool.",
-    "Not for frameworks (a drop-in helper).",
-    "Not for the long-term; use git.",
-    "Not for repeats; use a one-off.",
-    "Not for the well-known cases.",
-    "Not for the end-to-end; only unit checks.",
-    "write → read-back.",
-    # fresh, for the fix of that review
-    "description: >-\n  Tidies a docs folder before a release. Not for code formatting (Prettier and Black\n"
-    "  already own that) or for spell-checking, which codespell does well.",
-    "Not for secrets. Keep tokens in a password manager such as Bitwarden or KeePassXC, never in a plan file.",
-    "Not for real-time sync; this is a point-in-time comparison that runs on demand.",
-    "Not for large binaries (use Git LFS or an object store).",
-    "Not for notebooks: nbdime understands .ipynb diffs and merges far better than a line-based tool.",
-    "| Tool | Minimum | Why |\n|---|---|---|\n| python | 3.10 | the engines |\n| git | 2.30 | history checks |\n"
-    "| gh | 2.40 | optional, for release notes |",
-    "Flow: scan → dry-run → sign-off → apply → read-back → log.",
-    "Not for merge conflicts → resolve them in your editor or with git mergetool.",
-    "Not for cross-repo refactors; see the follow-up in docs/ROADMAP.md.",
-    "Not for pre-commit hooks. Wire the engine into pre-commit yourself if you want it on every commit.",
-    "Not for editing YAML by hand; yq and a schema-aware editor do that job.",
-    "Not for Markdown lint (markdownlint and Vale are the usual picks).",
-    "Not for the day-to-day churn of a work-in-progress branch, only for release copies.",
-    "Not for one-way mirrors; rsync or robocopy /MIR is simpler for that.",
-    "Not for anything user-facing: the engine writes plain-text reports for a human to read.",
-    "Not for a hand-off between two people; write a short hand-over note instead.",
-    "Not for CI. The engines are stand-alone scripts a workflow can call, but nothing here sets one up.",
-    "Not for copy-paste edits. Retype the change, or apply a proper patch with git apply.",
-    "Not for long-running jobs; each run is a single pass that exits when it is done.",
-    "Not for multi-root workspaces yet (one root per run).",
-    "Not for sub-modules; run the engine inside each sub-module on its own.",
-    "Not for lock files (package-lock.json, poetry.lock); regenerate them with the package manager.",
-    "Not for time-stamped backups (the engine keeps its own under ARCHIVE/).",
-    "Not for code review. A pull-request template and a second pair of eyes do more than any engine.",
-    "Not for rewriting history; git rebase and git filter-repo exist for that.",
-    "Not for images; oxipng and svgo shrink those without touching the docs.",
-    "Not for anything outside the two folders you name: no network calls, no auto-updates, no telemetry.",
-    "Not for non-UTF-8 files; the engine reads UTF-8 and skips the rest with a note.",
-    "Not for a shared drive without asking: check with the copy's co-owner first.",
-    "**Not Synk182:** a one-off rename (do it by hand), or a follow-up merge (→ git).",
-    "Not for scripted runs in a read-only container; --apply needs write access.",
-    "Not for large monorepos: scan time grows with file count, so point it at a sub-folder.",
-    "If the premise changed since the plan → re-plan. If a verify fails → roll-back.",
-    "Not for notes → use your own note-taking app.",
-    "Not for tests; pytest and coverage.py already cover that.",
-    "Not for Docker images or other build artefacts (see the Dockerfile's own docs).",
-    "| When | Use |\n|---|---|\n| Two copies drifted | Synk182 |\n| A branch merge | git |\n| A decision to log | DevCom5 |",
-    "Not for built-in help; run the engine with --help for that.",
-    "Not for check-ins to main: the engine never commits, pushes or tags.",
-    "Not for high-stakes copies without a backup; take a snapshot first.",
-    "| Ask | Skill |\n|---|---|\n| Two copies drifted | Synk182 |\n| Anything else | none |\n| Retyping a list | by hand |",
-    "Not for lint (ruff does that), nor for type checks, which mypy or pyright handle.",
-    "Not suited for huge repos: a full re-scan of 100k files takes a while.",
-    "Out of scope: GitHub issues, pull-request reviews and release tagging (the gh CLI does those).",
-    "Not for side-by-side diffs; a GUI such as Meld or Beyond Compare shows those better.",
-    "Not for the first run on a new machine (do a dry-run, then a read-back).",
-    "Not for opt-in telemetry or crash reports; the engines send nothing anywhere.",
-    "Not for key-value stores or SQLite files: those are binary, and the engine skips them.",
-    "Not for a to-do list. Keep one in your issue tracker (GitHub Issues, Jira, Linear).",
-    "Not for formatting; use black.",
-    "Not for side-by-side merges; use meld or kdiff3 instead.",
-    "Not for containers; run podman.",
-    "## Out of scope\n\n- Branch merges (git)\n- Anything on a network drive (copy it local first)\n- A follow-up release",
-    "Not for notes; use care. Not for merges; use rebase, with judgement, and sparingly.",
-    # each listed English compound where a pointer is read, so every entry earns its place
-    "Not for fixes that are ad-hoc, best-effort or brute-force.",
-    "Out of scope: renaming between camel-case, snake-case and kebab-case.",
-    "Not for review work (code-review, peer-review, fact-check, spell-check); ask a person.",
-    "Not for everyday lists (check-box, to-do, how-to, must-have); keep those in your issue tracker.",
-    "Not for git plumbing (cherry-pick, merge-request, pull-request, work-tree); git and your host cover it.",
-    "Not for the repository's layout (code-base, file-system, file-name, hard-link).",
-    "Not for data questions (data-set, key-value, plain-text, rich-text); ask whoever owns the data.",
-    "Out of scope: release plumbing (tool-chain, web-hook, end-point, front-end, command-line).",
-    "Not for tests (unit-test, load-test, sanity-check, dry-run): run the project's own suite.",
-    "Not for writing docs (man-page, run-book, front-matter, life-cycle).",
-    "Not for chasing bugs (dead-lock, dead-end, side-effect, round-trip, hot-fix).",
-    "Not for scenario planning (what-if, real-world, work-flow); bring those to the team.",
-    "Not for spelling questions (end-user, go-to, wild-card, no-op, time-stamp, copy-paste); follow the house style guide.",
-)
+# Every pointer form an earlier review or probe listed (the v1.2 to sixth v1.3 reviews:
+# arrows, tables under many headers, clauses, headings, labels, links, paths, code spans,
+# every spelling and dash), each with the made-up names it holds. Injected into a copy of
+# the pack, a name with a mark goes red through the vocabulary and a listed one through
+# the deny-list; the form no longer matters, which is the point.
+POINTER_FORMS = {
+    'Not for diagrams (private-helper).': ['private-helper'],
+    '| x | redundancy (→ internal-notes) |': ['internal-notes'],
+    '**Not Synk:** repo rules (git, house-rules), the rest': ['house-rules'],
+    '| Ask | Skill |\n|-----|-------|\n| Tidy notes | memo-sweeper |': ['memo-sweeper'],
+    'description: >-\n  Does things. Not for proofs\n  (github-helper).': ['github-helper'],
+    '| x | notes (→ the private-notes skill) |': ['private-notes'],
+    '| x | notes (→ a private-notes skill) |': ['private-notes'],
+    '| x | notes (→ in private-notes) |': ['private-notes'],
+    '| x | notes (→ your private-notes skill) |': ['private-notes'],
+    '| x | notes (→ `private-notes`) |': ['private-notes'],
+    '| x | notes (→ Solid8 or private-notes) |': ['private-notes'],
+    '| x | notes (-> private-notes) |': ['private-notes'],
+    '| x | notes (→ notetaker) |': ['notetaker'],
+    'Not for notes (the private-notes skill).': ['private-notes'],
+    'Not for notes (see private-notes).': ['private-notes'],
+    'Not for notes (private-notes (v2)).': ['private-notes'],
+    'Not for notes; use private-notes instead.': ['private-notes'],
+    'Not for notes. Use notetaker for those.': ['notetaker'],
+    '**Not Synk:** notes, use private-notes for those': ['private-notes'],
+    '| ask | skill |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    '| Ask | Skill | Why |\n|---|---|---|\n| Notes | notetaker | because |': ['notetaker'],
+    '| Ask | Skill |\n|---|---|\n| Notes | [private-notes](https://example.org) |': ['private-notes'],
+    '| x | notes (→ your private-notes tool) |': ['private-notes'],
+    '| x | notes (→ the private-notes plugin) |': ['private-notes'],
+    'Not for notes (a private-notes helper).': ['private-notes'],
+    'Not for notes; see private-notes.': ['private-notes'],
+    'Not for notes; load private-notes first.': ['private-notes'],
+    'Not for notes: private-notes handles those.': ['private-notes'],
+    "Not for notes (that is private-notes's job).": ['private-notes'],
+    '| x | notes (→ Private-Notes), memos (→ memo_sweeper) |': ['private-notes', 'memo-sweeper'],
+    '| Task | Skill |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    '| Need | Use |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    '| Ask | Tool |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    'Not for notes\n(private-notes).': ['private-notes'],
+    'Not for notes → private-notes\n- memos -> memo-sweeper.': ['private-notes', 'memo-sweeper'],
+    'Not for notes — private-notes.': ['private-notes'],
+    'Not for notes: private-notes.': ['private-notes'],
+    'Not for notes; leave those to private-notes.': ['private-notes'],
+    'Not for notes; those belong to private-notes.': ['private-notes'],
+    'Not for notes; open private-notes.': ['private-notes'],
+    'Not for notes; prefer private-notes.': ['private-notes'],
+    'Not for notes; install private-notes first.': ['private-notes'],
+    'Not for notes; switch to private-notes.': ['private-notes'],
+    'Not for notes; reach for private-notes.': ['private-notes'],
+    'Not for notes; that is what private-notes is for.': ['private-notes'],
+    'Not for notes; private-notes exists for that.': ['private-notes'],
+    'Not for notes; do those with private-notes.': ['private-notes'],
+    'Not for notes; go through private-notes.': ['private-notes'],
+    'Not for notes; take those from private-notes.': ['private-notes'],
+    'Not for notes; those are done by private-notes.': ['private-notes'],
+    'Not for notes; hand those off to private-notes.': ['private-notes'],
+    'Not for notes; delegate to private-notes.': ['private-notes'],
+    'Not for notes; defer to private-notes.': ['private-notes'],
+    'Not for notes → use private-notes.': ['private-notes'],
+    'Not for notes: `private-notes`.': ['private-notes'],
+    'Not for notes. Private-notes keeps those.': ['private-notes'],
+    'Not for notes (that is private-notes’s job).': ['private-notes'],
+    'Not meant for notes (private-notes).': ['private-notes'],
+    '## Not for\n\n- Notes (private-notes)\n- Merges (git)': ['private-notes'],
+    '**Not for:**\n- memos (memo-sweeper)': ['memo-sweeper'],
+    'Out of scope: notes (private-notes).': ['private-notes'],
+    '| Ask | Handled by |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    '| Need | Skill to use |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    '| Ask | Which skill |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    '| When | Use |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    '| Ask | Skill: |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    '| Ask | Skill |\n|---|---|\n| Notes | private-notes v2 |': ['private-notes'],
+    '| Ask | Skill |\n|---|---|\n| Notes | _private-notes_ |': ['private-notes'],
+    '| x | notes (→ private-notes v2) |': ['private-notes'],
+    '| Ask | Skill |\n|---|---|\n| Notes | jotbook v2 |': ['jotbook'],
+    '| x | notes (→ jotbook 2.1) |': ['jotbook'],
+    'Not for notes; use notetaker.': ['notetaker'],
+    'Not for notes; use notes2go.': ['notes2go'],
+    "Not for notes; that is notetaker's job.": ['notetaker'],
+    'Not for notes; notetaker handles those.': ['notetaker'],
+    '| x | notes (→ use private-notes) |': ['private-notes'],
+    'Not for notes, use private-notes instead.': ['private-notes'],
+    'Not for notes: use private-notes': ['private-notes'],
+    'Not for notes. Use private-notes for those.': ['private-notes'],
+    '| Ask | Skill |\n|-----|-------|\n| Notes | the private-notes skill |': ['private-notes'],
+    '| Ask | Skill |\n|-----|-------|\n| Notes | [private-notes](https://example.org) |': ['private-notes'],
+    '| Ask | Skill | Why |\n|-----|-------|-----|\n| Notes | private-notes | because |': ['private-notes'],
+    '| Ask  |  Skill |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    'Not for: notes (private-notes).': ['private-notes'],
+    '| x | notes (→ gitnotes-helper) |': ['gitnotes-helper'],
+    '| x | notes (→ jotbook) |': ['jotbook'],
+    '| x | notes (→ annotator-skill) |': ['annotator-skill'],
+    '| x | notes (→ thesaurus-skill) |': ['thesaurus-skill'],
+    '| x | notes (→ indexer) |': ['indexer'],
+    'Not for notes; try private-notes.': ['private-notes'],
+    'Not for notes; run private-notes.': ['private-notes'],
+    'Not for notes; the private-notes skill does those.': ['private-notes'],
+    'Not for notes. See private-notes for those.': ['private-notes'],
+    "Not for notes (private-notes's job).": ['private-notes'],
+    'Not for notes (private-notes handles those).': ['private-notes'],
+    'Not for notes (use private-notes).': ['private-notes'],
+    'Not for notes (`private-notes`).': ['private-notes'],
+    '| x | notes (→ Private-Notes) |': ['private-notes'],
+    '| x | notes (→ private_notes) |': ['private-notes'],
+    'Not for notes → private-notes': ['private-notes'],
+    '- notes → private-notes': ['private-notes'],
+    '**Not Synk:** notes\n(→ private-notes)': ['private-notes'],
+    "| x | notes (→ Solid8's engine, private-notes) |": ['private-notes'],
+    '| x | notes (→ e.g. private-notes) |': ['private-notes'],
+    '| x | notes (→ private-notes, when small) |': ['private-notes'],
+    '| x | notes (→ a private-notes tool) |': ['private-notes'],
+    'Not for notes (a private-notes tool).': ['private-notes'],
+    'Not for notes (your private-notes tool).': ['private-notes'],
+    'Not for notes (a private-notes skill).': ['private-notes'],
+    '| x | notes (→ a private-notes helper) |': ['private-notes'],
+    'Not for notes (a private-notes plugin).': ['private-notes'],
+    '## Not for\n- Notes (private-notes)\n- Merges (git)': ['private-notes'],
+    '## Not for\n- notes → private-notes\n- merges → git': ['private-notes'],
+    '| Ask | Skill |\n|---|---|\n| Notes | **private-notes** |': ['private-notes'],
+    'Not for notes; use private-notes.': ['private-notes'],
+    'Not for notes; the\nprivate-notes skill does those.': ['private-notes'],
+    '- Not for notes\n  (private-notes).': ['private-notes'],
+    'description: >-\n  Not for notes; see\n  private-notes for those.': ['private-notes'],
+    '### Notes → private-notes': ['private-notes'],
+    'Not for notes → private-notes, which keeps them.': ['private-notes'],
+    '| Ask | Skill |\r\n|---|---|\r\n| Notes | private-notes |\r\n': ['private-notes'],
+    'Not for notes (private-notes).\r\nNext line.\r\n': ['private-notes'],
+    'Not for notes; use Private-Notes.': ['private-notes'],
+    'Not for notes; use private_notes.': ['private-notes'],
+    'Not for notes; use private notes.': ['private-notes'],
+    'Not for notes; use PRIVATE-NOTES.': ['private-notes'],
+    'Not for notes; use the private-notes extension.': ['private-notes'],
+    'Not for notes; ask the private-notes agent.': ['private-notes'],
+    'Not for notes; run the private-notes command.': ['private-notes'],
+    'Not for notes; the private-notes MCP server does those.': ['private-notes'],
+    'Not for notes; the private-notes workflow covers it.': ['private-notes'],
+    'Not for notes; use the private-notes add-on.': ['private-notes'],
+    'Not for notes — that lives in private-notes now.': ['private-notes'],
+    'Not for notes; private-notes already covers it.': ['private-notes'],
+    'Not for notes; use private-notes with care.': ['private-notes'],
+    'Not for notes; use private-notes on those.': ['private-notes'],
+    'Not for notes; use private-notes as usual.': ['private-notes'],
+    'Not for notes; use private-notes via its CLI.': ['private-notes'],
+    'Not for notes; use private-notes in that case.': ['private-notes'],
+    'Not for notes; use private-notes directly.': ['private-notes'],
+    'Not for notes; use private-notes from the menu.': ['private-notes'],
+    'Not for notes; see private-notes/README.md.': ['private-notes'],
+    'Not for notes; run `skills/private-notes/SKILL.md`.': ['private-notes'],
+    'Not for notes; run /private-notes.': ['private-notes'],
+    'Not for notes; see [the notes skill](https://github.com/someone/private-notes).': ['private-notes'],
+    'Not for notes; see [private-notes][pn].\n\n[pn]: https://example.org': ['private-notes'],
+    'Not for notes [private-notes].': ['private-notes'],
+    '## Not for notes\n\nUse private-notes for those.': ['private-notes'],
+    '### Not for\n\nNotes and memos: use private-notes.': ['private-notes'],
+    'Not for notes, memos or to-do lists.\nUse private-notes for those.': ['private-notes'],
+    'Not for notes.\nPrivate-notes keeps those.': ['private-notes'],
+    '| Task | Owner |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    '| Task | Handled by |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    '| Topic | Go to |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    '| Concern | Delegate to |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    '| If you need | Then use |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    '| Situation | Use |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    '| Problem | Solution |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    '| For | Use |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    '| Want | Use |\n|---|---|\n| Notes | private-notes |': ['private-notes'],
+    'Not for notes: notetaker.': ['notetaker'],
+    'Not for notes — notetaker.': ['notetaker'],
+    'Not for notes; leave those to notetaker.': ['notetaker'],
+    'Not for notes; switch to notes2go.': ['notes2go'],
+    'Not for notes; those belong to notetaker.': ['notetaker'],
+    'Not for notes → notetaker.': ['notetaker'],
+    'Not for notes; use the notetaker skill.': ['notetaker'],
+    'Not for notes; use the jotbook skill.': ['jotbook'],
+    'Not for notes; use the jotbook plugin.': ['jotbook'],
+    'Not for notes; use jotbook2.': ['jotbook2'],
+    "Not for notes; that is memo7's job.": ['memo7'],
+    'Not for notes; memo7 handles those.': ['memo7'],
+    'Not for notes (memo7).': ['memo7'],
+    'Not for notes; use private‑notes.': ['private-notes'],
+    'Not for notes; use private–notes.': ['private-notes'],
+}
 
 
 # ─────────────────────────────────────────────────────────────── solid8
@@ -849,6 +843,91 @@ class Solid8Engine(unittest.TestCase):
         path = self.mod.update_pulse(self.tmp, {"solid8_last_run": "x"})
         data = json.loads(Path(path).read_text(encoding="utf-8"))
         self.assertEqual([s["signal"] for s in data["cross_skill"]["pending_signals"]], ["recent"])
+
+    def test_a_file_that_cannot_be_read_is_named_with_its_reason_not_fingerprinted_as_empty(self):
+        # Break it catches: a file that exists but cannot be read (held by another
+        # process, or an ACL deny) fingerprinted with hash "" and 0 lines, "2 files
+        # fingerprinted", no unreadable line, and grouped as a normal file (the sixth
+        # v1.3 review, S3 and S4). It is left out of the fingerprints and named with the
+        # OS reason, on the engine and after the CLI's count.
+        _write(self.tmp, "held.txt", "user line 1\nuser line 2\n")
+        _write(self.tmp, "free.txt", "same\n")
+        _hold_unreadable(self, Path(self.tmp) / "held.txt", self.tmp)
+        e = self.engine()
+        self.assertEqual(sorted(e.fingerprints), ["free.txt"])
+        self.assertEqual(len(e.unreadable), 1)
+        self.assertRegex(e.unreadable[0], r"^held\.txt: cannot be read \(.+\)$")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([self.tmp])
+        self.assertEqual(rc, 0)
+        self.assertIn("1 files fingerprinted", out.getvalue())
+        self.assertRegex(out.getvalue(), r"unreadable: 1\n.*held\.txt: cannot be read \(")
+
+    def test_a_file_link_is_named_and_not_followed_a_dangling_one_too(self):
+        # Break it catches: a symbolic link to a file inside the target fingerprinted with
+        # the target's content (a duplicate of itself), and a dangling one counted as
+        # "unreadable: 1" with no name (the sixth v1.3 review, S5c). Both are named among
+        # the links not followed, the dangling one as such, and neither is fingerprinted.
+        _write(self.tmp, "a.txt", "a\n" * 60)
+        try:
+            os.symlink(Path(self.tmp) / "a.txt", Path(self.tmp) / "link.txt")
+            os.symlink(Path(self.tmp) / "no-such.txt", Path(self.tmp) / "dangling.txt")
+        except OSError as e:
+            self.skipTest(f"this machine cannot make a file symlink ({e})")
+        e = self.engine()
+        self.assertEqual(sorted(e.fingerprints), ["a.txt"])
+        self.assertEqual(e.unreadable, [])
+        self.assertEqual(e.not_followed, ["dangling.txt (its target is missing)", "link.txt"])
+        self.assertEqual(e.comparisons, [])
+
+    def test_same_size_files_are_each_read_once_not_once_per_pair(self):
+        # Break it catches: 700 files of one size, all different, in one folder taking
+        # 51 s for "Clusters: 0" because every pair read both files again (the sixth v1.3
+        # review, S12). Each candidate file is read once and the pairs compare the cached
+        # units, so the run takes seconds and finds the same pairs: here a near-duplicate
+        # pair of the same size is still tier B.
+        n = 300
+        for i in range(n):
+            _write(self.tmp, f"note-{i:04d}.txt", f"note {i:04d} " + "x" * 100 + "\n" + f"second line {i:04d}\n")
+        body = "".join(f"shared line {i:02d}\n" for i in range(10))
+        _write(self.tmp, "pair-a.txt", body + "only in a\n")
+        _write(self.tmp, "pair-b.txt", body + "only in b\n")
+        e = self.mod.DenserEngine(self.tmp)
+        e.scan()
+        with mock.patch.object(e, "_units", wraps=e._units) as units:
+            e.compare_all()
+        self.assertLessEqual(units.call_count, n + 2, "a candidate file is read once")
+        self.assertEqual([(c.file_a, c.file_b, c.tier) for c in e.comparisons], [("pair-a.txt", "pair-b.txt", "B")])
+
+    def test_cli_details_below_zero_is_answered(self):
+        # Break it catches: --details -1 printing every cluster but the last, and -3 one
+        # (a negative slice), at rc 0 (the sixth v1.3 review, S12). It is an error.
+        _write(self.tmp, "a.txt", "same\n")
+        _write(self.tmp, "a - Copy.txt", "same\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([self.tmp, "--details", "-1"])
+        self.assertEqual(rc, 1)
+        self.assertIn("--details", out.getvalue())
+        self.assertNotIn("Consolidation Proposal", out.getvalue())
+
+    def test_a_pulse_saved_with_a_bom_is_read(self):
+        # Break it catches: a PULSE.json some editors save with a UTF-8 BOM answered
+        # "does not hold a JSON object; left untouched" (the sixth v1.3 review, S6): the
+        # reason was wrong, and the run went unrecorded. It is read, and written back
+        # without the mark.
+        _write(self.tmp, "a.txt", "same\n")
+        p = _write(self.tmp, "docs/PULSE.json", data=b"\xef\xbb\xbf" + b'{"project": "X", "cross_skill": {"pending_signals": []}}')
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([self.tmp, "--pulse"])
+        self.assertEqual(rc, 0)
+        self.assertIn("PULSE updated", out.getvalue())
+        raw = p.read_bytes()
+        self.assertFalse(raw.startswith(b"\xef\xbb\xbf"))
+        self.assertEqual(json.loads(raw.decode("utf-8"))["project"], "X")
+        self.assertIn("solid8_last_run", raw.decode("utf-8"))
 
 
 # ─────────────────────────────────────────────────────────────── synk182
@@ -1544,6 +1623,420 @@ class Synk182Engine(unittest.TestCase):
         self.assertIn("neither", out.getvalue())
         self.assertIn("ghost.txt", out.getvalue())
 
+    def test_a_file_that_cannot_be_read_is_named_and_left_out_of_every_comparison_and_plan(self):
+        # Break it catches: a file that exists but cannot be read (held by another
+        # process, or an ACL deny on the file) hashed as "" and read as empty, so it was
+        # compared as a 150% superset of itself, planned with MAXIMUM review, and --apply
+        # onto it died in a shutil traceback that left an archive folder with no manifest
+        # (the sixth v1.3 review, S3 and S4). It is named on the dashboard with the OS
+        # reason and left out of both copies' comparison and of the plan; an item that
+        # names it by hand is refused before any backup or write, whichever side cannot
+        # be read; and --diff of it is answered.
+        _write(self.u, "locked.txt", "user line 1\nuser line 2\n")
+        _write(self.w, "locked.txt", "user line 1\nuser line 2\nwork line 3\n")
+        _write(self.u, "free.txt", "same\n")
+        _write(self.w, "free.txt", "same\n")
+        _hold_unreadable(self, self.u / "locked.txt", self.tmp)
+        out = io.StringIO()
+        with redirect_stdout(out):
+            s = self.synk()
+            r = s.scan_and_compare()
+            plan = s.plan()
+        self.assertEqual(sorted(r["files"]), ["free.txt"])
+        self.assertEqual(plan, [])
+        self.assertEqual([(n["side"], n["path"]) for n in r["not_compared"]], [("user", "locked.txt")])
+        self.assertRegex(r["not_compared"][0]["reason"], r"^cannot be read \(.+\)$")
+        self.assertRegex(out.getvalue(), r"not compared.*locked\.txt.*cannot be read \(")
+        for direction in ("working_to_user", "user_to_working"):
+            with self.subTest(direction=direction):
+                item = [{"id": 1, "path": "locked.txt", "status": "merge", "direction": direction,
+                         "hashes": {"user": None, "working": None}}]
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    report = s.apply(item, [1])
+                self.assertEqual(report["applied"], [])
+                self.assertEqual([x["path"] for x in report["refused"]], ["locked.txt"])
+                self.assertRegex(report["refused"][0]["reason"], r"user copy.*cannot be read \(")
+                self.assertIsNone(report["archive"])
+                self.assertFalse((self.u / "ARCHIVE").exists())
+        self.assertEqual((self.w / "locked.txt").read_text(encoding="utf-8"), "user line 1\nuser line 2\nwork line 3\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--diff", "locked.txt"])
+        self.assertEqual(rc, 1)
+        self.assertRegex(out.getvalue(), r"locked\.txt.*cannot be read \(")
+
+    def test_a_backup_that_fails_midway_refuses_everything_and_leaves_no_archive(self):
+        # Break it catches: the backup phase of an apply dying in a raw traceback on a file
+        # it could not copy, leaving ARCHIVE/synk-<stamp>/ behind with a half-written
+        # backup and no manifest.json, rollback.md or apply-report.json (the sixth v1.3
+        # review, S3). Every item is refused with the reason, nothing is written to either
+        # copy, and the archive holds its manifest or does not exist.
+        _write(self.u, "a.txt", "user a\n")
+        _write(self.w, "a.txt", "work a\n")
+        _write(self.u, "b.txt", "user b\n")
+        _write(self.w, "b.txt", "work b\n")
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            plan = s.plan()
+        for act in plan:
+            act["direction"] = "user_to_working"
+        real = shutil.copy2
+
+        def copy2(src, dst, *a, **k):
+            if Path(src).name == "b.txt" and "ARCHIVE" in Path(dst).parts:
+                raise PermissionError(13, "Permission denied", str(src))
+            return real(src, dst, *a, **k)
+        out = io.StringIO()
+        with mock.patch.object(self.mod.shutil, "copy2", copy2), redirect_stdout(out):
+            report = s.apply(plan, [a["id"] for a in plan])
+        self.assertEqual(report["applied"], [])
+        self.assertEqual(sorted(x["path"] for x in report["refused"]), ["a.txt", "b.txt"])
+        for x in report["refused"]:
+            self.assertIn("no backup", x["reason"])
+        self.assertIsNone(report["archive"])
+        self.assertFalse((self.u / "ARCHIVE").exists(), "an archive holds its manifest or does not exist")
+        self.assertEqual((self.w / "a.txt").read_text(encoding="utf-8"), "work a\n")
+        self.assertEqual((self.w / "b.txt").read_text(encoding="utf-8"), "work b\n")
+        self.assertIn("nothing written", out.getvalue())
+
+    def test_an_exception_in_verification_after_a_copy_rolls_it_back(self):
+        # Break it catches: a MemoryError (or any non-OSError) raised while verifying a copy
+        # escaping apply() after the file was written: no rollback, no report line, no
+        # apply-report.json (the sixth v1.3 review, S7, injected). Any exception in
+        # verification rolls the copy back like a failed layer, names it, and the report
+        # is still written; a copy that overwrote a file is restored from the backup.
+        _write(self.u, "new.txt", "brand new\n")
+        _write(self.u, "over.txt", "user\n")
+        _write(self.w, "over.txt", "working original\n")
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            plan = s.plan()
+        for act in plan:
+            act["direction"] = "user_to_working"
+        real = Path.read_bytes
+
+        def boom(path):
+            if path.name in ("new.txt", "over.txt") and "ARCHIVE" not in path.parts:
+                raise MemoryError("injected")
+            return real(path)
+        out = io.StringIO()
+        with mock.patch.object(Path, "read_bytes", boom), redirect_stdout(out):
+            report = s.apply(plan, [a["id"] for a in plan])
+        self.assertEqual(sorted(report["rolled_back"]), ["new.txt", "over.txt"])
+        self.assertEqual(report["applied"], [])
+        self.assertFalse((self.w / "new.txt").exists())
+        self.assertEqual((self.w / "over.txt").read_text(encoding="utf-8"), "working original\n")
+        self.assertRegex(out.getvalue(), r"Rolled back new\.txt \(failed: verification error: MemoryError")
+        self.assertTrue((Path(report["archive"]) / "apply-report.json").is_file())
+
+    def test_a_rollback_that_fails_names_the_backup_to_restore_by_hand(self):
+        # The other edge of the case above: when the restore itself fails, the item is
+        # not reported as rolled back; the report and the run name the backup copy to
+        # restore by hand, and the run exits 1.
+        _write(self.u, "over.txt", "user\n")
+        _write(self.w, "over.txt", "working original\n")
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            plan = s.plan()
+        plan[0]["direction"] = "user_to_working"
+        s._verify_copy = lambda src, dst: ["hash"]
+        real = shutil.copy2
+
+        def copy2(src, dst, *a, **k):
+            if "ARCHIVE" in Path(src).parts:
+                raise PermissionError(13, "Permission denied", str(dst))
+            return real(src, dst, *a, **k)
+        out = io.StringIO()
+        with mock.patch.object(self.mod.shutil, "copy2", copy2), redirect_stdout(out):
+            report = s.apply(plan, [1])
+        self.assertEqual(report["rolled_back"], [])
+        self.assertEqual(report["applied"], [])
+        self.assertEqual([x["path"] for x in report["rollback_failed"]], ["over.txt"])
+        backup = Path(report["archive"]) / "working" / "over.txt"
+        self.assertEqual(report["rollback_failed"][0]["backup"], str(backup))
+        self.assertEqual(backup.read_text(encoding="utf-8"), "working original\n")
+        self.assertRegex(out.getvalue(), r"over\.txt.*restore it by hand from .*over\.txt")
+
+    def test_archive_in_another_case_is_synks_own_folder_where_the_file_system_folds_case(self):
+        # Break it catches: on a case-insensitive file system (Windows, default macOS) a
+        # project's own archive/ folder IS Synk's ARCHIVE, yet it was scanned as content:
+        # the backups of an apply landed in it, the next scan planned them as user_only,
+        # --approve new copied Synk's own manifests into the working copy, and every later
+        # run grew it (the sixth v1.3 review, S11). Where the file system folds case, any
+        # spelling of ARCHIVE is the backup folder: skipped in both copies and named on
+        # the dashboard, the archive path printed as it is on disk, and a file so named
+        # is named before planning and refuses the apply with its real path.
+        if not _folds_case(self.u):
+            self.skipTest("a case-sensitive file system: archive/ is a project folder there")
+        _write(self.u, "archive/old.txt", "project content, both sides\n")
+        _write(self.w, "archive/old.txt", "project content, both sides\n")
+        _write(self.u, "a.txt", "user\n")
+        _write(self.w, "a.txt", "work\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            s = self.synk()
+            r = s.scan_and_compare()
+            plan = s.plan()
+        self.assertEqual(sorted(r["files"]), ["a.txt"])
+        self.assertEqual(sorted((n["side"], n["path"]) for n in r["not_compared"]), [("user", "archive"), ("working", "archive")])
+        self.assertRegex(out.getvalue(), r"not compared.*archive.*ARCHIVE")
+        plan[0]["direction"] = "user_to_working"
+        out = io.StringIO()
+        with redirect_stdout(out):
+            report = s.apply(plan, [plan[0]["id"]])
+        self.assertEqual([a["path"] for a in report["applied"]], ["a.txt"])
+        archive = Path(report["archive"])
+        self.assertEqual(archive.parent.name, "archive", "the archive path is printed as it is on disk")
+        self.assertTrue((archive / "manifest.json").is_file())
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            r = s.scan_and_compare()
+            self.assertEqual(s.plan(), [])
+        self.assertEqual(sorted(r["files"]), ["a.txt"])
+        self.assertFalse(any("synk-" in p.as_posix() for p in self.w.rglob("*")), "no backup was synced as content")
+        shutil.rmtree(self.u / "archive")
+        _write(self.u, "Archive", "a file, not a folder")
+        _write(self.u, "new.txt", "brand new\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            s = self.synk()
+            r = s.scan_and_compare()
+            plan_file = _write(self.tmp, "plan.json", json.dumps(s.plan()))
+        self.assertEqual(sorted(r["files"]), ["a.txt", "new.txt"])
+        self.assertRegex(out.getvalue(), r"not compared.*Archive.*ARCHIVE")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "new"])
+        self.assertEqual(rc, 1)
+        self.assertRegex(out.getvalue(), r"Archive is a file, not a folder")
+        self.assertFalse((self.w / "new.txt").exists())
+
+    def test_diff_says_when_copies_differ_only_in_line_endings_and_refuses_a_path_outside(self):
+        # Break it catches: --diff of a file whose copies differ only in line endings
+        # printing one empty line at rc 0 while the dashboard called it a merge (the line
+        # sets match; the diff is of lines), and --diff ../x or --diff <absolute path>
+        # printing the same empty line at rc 0 (the sixth v1.3 review, S6 and S12). The
+        # dashboard, the plan and --diff all say the copies differ only in line endings,
+        # naming each side's; a path that leaves the copies is refused at rc 1.
+        _write(self.u, "crlf.txt", data=b"line 1\r\nline 2\r\nline 3\r\n")
+        _write(self.w, "crlf.txt", data=b"line 1\nline 2\nline 3\n")
+        _write(self.tmp, "outside.txt", "outside\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            s = self.synk()
+            r = s.scan_and_compare()
+            plan = s.plan()
+        a = r["files"]["crlf.txt"]
+        self.assertEqual((a["status"], a["relationship"], a["similarity"]), ("line_endings", "line_endings", 1.0))
+        self.assertEqual(a["endings"], {"user": "CRLF", "working": "LF"})
+        self.assertRegex(out.getvalue(), r"line_endings.*crlf\.txt.*user CRLF, working LF")
+        self.assertEqual(r["line_endings"], 1)
+        self.assertEqual(r["merge"], 0)
+        self.assertEqual((plan[0]["status"], plan[0]["direction"]), ("line_endings", None))
+        self.assertIn("line endings", plan[0]["note"])
+        self.assertIn("user CRLF, working LF", plan[0]["note"])
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--diff", "crlf.txt"])
+        self.assertEqual(rc, 0)
+        self.assertIn("differ only in line endings: user CRLF, working LF", out.getvalue())
+        self.assertNotIn("---", out.getvalue())
+        for rel in ("../outside.txt", str(Path(self.tmp) / "outside.txt"), "sub/../../outside.txt"):
+            with self.subTest(diff=rel):
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    rc = self.mod.main([str(self.u), str(self.w), "--diff", rel])
+                self.assertEqual(rc, 1)
+                self.assertNotIn("outside\n", out.getvalue())
+                self.assertRegex(out.getvalue(), r"--diff.*(leaves the copy|outside the copy|absolute)")
+
+    def test_a_file_link_inside_a_copy_is_named_and_not_followed_a_dangling_one_too(self):
+        # Break it catches: a symbolic link to a FILE inside a copy followed and copied as
+        # a regular file holding the target's content, and a dangling one vanishing
+        # without a word (the sixth v1.3 review, S5c); folder links were already named.
+        # A link to a file is named like a link to a folder and never followed, and a
+        # dangling one is named as such; nothing under either is compared or planned.
+        _write(self.u, "a.txt", "a\n")
+        try:
+            os.symlink(self.u / "a.txt", self.u / "link.txt")
+            os.symlink(self.u / "no-such.txt", self.u / "dangling.txt")
+        except OSError as e:
+            self.skipTest(f"this machine cannot make a file symlink ({e})")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            s = self.synk()
+            r = s.scan_and_compare()
+            plan = s.plan()
+        self.assertEqual(sorted(r["files"]), ["a.txt"])
+        self.assertEqual([a["path"] for a in plan], ["a.txt"])
+        reasons = {n["path"]: n["reason"] for n in r["not_compared"]}
+        self.assertEqual(sorted(reasons), ["dangling.txt", "link.txt"])
+        self.assertIn("not followed", reasons["link.txt"])
+        self.assertIn("missing", reasons["dangling.txt"])
+        self.assertRegex(out.getvalue(), r"not compared.*dangling\.txt.*missing")
+
+    def test_pulse_stamps_are_read_one_way_on_every_python_and_never_stop_the_run(self):
+        # Break it catches: one consumed signal stamped 1969-12-31T23:59:59, or any 0001 /
+        # 9999 stamp, raising OSError from .astimezone() on Windows, so --pulse of both
+        # engines printed "PULSE.json not written ([Errno 22] Invalid argument)" on every
+        # later run until the file was hand-edited; "consumed": "false" pruned as consumed;
+        # and a basic-format or 7-digit-fraction stamp pruned on 3.11+ but kept on 3.10
+        # (the sixth v1.3 review, S10). The rule, the same on every Python and written in
+        # docs/TRIFECTA.md: a stamp is the extended ISO-8601 form with an offset, Z or
+        # neither (local time), a fraction cut to microseconds; a consumed signal older
+        # than seven days is pruned; a consumed signal whose stamp cannot be read is pruned
+        # and the run says so; only JSON true is consumed; an unconsumed signal is never
+        # touched; an entry that is not an object is kept.
+        old = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%S")
+        signals = [("basic-z", (datetime.now() - timedelta(days=30)).strftime("%Y%m%dT%H%M%SZ"), True),
+                   ("seven-frac-z", old + ".1234567Z", True), ("naive-1969", "1969-12-31T23:59:59", True),
+                   ("naive-0001", "0001-01-01T00:00:00", True), ("aware-0001", "0001-01-01T00:00:00+00:00", True),
+                   ("aware-9999", "9999-12-31T23:00:00+00:00", True), ("naive-9999", "9999-12-31T00:00:00", True),
+                   ("plus-0930", old + "+09:30", True), ("space-sep-z", old.replace("T", " ") + "Z", True),
+                   ("consumed-string-false", old + "Z", "false"), ("consumed-0", old + "Z", 0),
+                   ("consumed-1", old + "Z", 1), ("empty", "", True), ("number", 1700000000, True),
+                   ("month-13", old[:5] + "13" + old[7:], True),
+                   ("unconsumed-old", old + "Z", False), ("unconsumed-bad", "yesterday", False)]
+        pulse = {"cross_skill": {"pending_signals": [
+            {"from": "devcom5", "signal": n, "to": "x", "timestamp": t, "consumed": c} for n, t, c in signals] + ["not an object"]}}
+        for rel in ("synk182/scripts/synk_engine.py", "solid8/scripts/denser_engine.py"):
+            with self.subTest(engine=rel):
+                mod = _load(Path(rel).stem, rel)
+                p = _write(self.u, "docs/PULSE.json", json.dumps(pulse))
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    path = mod.update_pulse(self.u, {"probe_last_run": "x"})
+                self.assertEqual(path, p)
+                kept = json.loads(p.read_text(encoding="utf-8"))["cross_skill"]["pending_signals"]
+                self.assertEqual([s["signal"] if isinstance(s, dict) else s for s in kept],
+                                 ["aware-9999", "naive-9999", "consumed-string-false", "consumed-0", "consumed-1",
+                                  "unconsumed-old", "unconsumed-bad", "not an object"])
+                for name in ("basic-z", "empty", "number", "month-13"):
+                    self.assertRegex(out.getvalue(), rf"pruned.*{name}.*not .*ISO-8601")
+                self.assertNotIn("not written", out.getvalue())
+
+    def test_a_plan_item_inside_a_skipped_folder_is_refused_before_any_write(self):
+        # Break it catches: a hand-edited plan item whose path lies in a folder the scan
+        # skips (.git, node_modules, ARCHIVE, a nested one) applied as written: --approve
+        # 1,2,3 wrote working/.git/hooks/pre-commit, working/node_modules/evil/index.js
+        # and working/ARCHIVE/old.txt, "six layers verified" (the sixth v1.3 review, S9).
+        # Such a path is refused before any backup or write, like '..' is.
+        _write(self.u, ".git/hooks/pre-commit", "#!/bin/sh\necho hooked\n")
+        _write(self.u, "node_modules/evil/index.js", "x\n")
+        _write(self.u, "ARCHIVE/old.txt", "archived\n")
+        _write(self.u, "sub/.git/config", "[core]\n")
+        _write(self.u, "keep.txt", "one\n")
+        paths = [".git/hooks/pre-commit", "node_modules/evil/index.js", "ARCHIVE/old.txt", "sub/.git/config"]
+        if _folds_case(self.u):
+            _write(self.u, "Archive/x.txt", "x\n")
+            paths.append("Archive/x.txt")
+        plan = [{"id": i + 1, "path": p, "status": "user_only", "direction": "user_to_working"} for i, p in enumerate(paths)]
+        plan_file = _write(self.tmp, "plan.json", json.dumps(plan))
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve",
+                                ",".join(str(a["id"]) for a in plan)])
+        self.assertEqual(rc, 1)
+        for p in paths:
+            with self.subTest(path=p):
+                self.assertRegex(out.getvalue(), rf"Refused {re.escape(p)}: .*skips")
+                self.assertFalse((self.w / p).exists())
+        self.assertEqual(sorted(p.name for p in self.w.iterdir()), [])
+
+    def test_two_names_differing_only_in_case_are_one_file_where_the_file_system_folds_case(self):
+        # Break it catches: user/Readme.md and work/README.md planned as two one-sided
+        # items on a case-insensitive file system, both refused at apply ("now has this
+        # file; re-plan"), and the re-plan planning the same two again, forever (the
+        # sixth v1.3 review, S11). Where both copies fold case they are one file: compared
+        # as one item under the user copy's spelling, named as the same file in different
+        # case, applied once, and the next plan is empty.
+        if not (_folds_case(self.u) and _folds_case(self.w)):
+            self.skipTest("a case-sensitive file system: Readme.md and README.md are two files there")
+        _write(self.u, "Readme.md", "# user readme\n")
+        _write(self.w, "README.md", "# work readme\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            s = self.synk()
+            r = s.scan_and_compare()
+            plan = s.plan()
+        self.assertEqual(sorted(r["files"]), ["Readme.md"])
+        self.assertEqual(r["files"]["Readme.md"]["names"], {"user": "Readme.md", "working": "README.md"})
+        self.assertEqual(r["files"]["Readme.md"]["status"], "different")
+        self.assertRegex(out.getvalue(), r"Readme\.md.*same file, different case.*README\.md")
+        self.assertEqual(len(plan), 1)
+        self.assertIn("different case", plan[0]["note"])
+        plan[0]["direction"] = "user_to_working"
+        with redirect_stdout(io.StringIO()):
+            report = s.apply(plan, [1])
+        self.assertEqual([a["path"] for a in report["applied"]], ["Readme.md"])
+        self.assertEqual({p.read_text(encoding="utf-8") for p in self.w.iterdir() if p.is_file()}, {"# user readme\n"})
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            self.assertEqual(s.plan(), [])
+
+    def test_cli_flag_values_and_hand_edits_are_answered_not_applied_blindly(self):
+        # Break it catches, each driven by the sixth v1.3 review (S9, S12): --threshold 2,
+        # -1 or nan accepted (nan made every pair different); a duplicate id in a
+        # hand-edited plan applied twice; direction USER_TO_WORKING answered "no direction
+        # chosen"; a path ending in a separator written as "a.txt\"; a plan or a PULSE
+        # saved with a UTF-8 BOM refused; an already-applied plan told to re-plan.
+        _write(self.u, "a.txt", "a\n")
+        _write(self.u, "b.txt", "b\n")
+        for th in ("2", "-1", "nan", "inf"):
+            with self.subTest(threshold=th):
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    rc = self.mod.main([str(self.u), str(self.w), "--threshold", th])
+                self.assertEqual(rc, 1)
+                self.assertIn("--threshold", out.getvalue())
+                self.assertIn("between 0 and 1", out.getvalue())
+        items = [{"id": 5, "path": "b.txt", "status": "user_only", "direction": "user_to_working"},
+                 {"id": 5, "path": "b.txt", "status": "user_only", "direction": "user_to_working"}]
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(_write(self.tmp, "dup.json", json.dumps(items))), "--approve", "5"])
+        self.assertEqual(rc, 1)
+        self.assertRegex(out.getvalue(), r"id 5 .*twice")
+        self.assertFalse((self.w / "b.txt").exists())
+        items = [{"id": 1, "path": "a.txt", "status": "user_only", "direction": "USER_TO_WORKING"},
+                 {"id": 2, "path": "a.txt\\", "status": "user_only", "direction": "user_to_working"},
+                 {"id": 3, "path": "a.txt/", "status": "user_only", "direction": "user_to_working"},
+                 {"id": 4, "path": "a.txt ", "status": "user_only", "direction": "user_to_working"}]
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(_write(self.tmp, "odd.json", json.dumps(items))), "--approve", "1,2,3,4"])
+        self.assertEqual(rc, 1)
+        self.assertRegex(out.getvalue(), r"Skipped a\.txt: .*USER_TO_WORKING.* is not user_to_working or working_to_user")
+        for p in ("a.txt\\", "a.txt/", "a.txt "):
+            self.assertRegex(out.getvalue(), re.escape(f"Refused {p}: ") + r".*ends in a separator or a space")
+        self.assertEqual(sorted(p.name for p in self.w.iterdir()), [])
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            plan = s.plan()
+        bom = _write(self.tmp, "plan-bom.json", data=b"\xef\xbb\xbf" + json.dumps(plan).encode("utf-8"))
+        _write(self.u, "docs/PULSE.json", data=b"\xef\xbb\xbf" + b'{"project": "X", "cross_skill": {"pending_signals": []}}')
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(bom), "--approve", "new", "--pulse"])
+        self.assertEqual(rc, 0)
+        self.assertTrue((self.w / "a.txt").is_file() and (self.w / "b.txt").is_file())
+        self.assertNotIn("left untouched", out.getvalue())
+        pulse = (self.u / "docs/PULSE.json").read_bytes()
+        self.assertFalse(pulse.startswith(b"\xef\xbb\xbf"))
+        self.assertIn("synk_files_changed", pulse.decode("utf-8"))
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(bom), "--approve", "new"])
+        self.assertEqual(rc, 1)
+        self.assertRegex(out.getvalue(), r"Refused a\.txt: already applied")
+        self.assertNotIn("re-plan", out.getvalue())
+
 
 # ─────────────────────────────────────────────────────────────── the three folders
 class SkillFolders(unittest.TestCase):
@@ -1595,12 +2088,18 @@ class SkillFolders(unittest.TestCase):
     def test_protocol_says_which_signal_timestamps_are_pruned(self):
         # Break it catches: the protocol saying only "ISO-8601" while the engines pruned
         # a Z stamp on some Python versions and never pruned one with no offset (found by
-        # the fifth v1.3 review). The engines' pruning is driven in each engine's own
-        # case; here the lifecycle rule must name both forms.
+        # the fifth v1.3 review), then a stamp one Python reads and another does not, and
+        # a consumed signal whose stamp cannot be read stopping every later --pulse (the
+        # sixth). The engines' pruning is driven in each engine's own case; here the
+        # lifecycle rule must pin the grammar and say what an unreadable stamp leads to.
         protocol = (ROOT / "docs/TRIFECTA.md").read_text(encoding="utf-8")
         rule = protocol[protocol.index("**Lifecycle:**"):].split("\n\n", 1)[0]
         self.assertIn("with an offset or `Z`", rule)
         self.assertIn("read as local time", rule)
+        self.assertIn("`YYYY-MM-DD`, then `T`", rule)
+        self.assertIn("then `HH:MM:SS`", rule)
+        self.assertIn("a consumed signal whose `timestamp` cannot be read is pruned", rule)
+        self.assertIn("only JSON `true` counts as consumed", rule)
 
     def test_description_reaches_the_host_listing(self):
         # Break it catches: a description a strict host drops from its listing,
@@ -1635,213 +2134,130 @@ class SkillFolders(unittest.TestCase):
                 self.assertTrue(named, f"{name}: the 'not for' names no sibling skill")
 
     def test_no_pointer_to_a_skill_that_is_neither_in_the_pack_nor_public(self):
-        # Break it catches: "not for X, use Y" where Y is neither in the pack nor
-        # public, so a reader's agent is sent nowhere (found by the v1.2 review).
-        # An allow-list, so the test itself names no skill it keeps out; run with
-        # TRIAD_ROOT on commit a9f9b3a it goes red on all four pointers that
-        # review found.
-        for p in sorted(ROOT.rglob("*.md")):
-            if ".git" in p.parts:
-                continue
-            with self.subTest(file=p.relative_to(ROOT).as_posix()):
-                self.assertEqual(_unlisted_pointers(p.read_text(encoding="utf-8")), [],
-                                 "not in the pack and not public; describe the work instead")
+        """Break it catches: "not for X, use Y" where Y is neither in the pack nor public,
+        so a reader's agent is sent nowhere (found by the v1.2 review: four private names).
 
-    def test_pointer_check_goes_red_on_every_form_it_reads(self):
-        # The probe for the case above, in made-up names: each pointer form goes
-        # red on a skill outside the pack, and stays green on the pack's names,
-        # git, verafox behind a link, a described kind of work, and parentheses
-        # that name nothing. The third v1.3 review found a first-word check passed
-        # "(→ the private-notes skill)", "use X", "->" and a lowercase table
-        # header, and flagged "(→ GitHub)", "(see above)" and a 3-column table.
-        red = {"Not for diagrams (private-helper).": ["private-helper"],
-               "| x | redundancy (→ internal-notes) |": ["internal-notes"],
-               "**Not Synk:** repo rules (git, house-rules), the rest": ["house-rules"],
-               "| Ask | Skill |\n|-----|-------|\n| Tidy notes | memo-sweeper |": ["memo-sweeper"],
-               "description: >-\n  Does things. Not for proofs\n  (github-helper).": ["github-helper"],
-               "| x | notes (→ the private-notes skill) |": ["private-notes"],
-               "| x | notes (→ a private-notes skill) |": ["private-notes"],
-               "| x | notes (→ in private-notes) |": ["private-notes"],
-               "| x | notes (→ your private-notes skill) |": ["private-notes"],
-               "| x | notes (→ `private-notes`) |": ["private-notes"],
-               "| x | notes (→ Solid8 or private-notes) |": ["private-notes"],
-               "| x | notes (-> private-notes) |": ["private-notes"],
-               "| x | notes (→ notetaker) |": ["notetaker"],
-               "Not for notes (the private-notes skill).": ["private-notes"],
-               "Not for notes (see private-notes).": ["private-notes"],
-               "Not for notes (private-notes (v2)).": ["private-notes"],
-               "Not for notes; use private-notes instead.": ["private-notes"],
-               "Not for notes. Use notetaker for those.": ["notetaker"],
-               "**Not Synk:** notes, use private-notes for those": ["private-notes"],
-               "| ask | skill |\n|---|---|\n| Notes | private-notes |": ["private-notes"],
-               "| Ask | Skill | Why |\n|---|---|---|\n| Notes | notetaker | because |": ["notetaker"],
-               "| Ask | Skill |\n|---|---|\n| Notes | [private-notes](https://example.org) |": ["private-notes"],
-               # the fourth v1.3 review: the pack's own "X tool" form, verbs beyond "use",
-               # a possessive or a subject, names written loosely, other table headers,
-               # and a clause wrapped onto the next line
-               "| x | notes (→ your private-notes tool) |": ["private-notes"],
-               "| x | notes (→ the private-notes plugin) |": ["private-notes"],
-               "Not for notes (a private-notes helper).": ["private-notes"],
-               "Not for notes; see private-notes.": ["private-notes"],
-               "Not for notes; load private-notes first.": ["private-notes"],
-               "Not for notes: private-notes handles those.": ["private-notes"],
-               "Not for notes (that is private-notes's job).": ["private-notes"],
-               "| x | notes (→ Private-Notes), memos (→ memo_sweeper) |": ["private-notes", "memo-sweeper"],
-               "| Task | Skill |\n|---|---|\n| Notes | private-notes |": ["private-notes"],
-               "| Need | Use |\n|---|---|\n| Notes | private-notes |": ["private-notes"],
-               "| Ask | Tool |\n|---|---|\n| Notes | private-notes |": ["private-notes"],
-               "Not for notes\n(private-notes).": ["private-notes"],
-               "Not for notes → private-notes\n- memos -> memo-sweeper.": ["private-notes", "memo-sweeper"]}
-        for text, names in red.items():
-            with self.subTest(red=text):
-                self.assertEqual(_unlisted_pointers(text), names)
-        green = ("Not for proofs ([verafox](https://example.org), in The Proof Pack), or diagrams "
-                 "(a diagramming skill). Other text (not a pointer).",
-                 "| x | redundancy (→ Solid8), merges (→ git), rules (→ your repository's own rules) |",
-                 "| x | memory (→ your memory-consolidation tool), proofs (→ verafox Mutate, in The Proof Pack) |",
-                 "| x | issues (→ GitHub), CI (→ GitHub Actions), merges (→ git's own merge) |",
-                 "| x | proofs (→ The Proof Pack), comms (→ DevCom5 Scribe), copies (→ Synk182's engine) |",
-                 "| Ask | Skill | Why |\n|---|---|---|\n| Two copies | Synk182 | because |\n"
-                 "| Prove it | verafox (The Proof Pack) | it is public |",
-                 "**Not Synk:** repo rules (git, a repo-rules skill); use git for merges.",
-                 "Not for merges (e.g., branch merges).", "Not for merges (see above).",
-                 "Not for merges (that is Synk182's job).", "Not for merges (v2 and later).",
-                 "Not for notes (or diagrams).", "Not for notes (and diagrams).", "Not for big files (over 10 MB).",
-                 "Not for merging (one copy wins).", "Not for notes (\"memory\").", "Not for proofs (Verafox).",
-                 "Not for notes (which stay).", "Not for notes (this one); use it elsewhere.",
-                 "Byte-comparing docs (use section-aware diff).",
-                 "| x | merges (→ git's own three-way merge) |", "Not for merges (in read-only mode).",
-                 "Not for merges; use section-aware diff instead.", "Not for merges; use a diff tool.",
-                 "Formerly: v1.2 (it is not for beside Solid8; freeware) → v1.3 (2026-09-30: fixes).",
-                 # the fourth v1.3 review: words that fill a pointer's slot but name no skill,
-                 # a "How to use" column, and the pack's flows written with bare arrows
-                 "Not for merges; use caution.", "Not for merges. Use discretion.", "**Not yet:** use caution.",
-                 "Not for writes (read-only).", "Not for merges (one-off).", "Not for merges (optional).",
-                 "Not for builds (x64).", "**Not Solid8:** two copies (2).", "Not for notes (via drag-and-drop).",
-                 "| x | mail (→ e-mail), files (→ your file-system), merges (→ a three-way merge) |",
-                 "| Ask | Skill |\n|---|---|\n| Plain edits | none |\n| Retyping | manual |",
-                 "| Host | Works? | How to use |\n|---|---|---|\n| Any | yes | drop-in |",
-                 "Low confidence → suggest skip-to-action; both → user-unique + working-unique → merged.",
-                 "backup → copy or merged write → verify (six layers) → roll back failures → log\n"
-                 "Config-first → Doc-reality cross-check → the new docs are doc-worthy.")
-        for text in green:
-            with self.subTest(green=text):
-                self.assertEqual(_unlisted_pointers(text), [])
+        Mechanism 1 of two (the vocabulary block above): every name-shaped token in every
+        tracked .md file must be in VOCABULARY_NAMES or VOCABULARY_WORDS; the failure names
+        file:line and the remedy. No grammar is read: a private name is caught by its shape
+        (a hyphen, an underscore, a digit, a path) wherever and however it is written. A
+        one-word private name has no shape; mechanism 2 (the deny-list test below) catches
+        it. Run with TRIAD_ROOT on an export of commit a9f9b3a, this goes red on the three
+        hyphenated names that review found; the fourth is a one-word name, so it is the
+        deny-list's."""
+        unknown = _unknown_tokens(ROOT)
+        self.assertEqual(unknown, [], "\n" + "\n".join(unknown) + "\n" + REMEDY)
 
-    def test_every_allowed_kind_is_read_from_the_pack(self):
-        # Break it catches: a kind in POINTER_KINDS that the check never reads, so a
-        # private name in its slot passes unseen: "(→ your memory-consolidation
-        # tool)", the pack's own form, was read as nothing (found by the fourth
-        # v1.3 review). Each allowed kind must be read from the pack's own files.
-        read = {n for p in ROOT.rglob("*.md") if ".git" not in p.parts
-                for n in _pointers_read(p.read_text(encoding="utf-8"))}
-        for kind in sorted(POINTER_KINDS):
-            with self.subTest(kind=kind):
-                self.assertIn(kind, read)
+    def test_vocabulary_holds_only_what_the_pack_uses(self):
+        # The ratchet: every entry of both lists must still occur in the pack's Markdown,
+        # whole-word (git, verafox and diagramming carry no mark and occur as plain words),
+        # so a list only ever holds what the pack uses; the lists are lowercase and disjoint.
+        text = "\n".join(p.read_text(encoding="utf-8") for p in _markdown_files(ROOT)).translate(_DASHES).lower()
+        for entry in sorted(VOCABULARY_NAMES | VOCABULARY_WORDS):
+            with self.subTest(entry=entry):
+                self.assertEqual(entry, entry.lower().strip())
+                self.assertRegex(text, r"(?<![a-z0-9_])" + re.escape(entry) + r"(?![a-z0-9_])",
+                                 "stale: the pack no longer uses it; remove it")
+        self.assertEqual(VOCABULARY_NAMES & VOCABULARY_WORDS, frozenset())
 
-    def test_pointer_check_reads_the_fifth_reviews_forms(self):
-        # Break it catches: a pointer the check passed at 1ce715f (the fifth v1.3
-        # review): an em dash or a colon, verbs and prepositions beyond the first eight,
-        # a "Not for" heading, "Out of scope:", more table headers, a version or italics
-        # around a name, a name opening a sentence or owning with a curly apostrophe, and
-        # a one-word name after a verb, as a possessive or as a subject.
-        red = {"Not for notes — private-notes.": ["private-notes"],
-               "Not for notes: private-notes.": ["private-notes"],
-               "Not for notes; leave those to private-notes.": ["private-notes"],
-               "Not for notes; those belong to private-notes.": ["private-notes"],
-               "Not for notes; open private-notes.": ["private-notes"],
-               "Not for notes; prefer private-notes.": ["private-notes"],
-               "Not for notes; install private-notes first.": ["private-notes"],
-               "Not for notes; switch to private-notes.": ["private-notes"],
-               "Not for notes; reach for private-notes.": ["private-notes"],
-               "Not for notes; that is what private-notes is for.": ["private-notes"],
-               "Not for notes; private-notes exists for that.": ["private-notes"],
-               "Not for notes; do those with private-notes.": ["private-notes"],
-               "Not for notes; go through private-notes.": ["private-notes"],
-               "Not for notes; take those from private-notes.": ["private-notes"],
-               "Not for notes; those are done by private-notes.": ["private-notes"],
-               "Not for notes; hand those off to private-notes.": ["private-notes"],
-               "Not for notes; delegate to private-notes.": ["private-notes"],
-               "Not for notes; defer to private-notes.": ["private-notes"],
-               "Not for notes → use private-notes.": ["private-notes"],
-               "Not for notes: `private-notes`.": ["private-notes"],
-               "Not for notes. Private-notes keeps those.": ["private-notes"],
-               "Not for notes (that is private-notes’s job).": ["private-notes"],
-               "Not meant for notes (private-notes).": ["private-notes"],
-               "## Not for\n\n- Notes (private-notes)\n- Merges (git)": ["private-notes"],
-               "**Not for:**\n- memos (memo-sweeper)": ["memo-sweeper"],
-               "Out of scope: notes (private-notes).": ["private-notes"],
-               "| Ask | Handled by |\n|---|---|\n| Notes | private-notes |": ["private-notes"],
-               "| Need | Skill to use |\n|---|---|\n| Notes | private-notes |": ["private-notes"],
-               "| Ask | Which skill |\n|---|---|\n| Notes | private-notes |": ["private-notes"],
-               "| When | Use |\n|---|---|\n| Notes | private-notes |": ["private-notes"],
-               "| Ask | Skill: |\n|---|---|\n| Notes | private-notes |": ["private-notes"],
-               "| Ask | Skill |\n|---|---|\n| Notes | private-notes v2 |": ["private-notes"],
-               "| Ask | Skill |\n|---|---|\n| Notes | _private-notes_ |": ["private-notes"],
-               "| x | notes (→ private-notes v2) |": ["private-notes"],
-               "| Ask | Skill |\n|---|---|\n| Notes | jotbook v2 |": ["jotbook"],
-               "| x | notes (→ jotbook 2.1) |": ["jotbook"],
-               "Not for notes; use notetaker.": ["notetaker"],
-               "Not for notes; use notes2go.": ["notes2go"],
-               "Not for notes; that is notetaker's job.": ["notetaker"],
-               "Not for notes; notetaker handles those.": ["notetaker"]}
-        for text, names in red.items():
-            with self.subTest(red=text):
-                self.assertEqual(_unlisted_pointers(text), names)
-        for text in ("Not for merges; use caution.", "Not for merges. Use discretion.", "Not for notes; use care.",
-                     "Not for merges; use rebase.", "Not for merges; use judgement.", "Not for merges; use sparingly."):
-            with self.subTest(green=text):
-                self.assertEqual(_unlisted_pointers(text), [])
+    def test_name_shape_is_what_the_vocabulary_block_says(self):
+        # Pins the shape rule, one case per clause of the block above, so a change to it is
+        # a change here first.
+        for token, name in (("Private-Notes", "private-notes"), ("private_notes", "private_notes"),
+                            ("private‑notes", "private-notes"), ("private–notes", "private-notes"),
+                            ("notes2go", "notes2go"), ("memo7", "memo7"), ("utf-8", "utf-8"), ("3P", "3p"),
+                            ("--dry-run", "dry-run"), ("synk_engine.py", "synk_engine"), ("mk1made.us", "mk1made"),
+                            ("release-notes.", "release-notes"), ("v1.3", None), ("v2", None), ("19a8722", None),
+                            ("2026-09-30", None), ("60-99", None), ("A-C", None), ("e.g.", None), ("PULSE.json", None),
+                            ("notes", None), ("Docker", None), ("private notes", None)):
+            with self.subTest(token=token):
+                self.assertEqual(_name_shaped(token), name)
+        text = ("see /jotbook, jotbook/SKILL.md and `skills/jotbook/`; read/comprehend it at 14:12 on "
+                "2026-09-30T14:12:00Z; docs/PULSE.json; https://github.com/someone/x; (D/M/C); 1-2 ¶/section")
+        self.assertEqual([t for _, t in _name_shaped_tokens(text)],
+                         ["jotbook", "jotbook", "skill", "skills", "jotbook", "docs", "pulse", "github", "someone"])
 
-    def test_pointer_check_reads_nothing_in_realistic_prose(self):
-        # Break it catches: ordinary English read as a skill name. At 1ce715f, 43 of the
-        # fifth review's 50 realistic paragraphs went red (third-party, dry-run,
-        # follow-up, a '| Tool | Version |' table, 'use yours instead').
-        for text in REALISTIC_PROSE:
-            with self.subTest(text=text):
-                self.assertEqual(_unlisted_pointers(text), [])
+    def _pack_copy(self):
+        """A copy of the pack's Markdown to inject into; README.md's text and line count."""
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        for p in _markdown_files(ROOT):
+            _write(tmp, p.relative_to(ROOT).as_posix(), p.read_text(encoding="utf-8"))
+        base = (tmp / "README.md").read_text(encoding="utf-8")
+        return tmp, base, base.count("\n")
 
-    def test_english_forms_are_known_without_being_listed(self):
-        # Break it catches: an English compound read as a name because nobody listed it.
-        # None of these is in _ENGLISH_COMPOUNDS or in the realistic prose, and each sits
-        # alone in an arrow group, the slot that reads any hyphenated word, so each is
-        # known by its form: a prefix, particle or number first, a particle last, a
-        # linker inside, a participle or a modifier head last, a one-letter or digit part.
-        held_out = ("re-run", "co-author", "sub-agent", "self-hosted", "non-blocking", "pre-release",
-                    "post-merge", "multi-agent", "cross-reference", "sign-up", "log-in", "add-ons", "hand-offs",
-                    "two-pass", "one-shot", "peer-to-peer", "up-to-date", "hand-written", "hard-coded",
-                    "long-lived", "thread-safe", "context-aware", "platform-agnostic", "user-friendly",
-                    "server-side", "compile-time", "sha-256", "x-ray", "record-keeping", "mobile-first")
-        for word in held_out:
-            with self.subTest(word=word):
-                self.assertNotIn(word, _ENGLISH_COMPOUNDS)
-                self.assertFalse(any(word in text for text in REALISTIC_PROSE))
-                self.assertEqual(_unlisted_pointers(f"| x | y (→ {word}) |"), [])
+    def test_every_pointer_form_goes_red_on_a_made_up_name(self):
+        # Every form the earlier reviews and probes listed, appended to a copy of the
+        # pack's README: a made-up name with a mark is reported by the vocabulary check
+        # at README.md:line, and every made-up name, one-word ones too, by the deny-list
+        # when it is listed. The copy is green before the injection. Closes the sixth
+        # review's medium 1 and low 1-2 by construction: no form is parsed.
+        tmp, base, n = self._pack_copy()
+        listed = sorted({name for names in POINTER_FORMS.values() for name in names})
+        self.assertEqual(_unknown_tokens(tmp), [])
+        self.assertEqual(_private_name_hits(tmp, listed), [])
+        for p in _markdown_files(tmp):  # the injections go into README.md; the rest was read once
+            if p != tmp / "README.md":
+                p.unlink()
+        for text, names in POINTER_FORMS.items():
+            with self.subTest(form=text):
+                (tmp / "README.md").write_text(base + text + "\n", encoding="utf-8", newline="")
+                lowered = text.translate(_DASHES).lower()
+                spelled = {_name_shaped(_private_name_pattern(name).search(lowered).group()) for name in names}
+                spelled.discard(None)
+                found = _unknown_tokens(tmp)
+                self.assertTrue(all(f.startswith("README.md:") and int(f.split(":")[1]) > n for f in found), found)
+                self.assertTrue(spelled <= {f.split(": ", 1)[1] for f in found}, (spelled, found))
+                hits = _private_name_hits(tmp, names)
+                self.assertEqual({h.split(": ", 1)[1] for h in hits}, set(names), hits)
+                self.assertTrue(all(h.startswith("README.md:") and int(h.split(":")[1]) > n for h in hits), hits)
 
-    def test_english_compounds_list_holds_only_what_no_form_marks(self):
-        # Keeps _ENGLISH_COMPOUNDS the one place for English's unmarked compounds: an
-        # entry a form already marks is dead weight, and an entry that is an allowed
-        # name or kind would hide a pointer.
-        for word in sorted(_ENGLISH_COMPOUNDS):
-            with self.subTest(word=word):
-                self.assertRegex(word, r"^[a-z]+(?:-[a-z]+)+$")
-                self.assertFalse(_english_by_form(word), "a form already marks it")
-                self.assertNotIn(word, POINTER_NAMES | POINTER_KINDS)
+    def test_a_stale_vocabulary_entry_goes_red(self):
+        # The ratchet's other edge: an entry the pack stops using fails, so the lists
+        # cannot grow on a guess. Driven on a copy of the pack with one word's every use
+        # removed, through the same check the ratchet test makes.
+        tmp, _, _ = self._pack_copy()
+        word = "re-plan"
+        for p in _markdown_files(tmp):
+            p.write_text(p.read_text(encoding="utf-8").replace(word, "plan again"), encoding="utf-8", newline="")
+        text = "\n".join(p.read_text(encoding="utf-8") for p in _markdown_files(tmp)).lower()
+        self.assertIn(word, VOCABULARY_WORDS)
+        self.assertNotRegex(text, r"(?<![a-z0-9_])" + re.escape(word) + r"(?![a-z0-9_])")
 
-    def test_english_compounds_list_holds_only_what_the_corpus_needs(self):
-        # Keeps _ENGLISH_COMPOUNDS from growing on a guess: every entry must be needed by
-        # a paragraph of REALISTIC_PROSE, which reads a name without it. An entry is
-        # added with the realistic paragraph that needs it, and removing one is caught.
-        global _ENGLISH_COMPOUNDS
-        full = _ENGLISH_COMPOUNDS
-        try:
-            for word in sorted(full):
-                with self.subTest(word=word):
-                    _ENGLISH_COMPOUNDS = full - {word}
-                    self.assertTrue(any(word in _unlisted_pointers(p) for p in REALISTIC_PROSE),
-                                    "no realistic paragraph needs it")
-        finally:
-            _ENGLISH_COMPOUNDS = full
+    def test_deny_list_reads_one_name_per_line_and_finds_every_spelling(self):
+        # Mechanism 2 driven on a made-up list: comments and blank lines are skipped; a
+        # listed name is found whole-word in any file (Markdown, a script, the licence),
+        # in any case, with a hyphen written as a hyphen, an underscore, a dash or a
+        # space; a longer word that contains it, a name with a digit added, .git and
+        # __pycache__ are not hits.
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        deny = _write(tmp, "names.txt", "# made-up names\n\njotbook\n  Private-Notes\n")
+        self.assertEqual(_read_private_names(deny), ["jotbook", "private-notes"])
+        pack = tmp / "pack"
+        _write(pack, "README.md", "Jotbook keeps those.\nthe jotbooks\njotbook2\nuse private_notes\n"
+                                  "PRIVATE NOTES\nprivate‑notes\nprivately noted\n")
+        _write(pack, "synk182/scripts/x.py", "# jotbook\n")
+        _write(pack, "LICENSE", "Private-Notes\n")
+        _write(pack, ".git/config", "jotbook\n")
+        _write(pack, "__pycache__/x.pyc", "jotbook\n")
+        self.assertEqual(_private_name_hits(pack, ["jotbook", "private-notes"]),
+                         ["LICENSE:1: private-notes", "README.md:1: jotbook", "README.md:4: private-notes",
+                          "README.md:5: private-notes", "README.md:6: private-notes", "synk182/scripts/x.py:1: jotbook"])
+
+    def test_private_names_from_the_deny_list_never_appear_in_the_pack(self):
+        """Mechanism 2 on the pack itself: TRIAD_PRIVATE_NAMES names a file outside the
+        repository, one private name per line (# comments); any whole-word occurrence of a
+        listed name in any file of the pack fails, named file:line. The list's contents and
+        place are never in the repository; without the variable the test is skipped, and
+        says so, rather than passing for nothing."""
+        path = os.environ.get("TRIAD_PRIVATE_NAMES")
+        if not path:
+            self.skipTest("TRIAD_PRIVATE_NAMES is not set: the private-name deny-list was not checked")
+        names = _read_private_names(path)
+        self.assertTrue(names, f"{path} lists no name")
+        hits = _private_name_hits(ROOT, names)
+        self.assertEqual(hits, [], "a private name in the public pack:\n" + "\n".join(hits))
 
     def test_devcom5_template_names_the_protocol_version(self):
         # Break it catches: the pulse_version in DevCom5's PULSE template drifting

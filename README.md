@@ -1,4 +1,4 @@
-<!-- Version 2.0 | Deps: none | Parent: The Triad (skills-trifecta README at 19a8722) | Path: . | Filename: README.md | Updated: 2026-09-30 01:15 ET — renamed The Triad; an agent skill pack for any host; freeware; versions named | Updated: 2026-09-30 01:37 ET — the address is SPRIC76/The-Triad; the MK1 Made footer | Updated: 2026-09-30 04:05 ET — v1.3: not-for pointers name kinds of work, verafox linked in The Proof Pack; versions 1.3 / 3.3 / 1.3 -->
+<!-- Version 2.0 | Deps: none | Parent: The Triad (skills-trifecta README at 19a8722) | Path: . | Filename: README.md | Updated: 2026-09-30 01:15 ET — renamed The Triad; an agent skill pack for any host; freeware; versions named | Updated: 2026-09-30 01:37 ET — the address is SPRIC76/The-Triad; the MK1 Made footer | Updated: 2026-09-30 04:05 ET — v1.3: not-for pointers name kinds of work, verafox linked in The Proof Pack; versions 1.3 / 3.3 / 1.3 | Updated: 2026-09-30 13:43 ET — the pack's own checks named: a vocabulary ratchet over its Markdown and an optional private-name deny-list -->
 # The Triad — DevCom5, Synk182, Solid8
 
 An **agent skill pack**: three skills that keep projects **understood**, **in sync**, and **lean** — coordinated via `docs/PULSE.json`. Each skill is a folder in the Agent Skills format (`SKILL.md`, with `references/` and `scripts/` beside it), so it works in any agent host that reads one. Known until commit 19a8722 as *Skills Trifecta*.
@@ -157,7 +157,9 @@ devcom5/     SKILL.md + references/
 synk182/     SKILL.md + references/ + scripts/
 solid8/      SKILL.md + references/ + scripts/
 docs/        TRIFECTA.md
-tests/       test_triad.py — kept tests for the engines, the skill folders and this pack (never shipped inside a skill)
+tests/       test_triad.py — kept tests for the engines, the skill folders and this pack (never shipped inside a skill);
+             the pack's own checks: every name-shaped token in its Markdown must be in a committed vocabulary,
+             and TRIAD_PRIVATE_NAMES may name a deny-list kept outside the repository
 ```
 
 Run the tests from this folder: `python -B -m unittest discover -s tests -v`

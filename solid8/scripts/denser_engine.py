@@ -7,6 +7,7 @@ Updated: 2026-09-30 04:53 ET — a backup is compared as the kind of file it bac
 Updated: 2026-09-30 05:37 ET — a backup of a binary is binary, every trailing backup marker is removed, --pulse warns when docs is a file and says a PULSE holding no object holds none
 Updated: 2026-09-30 06:09 ET — an --json file that cannot be written is answered with the reason and exit 1, and --pulse still records the scan
 Updated: 2026-09-30 07:28 ET — a junction or link inside the target is named and not followed; an empty --json name is answered; a signal stamped with Z is pruned on every Python
+Updated: 2026-09-30 13:43 ET — a file that cannot be read is named with the reason and left out, never fingerprinted as empty; a link to a file is named and not followed, a dangling one as such; each candidate file is read once, so a same-size group of hundreds compares in seconds; PULSE stamps are read by one grammar on every Python, and a consumed signal whose stamp cannot be read is pruned with a note; a PULSE saved with a BOM is read; --details below zero is an error
 
 Fingerprints every file under a folder, compares likely redundant pairs across
 the full similarity spectrum, and builds a consolidation proposal. It never
@@ -26,9 +27,11 @@ reported only as exact duplicates, or as the subset of a live file.
 CLI:
   python denser_engine.py TARGET [--details N] [--json OUT] [--pulse]
   an --json OUT that cannot be written, or an empty name, is answered with the reason,
-  exit 1; --pulse still runs
-  A junction or link inside TARGET is named and never followed, so a loop cannot
-  repeat files.
+  exit 1; --pulse still runs; --details takes a count of 0 or more
+  A junction or link inside TARGET, to a folder or a file, is named and never followed,
+  so a loop cannot repeat files (a dangling one is named as such); a folder that cannot
+  be listed and a file that cannot be read are named with the reason, never read as
+  absent or empty.
 """
 
 import argparse
@@ -39,7 +42,7 @@ import re
 import shutil
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
@@ -51,6 +54,12 @@ BINARY_EXTENSIONS = {
 
 
 IO_REPARSE_TAG_MOUNT_POINT = 0xA0000003  # a Windows junction
+# The one timestamp grammar every engine reads (docs/TRIFECTA.md, Lifecycle): extended
+# ISO-8601, the date, T or a space, the time to the minute or the second, an optional
+# fraction, then an offset, Z or nothing. Read here, never by fromisoformat, whose reach
+# differs between Pythons (3.10 reads neither Z nor a basic-format stamp; 3.11 reads both).
+ISO_8601 = re.compile(r"^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:[.,](\d{1,9}))?)?"
+                      r"(Z|z|[+-]\d{2}:?\d{2})?$")
 
 
 def _say(text: str = "") -> None:
@@ -62,15 +71,38 @@ def _say(text: str = "") -> None:
         print(text.encode(enc, "replace").decode(enc))
 
 
-def _stamp(text: str) -> datetime:
-    """A signal's ISO-8601 timestamp as an aware time: a trailing Z is UTC on every Python
-    (fromisoformat reads it only from 3.11), and a stamp with no offset is local time."""
-    return datetime.fromisoformat(text[:-1] + "+00:00" if text[-1:] in ("Z", "z") else text).astimezone()
+def _stamp(text, local: timezone) -> datetime:
+    """A signal's timestamp as an aware time, read the same way on every Python by the
+    grammar the protocol pins (ISO_8601 above): a fraction is cut to microseconds, an offset
+    or Z is kept, and a stamp with neither is local time. Anything else, a basic-format stamp
+    or a number included, raises ValueError; so does a date that does not exist."""
+    m = ISO_8601.match(text) if isinstance(text, str) else None
+    if not m:
+        raise ValueError(f"not an extended ISO-8601 timestamp: {text!r}")
+    y, mo, d, h, mi, s, frac, off = m.groups()
+    if off is None:
+        tz = local
+    elif off in ("Z", "z"):
+        tz = timezone.utc
+    else:
+        delta = timedelta(hours=int(off[1:3]), minutes=int(off[-2:]))
+        tz = timezone(delta if off[0] == "+" else -delta)
+    return datetime(int(y), int(mo), int(d), int(h), int(mi), int(s or 0),
+                    int((frac or "0")[:6].ljust(6, "0")), tzinfo=tz)
+
+
+def _older(stamp: datetime, cutoff: datetime) -> bool:
+    """stamp < cutoff, for a stamp at the edge of the calendar too (year 1 or 9999, where
+    adjusting for the offset overflows): there the year decides."""
+    try:
+        return stamp < cutoff
+    except OverflowError:
+        return stamp.year < cutoff.year
 
 
 def _is_link(path: Path) -> bool:
-    """True for a Windows junction or a symbolic link: a folder the walk must not enter,
-    since it may loop back into the target or reach outside it."""
+    """True for a Windows junction or a symbolic link, to a folder or a file: something the
+    walk must not enter or read, since it may loop back into the target or reach outside it."""
     if os.path.islink(path):
         return True
     isjunction = getattr(os.path, "isjunction", None)  # Python 3.12+
@@ -176,9 +208,10 @@ class DenserEngine:
         self.threshold_d = threshold_d
         self.fingerprints: Dict[str, FileFingerprint] = {}
         self.comparisons: List[ComparisonResult] = []
-        self.unreadable: List[str] = []
+        self.unreadable: List[str] = []  # "rel: cannot be read (reason)" / "rel: cannot be listed (reason)"
         self.not_followed: List[str] = []
         self._compared: Set[frozenset] = set()
+        self._units_of: Dict[str, Optional[Set[str]]] = {}  # each candidate file read once per compare_all
 
     # ── Phase 1: Discovery ──────────────────────────────────────────
     def scan(self) -> Dict[str, FileFingerprint]:
@@ -194,32 +227,48 @@ class DenserEngine:
         return self.fingerprints
 
     def _walk_files(self, root: Path):
-        """Walk the tree, skipping build artifacts, hidden entries and unreadable folders, and
-        not entering a junction or link, which is named in self.not_followed: one back into
+        """Walk the tree, skipping build artifacts and hidden entries; a folder that cannot be
+        listed is named in self.unreadable with the reason; a junction or link, to a folder
+        or a file, is named in self.not_followed and never entered or read: one back into
         the target would show every file again, level after level."""
+        def rel(path) -> str:
+            try:
+                return Path(path).relative_to(root).as_posix()
+            except ValueError:
+                return str(path)
+
         def onerror(err):
-            self.unreadable.append(str(getattr(err, "filename", err)))
+            self.unreadable.append(f"{rel(getattr(err, 'filename', None) or root)}: cannot be listed ({err.strerror or err})")
         for dirpath, dirnames, filenames in os.walk(root, onerror=onerror):
             here = Path(dirpath)
             walked = [d for d in dirnames if not d.startswith(".") and d not in self.SKIP_DIRS]
             links = [d for d in walked if _is_link(here / d)]  # a skipped one (node_modules) goes unnamed
-            self.not_followed += [(here / d).relative_to(root).as_posix() for d in sorted(links)]
+            self.not_followed += [rel(here / d) for d in sorted(links)]
             dirnames[:] = sorted(d for d in walked if d not in links)
             for name in sorted(filenames):
-                if not name.startswith("."):
-                    yield Path(dirpath) / name
+                if name.startswith("."):
+                    continue
+                p = here / name
+                if _is_link(p):
+                    self.not_followed.append(rel(p) + ("" if p.exists() else " (its target is missing)"))
+                    continue
+                yield p
 
     def _fingerprint(self, path: Path, relative: str) -> Optional[FileFingerprint]:
+        """The file's fingerprint, or None when it cannot be read (held by another process, an
+        ACL deny, gone mid-scan): then it is named in self.unreadable with the reason, never
+        fingerprinted as an empty file."""
         try:
             stat = path.stat()
-        except OSError:
-            self.unreadable.append(relative)
+            binary = self._is_binary(path)
+            digest = self._hash_file(path)
+            line_count = 0 if binary else self._count_lines(path)
+        except OSError as e:
+            self.unreadable.append(f"{relative}: cannot be read ({e.strerror or e})")
             return None
-        binary = self._is_binary(path)
         parts = Path(relative).parts[:-1]
         return FileFingerprint(
-            path=path, relative=relative, hash=self._hash_file(path), size=stat.st_size,
-            line_count=0 if binary else self._count_lines(path),
+            path=path, relative=relative, hash=digest, size=stat.st_size, line_count=line_count,
             extension=self._kind_suffix(path), name_pattern=self._detect_pattern(path.name),
             modified=stat.st_mtime, binary=binary,
             protected=any(p.lower() in self.ARCHIVE_DIRS or p.upper().startswith("POTIMP") for p in parts),
@@ -227,14 +276,12 @@ class DenserEngine:
 
     @staticmethod
     def _hash_file(path: Path) -> str:
+        """SHA-256 of a file; raises OSError when it cannot be read, never an empty hash."""
         sha256 = hashlib.sha256()
-        try:
-            with open(path, "rb") as f:
-                for chunk in iter(lambda: f.read(65536), b""):
-                    sha256.update(chunk)
-            return sha256.hexdigest()
-        except OSError:
-            return ""
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(65536), b""):
+                sha256.update(chunk)
+        return sha256.hexdigest()
 
     @classmethod
     def _kind_suffix(cls, path: Path) -> str:
@@ -245,19 +292,13 @@ class DenserEngine:
     def _is_binary(cls, path: Path) -> bool:
         if cls._kind_suffix(path) in BINARY_EXTENSIONS:
             return True
-        try:
-            with open(path, "rb") as f:
-                return b"\x00" in f.read(8192)
-        except OSError:
-            return False
+        with open(path, "rb") as f:
+            return b"\x00" in f.read(8192)
 
     @staticmethod
     def _count_lines(path: Path) -> int:
-        try:
-            with open(path, "r", encoding="utf-8", errors="replace") as f:
-                return sum(1 for _ in f)
-        except OSError:
-            return 0
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            return sum(1 for _ in f)
 
     def _detect_pattern(self, name: str) -> Optional[str]:
         """Classify a file NAME (with extension) as backup, copy or version sprawl."""
@@ -281,9 +322,13 @@ class DenserEngine:
     # ── Phase 2: Comparison ─────────────────────────────────────────
     def compare_all(self) -> List[ComparisonResult]:
         """Compare candidate pairs: same hash, same base name in a folder, same size,
-        and a version, copy or backup name against its base name in any folder."""
+        and a version, copy or backup name against its base name in any folder. Each
+        candidate file is read once and its units kept for every pair it is in, so a
+        same-size group of hundreds (exported logs, screenshots, fixed-size records) is
+        read hundreds of times, not hundreds of thousands."""
         self.comparisons.clear()
         self._compared.clear()
+        self._units_of.clear()
 
         for files in self._group_by_hash().values():
             for i, a in enumerate(files):
@@ -312,9 +357,8 @@ class DenserEngine:
             return ComparisonResult(rel_a, rel_b, "S", 1.0, "identical", "exact duplicate")
         if fp_a.binary or fp_b.binary:
             return ComparisonResult(rel_a, rel_b, "-", 0.0, "binary")
-        try:
-            units_a, units_b = self._units(fp_a.path), self._units(fp_b.path)
-        except OSError:
+        units_a, units_b = self._cached_units(rel_a), self._cached_units(rel_b)
+        if units_a is None or units_b is None:
             return ComparisonResult(rel_a, rel_b, "-", 0.0, "unreadable")
 
         similarity, relationship = self._calculate_similarity(units_a, units_b)
@@ -340,6 +384,16 @@ class DenserEngine:
             if not subset_protected:
                 return ComparisonResult(rel_a, rel_b, "-", similarity, relationship, "protected folder")
         return ComparisonResult(rel_a, rel_b, tier, similarity, relationship, delta)
+
+    def _cached_units(self, rel: str) -> Optional[Set[str]]:
+        """The units of a fingerprinted file, read once per compare_all; None when it could
+        not be read (the pair is then reported as unreadable, and the file read no more)."""
+        if rel not in self._units_of:
+            try:
+                self._units_of[rel] = self._units(self.fingerprints[rel].path)
+            except OSError:
+                self._units_of[rel] = None
+        return self._units_of[rel]
 
     def _units(self, path: Path) -> Set[str]:
         """Comparable units for a file: flattened JSON pairs, heading-keyed Markdown lines, or lines."""
@@ -517,6 +571,10 @@ def update_pulse(project_dir, fields: Dict, signals: Iterable[Tuple[str, str, st
     untouched and None is returned.
     One that parses but holds a wrong-typed field (cross_skill not an object,
     pending_signals null) is handled as if that field were empty, and says so.
+    A signal is pruned when it is consumed (JSON true, nothing else) and its
+    timestamp, read by the protocol's grammar, is older than seven days; a consumed
+    signal whose timestamp cannot be read is pruned with a note; an unconsumed
+    signal, and an entry that is not an object, is never touched.
     A docs that is a file raises NotADirectoryError naming it, before anything
     is written; the CLI reports that, and any other OSError, as a warning."""
     path = Path(project_dir) / "docs" / "PULSE.json"
@@ -525,7 +583,7 @@ def update_pulse(project_dir, fields: Dict, signals: Iterable[Tuple[str, str, st
     data: Dict = {}
     if path.is_file():
         try:
-            data = json.loads(path.read_text(encoding="utf-8"))
+            data = json.loads(path.read_text(encoding="utf-8-sig"))  # some editors save a BOM
         except (ValueError, OSError):
             return None
         if not isinstance(data, dict):
@@ -541,13 +599,19 @@ def update_pulse(project_dir, fields: Dict, signals: Iterable[Tuple[str, str, st
         if "pending_signals" in cs:
             _say("   ⚠️  PULSE pending_signals is not a list; treated as empty")
         pending = []
-    cutoff = datetime.now().astimezone() - timedelta(days=7)
+    local = datetime.now().astimezone().tzinfo
+    cutoff = datetime.now(local) - timedelta(days=7)
     kept = []
     for s in pending:
+        if not isinstance(s, dict) or s.get("consumed") is not True:
+            kept.append(s)
+            continue
         try:
-            old = s.get("consumed") and _stamp(s.get("timestamp", "")) < cutoff
-        except (AttributeError, TypeError, ValueError):
-            old = False  # an entry that is not an object is kept as it is
+            old = _older(_stamp(s.get("timestamp"), local), cutoff)
+        except ValueError:
+            _say(f"   ⚠️  pruned a consumed signal ({s.get('signal') or s.get('type') or 'unnamed'}) "
+                 f"whose timestamp is not extended ISO-8601: {s.get('timestamp')!r}")
+            continue
         if not old:
             kept.append(s)
     now = datetime.now().astimezone().isoformat(timespec="seconds")
@@ -563,11 +627,14 @@ def update_pulse(project_dir, fields: Dict, signals: Iterable[Tuple[str, str, st
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="Solid8 Denser engine: consolidation analysis (read-only).")
     ap.add_argument("target", nargs="?", default=".")
-    ap.add_argument("--details", type=int, default=0, metavar="N", help="show the top N clusters")
+    ap.add_argument("--details", type=int, default=0, metavar="N", help="show the top N clusters (0 or more)")
     ap.add_argument("--json", metavar="OUT", help="write the full proposal as JSON")
     ap.add_argument("--pulse", action="store_true", help="record the scan in TARGET/docs/PULSE.json")
     args = ap.parse_args(argv)
 
+    if args.details < 0:  # a negative count would slice the list from the end, silently
+        _say(f"✗ --details takes a count of clusters to show, 0 or more: got {args.details}")
+        return 1
     if not Path(args.target).is_dir():
         _say(f"✗ The target is not a folder: {args.target}")
         return 1
@@ -591,6 +658,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         _say(f"   🗜️  zips beside their contents: {len(proposal.archive_sprawl)}")
     if engine.unreadable:
         _say(f"   ⚠️  unreadable: {len(engine.unreadable)}")
+        for entry in engine.unreadable:
+            _say(f"      {entry}")
     if engine.not_followed:
         _say(f"   ⚠️  junctions or links not followed: {', '.join(engine.not_followed)}")
     order = {t: i for i, t in enumerate("SABCD")}
