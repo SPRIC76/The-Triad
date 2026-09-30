@@ -4,14 +4,15 @@ description: >-
   DevCom5 (Logger): project documentation and developer communications.
   Reports a project's state, trajectory and gaps; writes and maintains a
   five-document docs/ system (INDEX, ARCHITECTURE, USER_EXPERIENCE, PLANNING,
-  HISTORY); and co-authors proposals, specs, decision docs, status reports, 3P
-  updates, newsletters, FAQs and incident reports. Use when the user says
+  HISTORY); and co-authors a project's proposals, specs, decision docs, status
+  reports, progress, plans and problems updates, newsletters, FAQs and
+  incident reports. Use when the user says
   devcom5, dc5 or logger; asks to document a project, update a README,
   changelog or docs, catch them up, or say where things stand or where we
   were; is onboarding to a codebase, resuming after a break, or preparing a
   handover; or asks for one of those about a project - and proactively when a
   project's docs are missing or stale. Pairs with Synk182 and Solid8 via
-  docs/PULSE.json; supersedes doc-coauthoring and internal-comms. Not for
+  docs/PULSE.json. Not for
   office documents like a contract or slide deck (a document skill), proving a
   change works (verafox), the user's knowledge outside a project (a
   knowledge-search skill), or rendering diagrams (a diagramming skill).

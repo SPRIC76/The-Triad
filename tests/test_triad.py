@@ -1,4 +1,4 @@
-"""Version 1.3 | Deps: stdlib; Skillshaper's validate_skill.py when present | Parent: The Triad (DevCom5 1.3, Synk182 3.3, Solid8 1.3) | Path: tests | Filename: test_triad.py | Created: 2026-09-30 01:12 ET - kept tests for the pack: the two engines, the three skill folders, and the pack's own ratchets. | Updated: 2026-09-30 04:05 ET - v1.3: red-first cases from the v1.2 review (bounded plan paths, stale plans, wrong-typed PULSE fields, CLI messages, copy numbers, sprawl across folders, pointer and version ratchets); comments read for a public reader; both engines checked for personal paths. | Updated: 2026-09-30 04:53 ET - red-first cases from the second v1.3 review: folder targets and rollback, backups read as the file they back up, unknown --approve ids, one folder given twice, an unparseable PULSE reported, signals only when true, protocol safety rule 4; the pointer check is an allow-list, so the test names no private skill. | Updated: 2026-09-30 05:37 ET - red-first cases from the third v1.3 review: --pulse when docs is a file, a PULSE holding no object, an approved item with no direction, an item with only an id named by its id, --plan beside --apply and --diff beside another action, a backup of a binary, backups with two markers; the pointer check reads what a pointer names, in any of its forms, rather than its first word. | Updated: 2026-09-30 06:09 ET - red-first cases from the fourth v1.3 review: a --plan or --json file that cannot be written, an item with no path in the --approve new listing; the pointer check reads the "X tool/helper/plugin" form, verbs beyond "use", possessives and subjects, loose names, Task/Need/Tool tables, wrapped clauses and a bare arrow's name, leaves slot words, counts and the pack's flows alone, and every allowed kind must be read from the pack. | Updated: 2026-09-30 07:28 ET - red-first cases from the fifth v1.3 review: the pointer check tells a skill name from English's own hyphenated words by form, with a short ratcheted list of lexicalized compounds, keeps a realistic-prose corpus green and reads a one-word name after a verb again; an empty --plan, --apply, --diff or --json name, a file named ARCHIVE, hand-edited plan ids and hashes, junctions and links, a folder that cannot be listed, and signals stamped with Z. | Updated: 2026-09-30 13:43 ET - v1.2: the pointer check's grammar reader is retired for two exact mechanisms, a vocabulary ratchet over every name-shaped token in the pack's Markdown and a private-name deny-list read from TRIAD_PRIVATE_NAMES, both driven on every form the reviews listed and on the a9f9b3a export; red-first cases from the sixth v1.3 review: a file that cannot be read (held by another process), a backup that fails midway, an exception in verification and a rollback that fails, ARCHIVE in any case and case-only name pairs where the file system folds case, line-ending-only differences and --diff outside the copies, links to files, PULSE stamps in every shape on every Python, plan paths in skipped folders, flag values and hand edits, same-size groups read once, --details below zero, a PULSE with a BOM. | Updated: 2026-09-30 14:32 ET - red-first cases from the seventh v1.3 review: the vocabulary ratchet reads CamelCase, dotted names, bare, dot-folder and Windows paths, hex letters with one digit, v8, x_y, a date in a name and any script (its 28 forms kept in REVIEW7_FORMS), the deny-list folds accents and every separator including none and a soft wrap, the stale check reads with the tokenizer and kinds of work have their own list; skipped folders folded where the file system folds case, mixed endings and a BOM named, Windows-reserved plan paths, links in a plan or --diff, already applied for two-sided items, any exception in the backup phase, a file unreadable at compare time, the capped --json proposal, the exact ISO-8601 grammar and LF output. | Updated: 2026-09-30 15:25 ET - red-first cases from the eighth v1.3 review: device names asked of the OS on either Windows version and --approve new exiting 1 on what it leaves out, a capitalized Build/ and a nested archive/ compared and synced, already applied at exit 0 with no sync_conflict, a BOM beside other differences, Solid8's comparisons past five on the terminal; the stale check is one function (_stale_entries) the goes-red case runs; the deny-list joins a name's parts across any whitespace and up to three other non-alphanumeric characters (em dash, minus, soft hyphen, zero-width space, middle dot, slash included), since the seventh's "every separator" missed those six; American spelling.
+"""Version 1.3 | Deps: stdlib; Skillshaper's validate_skill.py when present | Parent: The Triad (DevCom5 1.3, Synk182 3.3, Solid8 1.3) | Path: tests | Filename: test_triad.py | Created: 2026-09-30 01:12 ET - kept tests for the pack: the two engines, the three skill folders, and the pack's own ratchets. | Updated: 2026-09-30 04:05 ET - v1.3: red-first cases from the v1.2 review (bounded plan paths, stale plans, wrong-typed PULSE fields, CLI messages, copy numbers, sprawl across folders, pointer and version ratchets); comments read for a public reader; both engines checked for personal paths. | Updated: 2026-09-30 04:53 ET - red-first cases from the second v1.3 review: folder targets and rollback, backups read as the file they back up, unknown --approve ids, one folder given twice, an unparseable PULSE reported, signals only when true, protocol safety rule 4; the pointer check is an allow-list, so the test names no private skill. | Updated: 2026-09-30 05:37 ET - red-first cases from the third v1.3 review: --pulse when docs is a file, a PULSE holding no object, an approved item with no direction, an item with only an id named by its id, --plan beside --apply and --diff beside another action, a backup of a binary, backups with two markers; the pointer check reads what a pointer names, in any of its forms, rather than its first word. | Updated: 2026-09-30 06:09 ET - red-first cases from the fourth v1.3 review: a --plan or --json file that cannot be written, an item with no path in the --approve new listing; the pointer check reads the "X tool/helper/plugin" form, verbs beyond "use", possessives and subjects, loose names, Task/Need/Tool tables, wrapped clauses and a bare arrow's name, leaves slot words, counts and the pack's flows alone, and every allowed kind must be read from the pack. | Updated: 2026-09-30 07:28 ET - red-first cases from the fifth v1.3 review: the pointer check tells a skill name from English's own hyphenated words by form, with a short ratcheted list of lexicalized compounds, keeps a realistic-prose corpus green and reads a one-word name after a verb again; an empty --plan, --apply, --diff or --json name, a file named ARCHIVE, hand-edited plan ids and hashes, junctions and links, a folder that cannot be listed, and signals stamped with Z. | Updated: 2026-09-30 13:43 ET - v1.2: the pointer check's grammar reader is retired for two exact mechanisms, a vocabulary ratchet over every name-shaped token in the pack's Markdown and a private-name deny-list read from TRIAD_PRIVATE_NAMES, both driven on every form the reviews listed and on the a9f9b3a export; red-first cases from the sixth v1.3 review: a file that cannot be read (held by another process), a backup that fails midway, an exception in verification and a rollback that fails, ARCHIVE in any case and case-only name pairs where the file system folds case, line-ending-only differences and --diff outside the copies, links to files, PULSE stamps in every shape on every Python, plan paths in skipped folders, flag values and hand edits, same-size groups read once, --details below zero, a PULSE with a BOM. | Updated: 2026-09-30 14:32 ET - red-first cases from the seventh v1.3 review: the vocabulary ratchet reads CamelCase, dotted names, bare, dot-folder and Windows paths, hex letters with one digit, v8, x_y, a date in a name and any script (its 28 forms kept in REVIEW7_FORMS), the deny-list folds accents and every separator including none and a soft wrap, the stale check reads with the tokenizer and kinds of work have their own list; skipped folders folded where the file system folds case, mixed endings and a BOM named, Windows-reserved plan paths, links in a plan or --diff, already applied for two-sided items, any exception in the backup phase, a file unreadable at compare time, the capped --json proposal, the exact ISO-8601 grammar and LF output. | Updated: 2026-09-30 15:25 ET - red-first cases from the eighth v1.3 review: device names asked of the OS on either Windows version and --approve new exiting 1 on what it leaves out, a capitalized Build/ and a nested archive/ compared and synced, already applied at exit 0 with no sync_conflict, a BOM beside other differences, Solid8's comparisons past five on the terminal; the stale check is one function (_stale_entries) the goes-red case runs; the deny-list joins a name's parts across any whitespace and up to three other non-alphanumeric characters (em dash, minus, soft hyphen, zero-width space, middle dot, slash included), since the seventh's "every separator" missed those six; American spelling. | Updated: 2026-09-30 15:59 ET - red-first cases from the ninth v1.3 review: link answers never outlive the call that asked them, and a junction made after the checks is refused before the write; roots given as \\\\?\\C:\\... sync and still refuse NUL, with the device test's expectation asked of the OS by opening and listing, not by the engine's own rule; a skipped folder spelled otherwise in the other copy is named, not offered; a nested ARCHIVE/ is content; --approve new with only the PULSE left out exits 0; apply-report.json holds --approve new's refusals; the deny-list joins only across dashes, underscores, invisible joiners, middle dots and slashes, never sentence punctuation.
 
 Run from the pack folder:  python -B -m unittest discover -s tests -v
 
@@ -81,6 +81,30 @@ def _link_folder(link, target):
         return True
     except OSError:
         return False
+
+
+def _os_devices(scratch, rels):
+    """{rel: whether the OS reads any segment of rel as a device}, asked by another road than
+    the engine's os.path.abspath: each segment is opened for writing as a file in a fresh,
+    plain folder and nothing is written; a name the folder then lists is an ordinary file,
+    and one it does not (NUL) went to a device. Only ever asked under a plain root: under
+    \\\\?\\ the OS maps no device, and NUL would become a real file."""
+    answers, n = {}, 0
+    for rel in rels:
+        device = False
+        for part in rel.split("/"):
+            n += 1
+            folder = Path(scratch) / f"o{n}"
+            folder.mkdir(parents=True)
+            try:
+                with open(os.path.join(str(folder), part), "w"):
+                    pass
+            except OSError:
+                pass  # not created as a file: listed below as absent
+            device = device or part not in os.listdir(folder)
+        answers[rel] = device
+    shutil.rmtree(scratch, ignore_errors=True)
+    return answers
 
 
 def _unlistable(folder):
@@ -396,20 +420,35 @@ def _fold_text(text):
     return "".join(c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c)).lower()
 
 
-# between a name's letters: any whitespace (a line break and its indent included) and at
-# most three other characters that are not letters or digits (a hyphen, an underscore, any
-# dash, a minus sign, a middle dot, a slash, a dot, and a soft hyphen or zero-width space,
-# which are invisible when rendered), or none
-_JOIN = r"\s*(?:[^a-z0-9\s]\s*){0,3}"
+# between a name's parts: any whitespace (a line break and its indent included) and at most
+# three joiners, or none. A joiner is a hyphen-like dash (hyphen-minus, hyphen, non-breaking
+# hyphen, figure dash, en and em dash, minus sign), an underscore, a soft hyphen, a
+# zero-width space or joiner (invisible when rendered), a middle dot or a slash. Sentence
+# punctuation (. , ; : ! ?) and brackets never join: "Keep it private. Notes go elsewhere."
+# is two sentences, not a name. Listed by code point, so no invisible character sits here.
+_JOINERS = "".join(map(chr, (0x2D, 0x2010, 0x2011, 0x2012, 0x2013, 0x2014, 0x2212, 0x5F, 0xAD,
+                             0x200B, 0x200C, 0x200D, 0x2060, 0xB7, 0x2F)))
+_JOIN = r"\s*(?:[" + re.escape(_JOINERS) + r"]\s*){0,3}"
 
 
 def _private_name_pattern(name):
     """Whole-word on folded text: the name's letters and digits in order, with _JOIN between
     them: private-notes matches privatenotes, private--notes, private notes, private—notes,
     private−notes, private·notes, private/notes and a soft wrap; jotbook matches jot-book
-    and jot book. A letter or digit joined to either end (jotbooks, jotbook2) is another word."""
-    chars = [re.escape(c) for c in _fold_text(name) if c.isalnum()]
-    return re.compile(r"(?<![a-z0-9])" + _JOIN.join(chars) + r"(?![a-z0-9])")
+    and jot book. A letter or digit joined to either end (jotbooks, jotbook2) is another word.
+    Where the listed name itself holds another character (private.notes), that exact one
+    joins there too, with no space beside it: private.notes, never "private. Notes"."""
+    runs = re.findall(r"[^\W_]|[\W_]+", _fold_text(name))  # a letter or digit, or a run between them
+    out, gap = [], None
+    for run in runs:
+        if run.isalnum():
+            if out:
+                out.append(_JOIN if gap is None else "(?:" + _JOIN + "|" + re.escape(gap) + ")")
+            out.append(re.escape(run))
+            gap = None
+        elif out:
+            gap = run.strip() or None
+    return re.compile(r"(?<![a-z0-9])" + "".join(out) + r"(?![a-z0-9])")
 
 
 def _private_name_hits(root, names):
@@ -2315,22 +2354,19 @@ class Synk182Engine(unittest.TestCase):
         # And the eighth review's high: a fixed device list refused con.txt, nul.txt, prn.md,
         # com1.log, aux/ and Con/, which Windows 11 writes as ordinary files, and --approve
         # new left nul.txt out at rc 0. Which names are devices is asked of the running OS,
-        # here as in the engine (os.path.abspath maps a device to \\.\), so this case holds
-        # on Windows 10, which maps con.txt, and on 11, which maps only a bare NUL; every
-        # candidate the OS calls ordinary syncs, and --approve new names each item it leaves
-        # out and exits 1.
+        # so this case holds on Windows 10, which maps con.txt, and on 11, which maps only a
+        # bare NUL; every candidate the OS calls ordinary syncs, and --approve new names each
+        # item it leaves out and exits 1. The expectation is the OS's own answer, by another
+        # road than the engine's (_os_devices: a file opened under that name, then the folder
+        # listed), since a copy of the engine's rule passed with the ninth review's N2 in it.
         if os.name != "nt":
             self.skipTest("these forms are ordinary names outside Windows")
         _write(self.u, "a.txt", "a\n")
-
-        def device(rel):
-            parts = rel.split("/")
-            return any(os.path.abspath(os.path.join(str(self.u), *parts[:i])).startswith(("\\\\.\\", "\\\\?\\"))
-                       for i in range(1, len(parts) + 1))
         candidates = ["NUL", "nul", "sub/NUL", "NUL/x.txt", "sub/CON", "con.txt", "nul.txt", "prn.md", "com1.log",
                       "sub/LPT1", "aux/helpers.c", "Con/readme.md", "CONIN$", "COM\u00b9"]
-        devices = [p for p in candidates if device(p)]
-        ordinary = [p for p in candidates if not device(p)]
+        device = _os_devices(Path(self.tmp) / "oracle", candidates)
+        devices = [p for p in candidates if device[p]]
+        ordinary = [p for p in candidates if not device[p]]
         self.assertIn("NUL", devices, "a bare NUL is a device on every Windows")
         forms = ["a.txt.", "sub./a.txt", "a.txt:evil", "a<b.txt", "a|b.txt", "a?.txt"]
         paths = forms + devices
@@ -2553,6 +2589,212 @@ class Synk182Engine(unittest.TestCase):
         with redirect_stdout(io.StringIO()):
             r = self.synk().scan_and_compare()
         self.assertNotIn("build/out.o", r["files"], "build/ as spelled is still skipped")
+
+    def _junction_case(self):
+        """A user-only sub/new.txt planned, and a folder outside both copies for a junction."""
+        _write(self.u, "sub/new.txt", "user new\n")
+        _write(self.u, "keep.txt", "k\n")
+        _write(self.w, "keep.txt", "k\n")
+        outside = Path(self.tmp) / "outside"
+        outside.mkdir()
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            plan = s.plan()
+        return s, plan, outside
+
+    def test_link_answers_never_outlive_the_call_that_asked_them(self):
+        # Break it catches: link and refusal answers kept on the engine between public calls
+        # (the ninth review's N1): new_ids(plan) or refusal(path) asked first, then the working
+        # copy's sub/ turned into a junction to a folder outside both copies, then apply()
+        # answered from before the junction and wrote sub/new.txt outside both copies, "six
+        # layers verified". Each call asks afresh: apply refuses, and nothing lands outside.
+        for first in ("new_ids", "refusal"):
+            with self.subTest(first=first):
+                shutil.rmtree(self.tmp)
+                for d in (self.u, self.w):
+                    d.mkdir(parents=True)
+                s, plan, outside = self._junction_case()
+                ids = s.new_ids(plan) if first == "new_ids" else [a["id"] for a in plan]
+                self.assertEqual(ids, [a["id"] for a in plan if a["path"] == "sub/new.txt"])
+                self.assertIsNone(s.refusal("sub/new.txt"))
+                if not _link_folder(self.w / "sub", outside):
+                    self.skipTest("this machine makes neither a junction nor a symbolic link")
+                with redirect_stdout(io.StringIO()):
+                    report = s.apply(plan, ids)
+                self.assertEqual(report["applied"], [])
+                self.assertEqual([x["path"] for x in report["refused"]], ["sub/new.txt"])
+                self.assertIn("junction or link on the working side (sub)", report["refused"][0]["reason"])
+                # refused by apply's own checks, before any backup: an answer from before the
+                # junction would pass them, and only the last guard before the write would stop it
+                self.assertNotIn("appeared before the write", report["refused"][0]["reason"])
+                self.assertIsNone(report["archive"])
+                self.assertEqual(os.listdir(outside), [], "nothing is written outside both copies")
+
+    def test_a_junction_that_appears_after_the_checks_is_refused_before_the_write(self):
+        # Break it catches: the destination's folders read from the answers apply() gathered
+        # before its backup, so a junction made while the backup ran (after every check)
+        # was followed by the copy, out of both copies (the ninth review's N1, within one
+        # call). Immediately before each write the destination's folders are asked of the
+        # disk again, uncached, and a link there refuses the item.
+        s, plan, outside = self._junction_case()
+        real = s._backup_into
+        made = []
+
+        def backup_then_junction(*a, **k):
+            real(*a, **k)
+            made.append(_link_folder(self.w / "sub", outside))
+        with mock.patch.object(s, "_backup_into", backup_then_junction), redirect_stdout(io.StringIO()) as out:
+            report = s.apply(plan, [a["id"] for a in plan])
+        if made != [True]:
+            self.skipTest("this machine makes neither a junction nor a symbolic link")
+        self.assertEqual(report["applied"], [])
+        self.assertEqual([x["path"] for x in report["refused"]], ["sub/new.txt"])
+        self.assertIn("appeared before the write", report["refused"][0]["reason"])
+        self.assertIn("Refused sub/new.txt", out.getvalue())
+        self.assertEqual(os.listdir(outside), [], "nothing is written outside both copies")
+
+    def test_roots_given_with_the_extended_prefix_sync_and_still_refuse_devices(self):
+        # Break it catches: copies given as \\?\C:\... had every item refused as "a device"
+        # (the ninth review's N2), since abspath keeps a prefix the caller gave and the
+        # engine read \\?\ as a device; apply by id and --approve new exited 1 and --diff
+        # refused a.txt, where 1230e22 synced them. Only \\.\ is a device: such roots are
+        # used in their plain form, where NUL is still the device the OS says it is, and
+        # never becomes a real file named nul.
+        if os.name != "nt":
+            self.skipTest("the \\\\?\\ prefix is a Windows form")
+        _write(self.u, "a.txt", "user\n")
+        _write(self.w, "a.txt", "work\n")
+        _write(self.u, "new.txt", "n\n")
+        u, w = "\\\\?\\" + str(self.u), "\\\\?\\" + str(self.w)
+        s = self.mod.SynkEngine(u, w)
+        self.assertEqual((str(s.user_dir), str(s.working_dir)), (str(self.u.resolve()), str(self.w.resolve())),
+                         "the copies are used, and printed, in their plain form")
+        self.assertIsNone(s.refusal("a.txt"))
+        self.assertIsNone(s.refusal("new.txt"))
+        self.assertRegex(s.refusal("nul") or "", "device")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([u, w, "--diff", "a.txt"])
+        self.assertEqual(rc, 0, out.getvalue())
+        self.assertIn("+work", out.getvalue())
+        plan_file = Path(self.tmp) / "plan.json"
+        with redirect_stdout(io.StringIO()):
+            self.mod.main([u, w, "--plan", str(plan_file)])
+        plan = json.loads(plan_file.read_text(encoding="utf-8"))
+        for a in plan:
+            a["direction"] = "user_to_working"
+        plan.append({"id": 50, "path": "nul", "status": "user_only", "direction": "user_to_working"})
+        plan_file.write_text(json.dumps(plan), encoding="utf-8")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([u, w, "--apply", str(plan_file), "--approve",
+                                ",".join(str(a["id"]) for a in plan if a["path"] != "nul")])
+        self.assertEqual(rc, 0, out.getvalue())
+        self.assertEqual((self.w / "a.txt").read_text(encoding="utf-8"), "user\n")
+        self.assertEqual((self.w / "new.txt").read_text(encoding="utf-8"), "n\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([u, w, "--apply", str(plan_file), "--approve", "50"])
+        self.assertEqual(rc, 1)
+        self.assertRegex(out.getvalue(), r"Refused nul: .*device")
+        self.assertNotIn("nul", [n.lower() for n in os.listdir(self.w)], "no real file named nul")
+
+    def test_a_skipped_folder_spelled_otherwise_in_the_other_copy_is_named_not_offered(self):
+        # Break it catches: where the file system folds case, build/ (skipped as spelled) in
+        # one copy and Build/ (content) in the other gave a one-sided Build/out.txt that
+        # --approve new refused as "the user copy now has this file; re-plan", at exit 1,
+        # on every run, and the dashboard said the file was missing from a copy that held
+        # it (the ninth review's N3). The folder is named as not compared, with both
+        # spellings and the way out, and nothing about it is offered to apply.
+        if not _folds_case(self.u):
+            self.skipTest("the file system here tells build/ from Build/")
+        _write(self.u, "build/out.txt", "user side\n")
+        _write(self.w, "Build/out.txt", "working side\n")
+        _write(self.u, "Dist/x.txt", "user side\n")
+        _write(self.w, "dist/x.txt", "working side\n")
+        _write(self.u, "keep.txt", "k\n")
+        _write(self.w, "keep.txt", "k\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            s = self.synk()
+            r = s.scan_and_compare()
+            plan = s.plan()
+        self.assertEqual(plan, [])
+        self.assertEqual((r["user_only"], r["working_only"]), (0, 0))
+        reasons = {(n["side"], n["path"]): n["reason"] for n in r["not_compared"]}
+        self.assertEqual(reasons, {
+            ("working", "Build"): "skipped: spelled build in the user copy and Build in the working copy; rename one to sync it",
+            ("user", "Dist"): "skipped: spelled Dist in the user copy and dist in the working copy; rename one to sync it"})
+        self.assertIn("working copy's Build (skipped: spelled build in the user copy", out.getvalue())
+        plan_file = _write(self.tmp, "plan.json", json.dumps(plan))
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "new"])
+        self.assertEqual(rc, 0, out.getvalue())
+        self.assertNotIn("re-plan", out.getvalue())
+
+    def test_a_nested_folder_spelled_exactly_archive_is_content(self):
+        # Break it catches: a nested docs/ARCHIVE/ (the exact name, as Solid8 spells its
+        # archive) skipped with no dashboard line and refused by id, while docs/Archive2/
+        # beside it synced, against SKILL.md's "a project's other archive-named folders are
+        # content and stay in sync on every file system" (the ninth review's N3, F5). Only
+        # the root's ARCHIVE is Synk's own, in any spelling: a nested one is compared,
+        # planned and synced, and pairs with another spelling of it as one folder.
+        _write(self.u, "docs/ARCHIVE/old.md", "a\n")
+        _write(self.u, "ARCHIVE/synk-x/manifest.json", "{}\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            s = self.synk()
+            r = s.scan_and_compare()
+            plan = s.plan()
+        self.assertEqual(sorted(r["files"]), ["docs/ARCHIVE/old.md"])
+        self.assertIsNone(s.refusal("docs/ARCHIVE/old.md"))
+        self.assertRegex(s.refusal("ARCHIVE/synk-x/manifest.json") or "", "skips")
+        with redirect_stdout(io.StringIO()):
+            report = s.apply(plan, s.new_ids(plan))
+        self.assertEqual([a["path"] for a in report["applied"]], ["docs/ARCHIVE/old.md"])
+        self.assertEqual((self.w / "docs/ARCHIVE/old.md").read_text(encoding="utf-8"), "a\n")
+
+    def test_approve_new_with_only_the_pulse_left_out_is_a_clean_run(self):
+        # Break it catches: --approve new on copies whose only one-sided file is
+        # docs/PULSE.json (the state after any --pulse run) printed "Nothing approved: pass
+        # --approve with plan ids." and exited 1, though the PULSE is left out by design
+        # (the ninth review's N4); a scripted --approve new failed with nothing to do.
+        _write(self.u, "a.txt", "same\n")
+        _write(self.w, "a.txt", "same\n")
+        _write(self.u, "docs/PULSE.json", '{"project": "x"}\n')
+        plan_file = Path(self.tmp) / "plan.json"
+        with redirect_stdout(io.StringIO()):
+            self.mod.main([str(self.u), str(self.w), "--plan", str(plan_file)])
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "new"])
+        self.assertEqual(rc, 0, out.getvalue())
+        self.assertIn("Not in 'new': docs/PULSE.json", out.getvalue())
+        self.assertIn("Nothing else to approve", out.getvalue())
+        self.assertNotIn("Nothing approved", out.getvalue())
+        self.assertFalse((self.w / "docs/PULSE.json").exists())
+
+    def test_apply_report_on_disk_holds_the_items_approve_new_refused(self):
+        # Break it catches: --approve new counted an item it refused on the terminal and in
+        # the PULSE's sync_conflict, but the archive's apply-report.json said refused: []
+        # (the ninth review's N5): the record on disk and the one on the terminal differed.
+        _write(self.u, "new.txt", "n\n")
+        plan_file = Path(self.tmp) / "plan.json"
+        with redirect_stdout(io.StringIO()):
+            self.mod.main([str(self.u), str(self.w), "--plan", str(plan_file)])
+        plan = json.loads(plan_file.read_text(encoding="utf-8"))
+        plan.append({"id": 50, "path": "../victim.txt", "status": "user_only", "direction": "user_to_working"})
+        plan_file.write_text(json.dumps(plan), encoding="utf-8")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "new"])
+        self.assertEqual(rc, 1)
+        self.assertIn("Refused: 1 ", out.getvalue())
+        report = json.loads(next((self.u / "ARCHIVE").rglob("apply-report.json")).read_text(encoding="utf-8"))
+        self.assertEqual([x["path"] for x in report["refused"]], ["../victim.txt"])
+        self.assertEqual([a["path"] for a in report["applied"]], ["new.txt"])
 
     def test_every_file_the_engines_write_is_lf_on_every_platform(self):
         # Break it catches: on Windows every JSON and Markdown file the pack writes (the
@@ -2884,7 +3126,10 @@ class SkillFolders(unittest.TestCase):
         # spellings had privatenotes, private--notes, jot-book and the soft wrap as misses;
         # the eighth's six (em dash, minus, soft hyphen, zero-width space, middle dot,
         # slash) are lines 13 to 18 below. Separators past three, such as a sentence
-        # between the parts, are not read as a join.
+        # between the parts, are not read as a join. Nor is sentence punctuation: the ninth
+        # review's false hits, "Keep it private. Notes go elsewhere." and a name's parts on
+        # either side of a colon and a comment or a comma in a list, are in PROSE.md, which
+        # must give no hit.
         tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, tmp, True)
         deny = _write(tmp, "names.txt", "# made-up names\n\njotbook\n  Private-Notes\n")
@@ -2900,6 +3145,10 @@ class SkillFolders(unittest.TestCase):
                                      "prívate-notes\njot-book\njot book\nsee private-\nnotes there\nnothing here\nprivate -notes\n"
                                      "private—notes\nprivate−notes\nprivate­notes\nprivate​notes\n"
                                      "private·notes\nprivate/notes\njot­book\nsee private-\n    notes, indented\n")
+        _write(pack, "docs/PROSE.md", "Keep it private. Notes go elsewhere.\nif not private:\n    # notes here\n"
+                                      'names = ["private",\n         "notes-2026"]\nprivate, notes; private; notes\n'
+                                      "private: notes\nprivate! Notes\nprivate? Notes\nprivate.notes\n"
+                                      "Is it private (notes aside)?\nA jot. Book it.\nprivate - . - notes\n")
         self.assertEqual(_private_name_hits(pack, ["jotbook", "private-notes"]),
                          ["LICENSE:1: private-notes", "README.md:1: jotbook", "README.md:4: private-notes",
                           "README.md:5: private-notes", "README.md:6: private-notes",

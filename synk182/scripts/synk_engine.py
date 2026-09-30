@@ -10,6 +10,7 @@ Updated: 2026-09-30 07:28 ET — a junction or link inside either copy, a folder
 Updated: 2026-09-30 13:43 ET — a file that cannot be read is named with the reason and left out of the comparison, never read as empty, and an item that names one is refused; a backup that fails refuses every item and leaves no archive; any exception in verification rolls the copy back, and a failed rollback names the backup; where the file system folds case, any spelling of ARCHIVE is Synk's folder and Readme.md / README.md are one file; copies that differ only in line endings are said so on the dashboard, in the plan and by --diff, which also refuses a path outside the copies and names a file it cannot read; a link to a file is named and not followed, a dangling one as such; PULSE stamps are read by one grammar on every Python, and a consumed signal whose stamp cannot be read is pruned with a note; a plan path in a folder the scan skips, one ending in a separator or a space, and a duplicate id are refused; --threshold outside 0..1 is an error; a plan or PULSE saved with a BOM is read; an already-applied item says so
 Updated: 2026-09-30 14:32 ET — a skipped folder in any spelling the file system folds, a link on either side, a form Windows reserves and an item already applied, whatever its status, are refused before any write; line endings that differ within a file and a byte-order mark alone are named as such, on the dashboard, in the plan and by --diff; anything raised while backing up refuses every item and leaves no archive; a nested archive/ is named as a folder, not as Synk's own; the timestamp grammar is read exactly as the protocol pins it; everything written is LF
 Updated: 2026-09-30 15:25 ET — device names are asked of the running OS (os.path.abspath), never listed, so con.txt, aux/ and COM1 sync on Windows 11 and NUL is refused on every Windows; --approve new counts each item it refuses and exits 1; only .git, .hg, .svn, node_modules and the root's ARCHIVE fold case, so Build/ and a nested archive/ are compared and synced; an item already applied is reported as such at exit 0, with no sync_conflict; a byte-order mark is named beside any other difference; link answers are asked once per prefix, the destination hashed once and each refusal computed once
+Updated: 2026-09-30 15:58 ET — no link or refusal answer outlives the public call that asked it, and each destination's folders are asked again, uncached, just before its write, so a junction made after new_ids, refusal or the checks is refused; only \\\\.\\ is a device: roots given as \\\\?\\C:\\... are used in their plain form and sync; a folder skipped as spelled in one copy and spelled otherwise in the other is named, not offered; a nested ARCHIVE/ is content; --approve new with nothing left to approve exits 0; apply-report.json holds --approve new's refusals
 
 Two copies: the USER copy (the one the user treats as authority) and the
 WORKING copy (a sandbox or upload, a mounted or cloud-synced folder, a git
@@ -33,11 +34,15 @@ CLI (read-only unless --apply):
         back up, copy each approved item in its direction, verify six layers,
         roll back any item that fails; --approve new approves every one-sided file, and
         names each one it leaves out (docs/PULSE.json by design; any other is refused,
-        and exits 1); an item whose path leaves either copy, lies in a folder the scan
+        written to apply-report.json, and exits 1; with nothing left to approve, it says
+        so, exit 0); an item whose path leaves either copy, lies in a folder the scan
         skips, ends in a separator or a space, names a device or a form Windows reserves,
         or names a folder, whose source or destination cannot be read, or whose
         destination changed since the plan was written, is refused before any backup or
-        write; one already applied is reported as such, exit 0; the source is copied as it is
+        write, and so is one whose destination folder became a junction or link since
+        (asked again, uncached, just before the write); roots given as \\\\?\\C:\\... are
+        used in their plain form, where the OS maps devices; one already applied is
+        reported as such, exit 0; the source is copied as it is
         at apply time; an id that names no plan item, or one that appears twice, stops
         the run before anything is applied; an approved item with no direction, or a
         direction that is not user_to_working or working_to_user, is skipped with its
@@ -56,9 +61,12 @@ CLI (read-only unless --apply):
         read (named with the reason, never read as absent or empty), and a file in the
         place of the ARCHIVE folder. Where the file system folds case (Windows, default
         macOS), any spelling of ARCHIVE at a copy's root is Synk's backup folder, skipped
-        and named (a nested archive/ is content), .git, .hg, .svn and node_modules are
-        skipped in any spelling (build-output names only as spelled), and a file whose
-        name differs only in case between the copies is one item
+        and named (a nested archive/ or ARCHIVE/ is content), .git, .hg, .svn and
+        node_modules are skipped in any spelling (build-output names only as spelled, and
+        one skipped as spelled in one copy but spelled otherwise in the other is named:
+        "skipped: spelled build in the user copy and Build in the working copy; rename one
+        to sync it"), and a file whose name differs only in case between the copies is one
+        item
   --threshold 0.6 (between 0 and 1)   --pulse (write results to USER_DIR/docs/PULSE.json)
 """
 
@@ -69,7 +77,9 @@ import json
 import os
 import re
 import shutil
+import stat
 import sys
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -100,7 +110,26 @@ BOM = b"\xef\xbb\xbf"
 # are not listed: which names are devices differs between Windows versions (Windows 11 maps
 # only a bare NUL; Windows 10 also con.txt), so the running OS is asked (refusal, below).
 WINDOWS_FORBIDDEN = set('<>:"|?*') | {chr(i) for i in range(32)}
-DEVICE_PREFIXES = ("\\\\.\\", "\\\\?\\")  # what os.path.abspath makes of a device path on Windows
+
+
+def _plain(root: str) -> Optional[str]:
+    """A root without the \\\\?\\ prefix a caller may give it (\\\\?\\C:\\x is C:\\x, and
+    \\\\?\\UNC\\server\\share is \\\\server\\share), or None when it has no plain form (a volume
+    mounted by GUID). Under a \\\\?\\ root Windows maps no device name, so NUL written there
+    is a real file ordinary tools cannot delete: devices are asked of the plain form."""
+    if not root.startswith("\\\\?\\"):
+        return root
+    rest = root[4:]
+    if rest[:4].upper() == "UNC\\":
+        return "\\\\" + rest[4:]
+    return rest if PureWindowsPath(rest).drive[1:2] == ":" else None
+
+
+def _within(where: str, root: str) -> bool:
+    """Whether where (as os.path.abspath gives it) is root or lies under it: a device,
+    \\\\.\\NUL, lies under no root. Compared as the OS compares names (os.path.normcase)."""
+    w, r = os.path.normcase(where), os.path.normcase(root).rstrip("\\/")
+    return w == r or w.startswith(r + os.sep) or (os.altsep is not None and w.startswith(r + os.altsep))
 
 
 def _say(text: str = "") -> None:
@@ -266,18 +295,16 @@ def _older(stamp: datetime, cutoff: datetime) -> bool:
         return stamp.year < cutoff.year
 
 
-def _is_link(path: Path) -> bool:
+def _is_link(path) -> bool:
     """True for a Windows junction or a symbolic link, to a folder or a file: something the
-    scan must not enter or read, since it may loop back into the copy or reach outside it."""
-    if os.path.islink(path):
-        return True
-    isjunction = getattr(os.path, "isjunction", None)  # Python 3.12+
-    if isjunction is not None:
-        return isjunction(path)
-    try:  # below 3.12, a junction is a folder with the mount-point reparse tag
-        return getattr(os.lstat(path), "st_reparse_tag", 0) == IO_REPARSE_TAG_MOUNT_POINT
-    except OSError:
+    scan must not enter or read, since it may loop back into the copy or reach outside it.
+    One lstat answers both on every Python (os.path.islink and os.path.isjunction each make
+    their own): a link's mode, or a junction's mount-point reparse tag."""
+    try:
+        st = os.lstat(path)
+    except (OSError, ValueError):
         return False
+    return stat.S_ISLNK(st.st_mode) or getattr(st, "st_reparse_tag", 0) == IO_REPARSE_TAG_MOUNT_POINT
 
 
 class SynkEngine:
@@ -285,29 +312,71 @@ class SynkEngine:
 
     def __init__(self, user_dir: str, working_dir: str, threshold: float = 0.60,
                  skip_dirs: Optional[Iterable[str]] = None):
-        self.user_dir = Path(user_dir).resolve()
-        self.working_dir = Path(working_dir).resolve()
+        # a root given as \\?\C:\... or \\?\UNC\... is used in its plain form, where devices
+        # are what the OS says they are; one with no plain form keeps its prefix
+        self.user_dir, self.working_dir = (Path(_plain(str(r)) or str(r)) for r in
+                                           (Path(user_dir).resolve(), Path(working_dir).resolve()))
         self.threshold = threshold  # Correction #2
         self.skip_dirs = set(SKIP_DIRS if skip_dirs is None else skip_dirs)
         self.archive_root = self.user_dir / "ARCHIVE"  # respelled as it is on disk by _archive_root
         self.user_files: Dict[str, Dict] = {}
         self.working_files: Dict[str, Dict] = {}
         self.not_compared: List[Dict] = []
+        self._skipped_as_spelled: Dict[str, List[str]] = {"user": [], "working": []}
         self.results: Optional[Dict] = None
         self._folds: Dict[Path, bool] = {}
         self._folded = {d.lower() for d in self.skip_dirs if d.lower() in FOLDED_SKIPS}
-        self._links: Dict[Path, bool] = {}  # a path prefix's link answer, asked once per run
-        self._refusals: Dict[str, Optional[str]] = {}  # new_ids' answers, reused by apply
+        # a path prefix's link answer and device answer, kept only within one public call
+        # (apply, new_ids, left_out_of_new) and dropped at its end: None between calls, so
+        # nothing a caller asked earlier outlives a junction that appeared since
+        self._links: Optional[Dict[str, bool]] = None
+        self._devices: Optional[Dict[str, str]] = None
+        # the OS is asked about devices under each root's plain form (a stand-in drive root
+        # for one with none: device names are mapped by name, not by where they lie)
+        self._device_roots = [_plain(str(r)) or os.path.abspath(os.sep) for r in (self.user_dir, self.working_dir)]
 
     def _folds_case(self, root: Path) -> bool:
         if root not in self._folds:
             self._folds[root] = _folds_case(root)
         return self._folds[root]
 
-    def _is_link(self, path: Path) -> bool:
+    def _is_link(self, path: str) -> bool:
+        if self._links is None:
+            return _is_link(path)
         if path not in self._links:
             self._links[path] = _is_link(path)
         return self._links[path]
+
+    def _device_at(self, plain: str, parts: Tuple[str, ...]) -> str:
+        """Where the OS puts plain/parts (os.path.abspath), asked once per prefix in a call."""
+        key = os.path.join(plain, *parts)
+        if self._devices is None:
+            return os.path.abspath(key)
+        if key not in self._devices:
+            self._devices[key] = os.path.abspath(key)
+        return self._devices[key]
+
+    @contextmanager
+    def _one_call(self):
+        """Link answers cached for the length of one public call, built at its start and
+        dropped at its end; a call made inside another shares the outer one's."""
+        outer = self._links is None
+        if outer:
+            self._links, self._devices = {}, {}
+        try:
+            yield
+        finally:
+            if outer:
+                self._links = self._devices = None
+
+    def _link_on_the_way(self, root: Path, rel: str) -> Optional[str]:
+        """The first prefix of rel under root that is a junction or link, asked of the disk
+        now, never of a cache: checked immediately before each write."""
+        parts, base = PureWindowsPath(rel).parts, str(root)
+        for i in range(1, len(parts) + 1):
+            if _is_link(os.path.join(base, *parts[:i])):
+                return "/".join(parts[:i])
+        return None
 
     def _spells_archive(self, name: str, root: Path) -> bool:
         """Whether name, at a copy's root, is Synk's ARCHIVE: the exact name, or any spelling
@@ -318,9 +387,10 @@ class SynkEngine:
     def _skipped(self, name: str, root: Path, top: bool = False) -> bool:
         """Whether name is a folder the scan skips in root: an exact skip name, or, where the
         file system folds case, any spelling of a version-control or package folder (there
-        .GIT/ IS .git/, and a hook under it runs) or, at the copy's root (top), of ARCHIVE."""
+        .GIT/ IS .git/, and a hook under it runs) or, at the copy's root (top), of ARCHIVE.
+        ARCHIVE is Synk's only at the root: a nested ARCHIVE/, exactly so spelled, is content."""
         if name in self.skip_dirs:
-            return True
+            return top or name != "ARCHIVE"
         if not self._folds_case(root):
             return False
         low = name.lower()
@@ -365,7 +435,8 @@ class SynkEngine:
             here = Path(dirpath)
             kept = []
             for d in sorted(dirnames):
-                if d in self.skip_dirs:
+                if d in self.skip_dirs and (here == root or d != "ARCHIVE"):  # a nested ARCHIVE/ is content
+                    self._skipped_as_spelled[side].append((here / d).relative_to(root).as_posix())
                     continue
                 if here == root and "ARCHIVE" in self.skip_dirs and self._spells_archive(d, root):  # archive/ on Windows or macOS
                     skip(here / d, f"Synk's ARCHIVE folder, spelled {d}, on a file system that folds case; skipped as ARCHIVE is")
@@ -404,8 +475,11 @@ class SynkEngine:
         both copies fold case, a name that differs only in case between them (Readme.md
         and README.md) is one file, compared under the user copy's spelling."""
         self.not_compared = []
+        self._skipped_as_spelled = {"user": [], "working": []}
         self.user_files = self._scan_directory(self.user_dir, self.working_dir, "user")
         self.working_files = self._scan_directory(self.working_dir, self.user_dir, "working")
+        if self._folds_case(self.user_dir) and self._folds_case(self.working_dir):
+            self._name_spelled_apart()
         unread = [n["path"] for n in self.not_compared]
 
         def read_in_both(rel: str) -> bool:
@@ -437,6 +511,30 @@ class SynkEngine:
         if not quiet:
             self._dashboard()
         return self.results
+
+    def _name_spelled_apart(self) -> None:
+        """Where both copies fold case, a folder skipped as spelled in one copy (build/) whose
+        other spelling is content in the other (Build/) is one folder spelled two ways: it is
+        named as not compared, and its files are left out of the plan. Otherwise the file
+        would read as missing from a copy that holds it, and no apply or re-plan could help."""
+        sides = (("user", self.user_files, "working", self.working_files),
+                 ("working", self.working_files, "user", self.user_files))
+        named = set()
+        for side, _, other, other_files in sides:
+            skipped = {s.lower(): s for s in self._skipped_as_spelled[side]}
+            if not skipped:
+                continue
+            for rel in other_files:
+                parts = rel.split("/")[:-1]
+                for i in range(1, len(parts) + 1):
+                    p = "/".join(parts[:i])
+                    s = skipped.get(p.lower())
+                    if s is not None and s != p and (other, p) not in named:
+                        named.add((other, p))
+                        spelled = {side: s, other: p}
+                        self.not_compared.append({"side": other, "path": p, "reason": (
+                            f"skipped: spelled {spelled['user']} in the user copy and {spelled['working']} "
+                            "in the working copy; rename one to sync it")})
 
     def _analyze_file_pair(self, rel: str, u: Optional[Dict], w: Optional[Dict]) -> Dict:
         if not u or not w:
@@ -577,8 +675,9 @@ class SynkEngine:
         Windows must hold no form Windows reserves (a segment ending in a dot or a space, a
         ':' stream, <>"|?*: the copy would land under another name, in a stream, or fail
         after the backup was made), must not name a device at any prefix as the running OS
-        maps it (os.path.abspath gives \\\\.\\ or \\\\?\\: NUL on Windows 11, con.txt too on
-        Windows 10), must resolve under each copy, must not lie in a folder the scan skips
+        maps it (os.path.abspath puts it outside the copy, at \\\\.\\: NUL on Windows 11,
+        con.txt too on Windows 10; asked of the copy's plain form when it was given as
+        \\\\?\\C:\\...), must resolve under each copy, must not lie in a folder the scan skips
         (so nothing is written where nothing is compared), must not pass through or name a
         junction or link on either side (the scan never follows one), and must not name a
         folder in either copy ('sub', or '.' for the copy itself)."""
@@ -595,21 +694,21 @@ class SynkEngine:
             for part in win.parts:
                 if part[-1] in ". " or set(part) & WINDOWS_FORBIDDEN:
                     return f"path holds a form Windows reserves ({part!r}: a segment ending in a dot or a space, a ':' stream, or <>\"|?*)"
-        for root in (self.user_dir, self.working_dir):
+        for plain in dict.fromkeys(self._device_roots):
             for i in range(1, len(win.parts) + 1):  # asked of the OS, at every prefix: a folder named NUL fails too
-                where = os.path.abspath(os.path.join(str(root), *win.parts[:i]))
-                if where.startswith(DEVICE_PREFIXES):
+                where = self._device_at(plain, win.parts[:i])
+                if not _within(where, plain):  # the OS put it elsewhere: \\.\NUL, a device
                     return f"path names a device Windows reserves ({'/'.join(win.parts[:i])} is {where} to this OS)"
         for i, part in enumerate(win.parts[:-1]):
             if any(self._skipped(part, root, top=i == 0) for root in (self.user_dir, self.working_dir)):
                 return f"path lies in a folder the scan skips ({part})"
         for root in (self.user_dir, self.working_dir):
+            base = str(root)
             for i in range(1, len(win.parts) + 1):
-                if self._is_link(root.joinpath(*win.parts[:i])):
+                if self._is_link(os.path.join(base, *win.parts[:i])):
                     return f"a junction or link on the {'user' if root == self.user_dir else 'working'} side ({'/'.join(win.parts[:i])}); never followed"
             # no prefix is a link and no segment is '..', so the path resolves where it is spelled
-            where = os.path.abspath(os.path.join(str(root), *win.parts))
-            if os.path.commonpath([where, str(root)]) != str(root):
+            if not _within(os.path.abspath(os.path.join(base, *win.parts)), base):
                 return "path resolves outside the copy"
         if any((root / rel).is_dir() for root in (self.user_dir, self.working_dir)):
             return "names a folder, not a file"
@@ -654,34 +753,32 @@ class SynkEngine:
             return ("changed", f"the {side} copy changed since the plan; re-plan")
         return None
 
-    def _refusal_once(self, rel) -> Optional[str]:
-        """refusal(rel), asked once per run: new_ids' answer is reused by apply()."""
-        if not isinstance(rel, str) or rel not in self._refusals:
-            why = self.refusal(rel)
-            if isinstance(rel, str):
-                self._refusals[rel] = why
-            return why
-        return self._refusals[rel]
-
     def new_ids(self, plan: List[Dict]) -> List[int]:
         """What --approve new approves: every one-sided item whose path stays inside the copies,
-        except docs/PULSE.json, which each copy keeps for itself (approve it by id to copy it)."""
-        return [a["id"] for a in plan if a.get("status") in ("user_only", "working_only")
-                and a.get("path") != PULSE_REL and self._refusal_once(a.get("path")) is None]
+        except docs/PULSE.json, which each copy keeps for itself (approve it by id to copy it).
+        An answer here is not reused by apply(), which asks again."""
+        return self._split_new(plan)[0]
 
     def left_out_of_new(self, plan: List[Dict]) -> List[Tuple[Dict, str, bool]]:
         """Each one-sided item --approve new leaves out: (item, why, refused). docs/PULSE.json
         is left out by design (refused False); every other one is refused, and the run exits 1."""
-        out = []
-        for a in plan:
-            if a.get("status") not in ("user_only", "working_only"):
-                continue
-            why = self._refusal_once(a.get("path"))
-            if why:
-                out.append((a, why, True))
-            elif a.get("path") == PULSE_REL:
-                out.append((a, "each copy keeps its own; approve it by id to copy it", False))
-        return out
+        return self._split_new(plan)[1]
+
+    def _split_new(self, plan: List[Dict]) -> Tuple[List[int], List[Tuple[Dict, str, bool]]]:
+        """new_ids(plan) and left_out_of_new(plan) from one pass: each path asked once."""
+        ids, out = [], []
+        with self._one_call():
+            for a in plan:
+                if a.get("status") not in ("user_only", "working_only"):
+                    continue
+                why = self.refusal(a.get("path"))
+                if why:
+                    out.append((a, why, True))
+                elif a.get("path") == PULSE_REL:
+                    out.append((a, "each copy keeps its own; approve it by id to copy it", False))
+                else:
+                    ids.append(a["id"])
+        return ids, out
 
     # ── Backup ─────────────────────────────────────────────────────────
     def _new_archive_dir(self) -> Tuple[Path, bool]:
@@ -779,8 +876,10 @@ class SynkEngine:
             failed += ["line_count", "content"]
         return failed
 
-    def apply(self, plan: List[Dict], approved_ids: Iterable[int]) -> Dict:
+    def apply(self, plan: List[Dict], approved_ids: Iterable[int], refused: Iterable[Dict] = ()) -> Dict:
         """Execute approved actions that have a direction; back up first, roll back on failure.
+        refused: items a caller already refused ({"path", "reason"}, as --approve new's left-out
+        ones), recorded first in the report and in the archive's apply-report.json.
 
         An item whose path leaves either copy, lies in a folder the scan skips or names a
         folder, whose source or destination cannot be read, or whose destination changed
@@ -788,17 +887,16 @@ class SynkEngine:
         fails, every item is refused and no archive folder is left behind. Any exception
         while verifying a copy rolls it back; a rollback that fails is reported with the
         backup to restore by hand. An item whose destination already holds its source's
-        content is reported in already_applied: nothing to do, and not a failure."""
-        try:
-            return self._apply(plan, approved_ids)
-        finally:  # the link and refusal answers hold for one run only
-            self._links.clear()
-            self._refusals.clear()
+        content is reported in already_applied: nothing to do, and not a failure. Link answers
+        are asked afresh by each call, and each destination's folders are asked again,
+        uncached, immediately before its write: a junction that appears is never followed."""
+        with self._one_call():
+            return self._apply(plan, approved_ids, refused)
 
-    def _apply(self, plan: List[Dict], approved_ids: Iterable[int]) -> Dict:
+    def _apply(self, plan: List[Dict], approved_ids: Iterable[int], refused: Iterable[Dict]) -> Dict:
         approved = set(approved_ids)
-        report = {"applied": [], "already_applied": [], "skipped": [], "refused": [], "rolled_back": [],
-                  "rollback_failed": [], "archive": None}
+        report = {"applied": [], "already_applied": [], "skipped": [], "refused": [dict(r) for r in refused],
+                  "rolled_back": [], "rollback_failed": [], "archive": None}
         todo = []
         for act in plan:
             if act["id"] not in approved:
@@ -816,9 +914,7 @@ class SynkEngine:
                 continue
             premise = None
             try:
-                rel = act.get("path")  # new_ids' answer when it asked this run; asked here otherwise
-                why = (self._refusals.pop(rel) if isinstance(rel, str) and rel in self._refusals
-                       else self.refusal(rel)) or self._unreadable(act)
+                why = self.refusal(act.get("path")) or self._unreadable(act)
                 if not why:
                     premise = self._premise(act)
                     why = premise[1] if premise and premise[0] == "changed" else None
@@ -859,6 +955,12 @@ class SynkEngine:
             src_root, dst_root = (self.user_dir, self.working_dir) if to_working else (self.working_dir, self.user_dir)
             side = "working" if to_working else "user"
             src, dst = src_root / act["path"], dst_root / act["path"]
+            link = self._link_on_the_way(dst_root, act["path"])  # asked of the disk now, not of a cache
+            if link:
+                why = f"a junction or link on the {side} side ({link}) appeared before the write; never followed"
+                report["refused"].append({"path": act["path"], "reason": why})
+                _say(f"  ✗ Refused {act['path']}: {why}")
+                continue
             existed = dst.is_file()
             try:
                 dst.parent.mkdir(parents=True, exist_ok=True)
@@ -1045,12 +1147,17 @@ def main(argv: Optional[List[str]] = None) -> int:
             return 1
         left_out = []  # one-sided items 'new' refuses: each is named, and the run exits 1
         if args.approve.strip().lower() == "new":
-            for a, why, refused in synk.left_out_of_new(plan):
+            ids, left = synk._split_new(plan)
+            for a, why, refused in left:
                 name = a.get("path") or f"item {a.get('id')}"  # named as apply() names it
                 _say(f"  ⏭️ Not in 'new': {name} ({why})")
                 if refused:
                     left_out.append({"path": a.get("path"), "reason": why})
-            ids = synk.new_ids(plan)
+            if not ids and not left_out:  # nothing to do is a clean run, whatever it leaves to an id
+                _say("Nothing else to approve: docs/PULSE.json is left to an explicit id." if any(
+                    a.get("path") == PULSE_REL and a.get("status") in ("user_only", "working_only") for a in plan)
+                     else "Nothing new to approve: no file is in one copy only.")
+                return 0
         else:
             try:
                 ids = [int(x) for x in args.approve.split(",") if x.strip()]
@@ -1064,8 +1171,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         if not ids and not left_out:
             _say("Nothing approved: pass --approve with plan ids.")
             return 1
-        report = synk.apply(plan, ids)
-        report["refused"] = left_out + report["refused"]  # counted, signaled and failing like any refusal
+        # left-out items are counted, signaled, written to apply-report.json and fail like any refusal
+        report = synk.apply(plan, ids, refused=left_out)
         _say(f"🔄 Synced: {len(report['applied'])} | Rolled back: {len(report['rolled_back'])} "
              f"| Refused: {len(report['refused'])} | Skipped: {len(report['skipped'])} | Archive: {report['archive']}"
              + (f" | Already applied: {len(report['already_applied'])}" if report["already_applied"] else "")

@@ -1,4 +1,4 @@
-<!-- Version 2.0 | Deps: none | Parent: The Triad (skills-trifecta README at 19a8722) | Path: . | Filename: README.md | Updated: 2026-09-30 01:15 ET — renamed The Triad; an agent skill pack for any host; freeware; versions named | Updated: 2026-09-30 01:37 ET — the address is SPRIC76/The-Triad; the MK1 Made footer | Updated: 2026-09-30 04:05 ET — v1.3: not-for pointers name kinds of work, verafox linked in The Proof Pack; versions 1.3 / 3.3 / 1.3 | Updated: 2026-09-30 13:43 ET — the pack's own checks named: a vocabulary ratchet over its Markdown and an optional private-name deny-list -->
+<!-- Version 2.0 | Deps: none | Parent: The Triad (skills-trifecta README at 19a8722) | Path: . | Filename: README.md | Updated: 2026-09-30 01:15 ET — renamed The Triad; an agent skill pack for any host; freeware; versions named | Updated: 2026-09-30 01:37 ET — the address is SPRIC76/The-Triad; the MK1 Made footer | Updated: 2026-09-30 04:05 ET — v1.3: not-for pointers name kinds of work, verafox linked in The Proof Pack; versions 1.3 / 3.3 / 1.3 | Updated: 2026-09-30 13:43 ET — the pack's own checks named: a vocabulary ratchet over its Markdown and an optional private-name deny-list | Updated: 2026-09-30 15:59 ET — DevCom5's triggers say progress, plans and problems updates, not 3P updates -->
 # The Triad — DevCom5, Synk182, Solid8
 
 An **agent skill pack**: three skills that keep projects **understood**, **in sync**, and **lean** — coordinated via `docs/PULSE.json`. Each skill is a folder in the Agent Skills format (`SKILL.md`, with `references/` and `scripts/` beside it), so it works in any agent host that reads one. Known until commit 19a8722 as *Skills Trifecta*.
@@ -100,7 +100,7 @@ These skills **guide an AI agent** — they do not auto-run destructive actions.
 - Maintains a project's existing documentation system instead of creating a parallel one
 - Status: `📡 DevCom5: [staleness] | Depth: … | Docs: [n/5]`
 
-**Triggers:** `devcom5`, `dc5`, `logger`, documentation, project status, catch-up, README and changelog updates, proposals, 3P updates, newsletters, and more (see the description in `devcom5/SKILL.md`).
+**Triggers:** `devcom5`, `dc5`, `logger`, documentation, project status, catch-up, README and changelog updates, proposals, progress, plans and problems updates, newsletters, and more (see the description in `devcom5/SKILL.md`).
 
 **Not DevCom5:** proving a change works or grading its evidence ([verafox](https://github.com/SPRIC76/The-Proof-Pack), in The Proof Pack), a person's own knowledge base outside a project (a knowledge-search skill), rendering diagrams (a diagramming skill).
 
