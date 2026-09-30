@@ -5,6 +5,7 @@ Denser Engine v1.3 — Consolidation Analysis
 Updated: 2026-09-30 04:05 ET — sprawl found across folders, copy numbers, wrong-typed PULSE fields, target check
 Updated: 2026-09-30 04:53 ET — a backup is compared as the kind of file it backs up (cfg.json.bak as JSON)
 Updated: 2026-09-30 05:37 ET — a backup of a binary is binary, every trailing backup marker is removed, --pulse warns when docs is a file and says a PULSE holding no object holds none
+Updated: 2026-09-30 06:09 ET — an --json file that cannot be written is answered with the reason and exit 1, and --pulse still records the scan
 
 Fingerprints every file under a folder, compares likely redundant pairs across
 the full similarity spectrum, and builds a consolidation proposal. It never
@@ -23,6 +24,7 @@ reported only as exact duplicates, or as the subset of a live file.
 
 CLI:
   python denser_engine.py TARGET [--details N] [--json OUT] [--pulse]
+  an --json OUT that cannot be written is answered with the reason, exit 1; --pulse still runs
 """
 
 import argparse
@@ -559,10 +561,16 @@ def main(argv: Optional[List[str]] = None) -> int:
         _say(f"\n   [{c['tier']}] " + " | ".join(c["files"]))
         for comp in c["comparisons"][:5]:
             _say(f"       {comp['similarity']:.2f} {comp['relationship']}: {comp['delta']}")
+    json_written = True
     if args.json:
-        Path(args.json).write_text(json.dumps(proposal.to_dict(), indent=2, ensure_ascii=False), encoding="utf-8")
-        _say(f"\n   📋 Proposal written: {args.json}")
-    if args.pulse:
+        try:
+            Path(args.json).write_text(json.dumps(proposal.to_dict(), indent=2, ensure_ascii=False), encoding="utf-8")
+        except OSError as e:  # a missing folder, a folder in its place, no permission to write
+            _say(f"\n   ✗ Proposal not written ({e})")
+            json_written = False
+        else:
+            _say(f"\n   📋 Proposal written: {args.json}")
+    if args.pulse:  # the scan is still recorded; only the proposal file failed
         rmap: Dict[str, List[List[str]]] = {}
         for comp in engine.comparisons:
             rmap.setdefault(comp.tier, []).append([comp.file_a, comp.file_b])
@@ -576,7 +584,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             _say(f"   ⚠️  PULSE.json not written ({e})")
         else:
             _say("   📡 PULSE updated" if written else "   ⚠️  PULSE.json does not hold a JSON object; left untouched")
-    return 0
+    return 0 if json_written else 1
 
 
 if __name__ == "__main__":

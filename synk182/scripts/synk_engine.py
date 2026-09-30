@@ -5,6 +5,7 @@ Synk Engine v2.1 — compare two copies of a project, plan, back up, apply, veri
 Updated: 2026-09-30 04:05 ET — plan paths bounded to the copies, stale plan refused, wrong-typed PULSE fields, CLI messages
 Updated: 2026-09-30 04:53 ET — folder targets refused, rollback never deletes a folder, unknown --approve ids and one folder given twice are errors, an unparseable PULSE is reported, sync_completed and new_files_synced only when true
 Updated: 2026-09-30 05:37 ET — an approved item with no direction exits 1 with its reason, an item with no path is named by its id, --plan with --apply and --diff with another action are errors, --pulse warns when docs is a file and says a PULSE holding no object holds none
+Updated: 2026-09-30 06:09 ET — a --plan file that cannot be written is answered with the reason and exit 1, and --pulse still records the scan; the --approve new listing names an item with no path by its id
 
 Two copies: the USER copy (the one the user treats as authority) and the
 WORKING copy (a sandbox or upload, a mounted or cloud-synced folder, a git
@@ -27,7 +28,8 @@ CLI (read-only unless --apply):
         changed since the plan was written, is refused before any backup or write;
         an id that names no plan item stops the run before anything is applied;
         an approved item with no direction is skipped with its reason, and exits 1
-  --plan, --diff and --apply are separate runs; --diff takes no --pulse
+  --plan, --diff and --apply are separate runs; --diff takes no --pulse;
+        a --plan file that cannot be written is answered with the reason, exit 1
   --threshold 0.6   --pulse (write results to USER_DIR/docs/PULSE.json)
 """
 
@@ -519,7 +521,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             for a in plan:
                 if a.get("status") in ("user_only", "working_only") and a["id"] not in ids:
                     why = synk.refusal(a.get("path")) or "each copy keeps its own; approve it by id to copy it"
-                    _say(f"  ⏭️ Not in 'new': {a.get('path')} ({why})")
+                    name = a.get("path") or f"item {a.get('id')}"  # named as apply() names it
+                    _say(f"  ⏭️ Not in 'new': {name} ({why})")
         else:
             try:
                 ids = [int(x) for x in args.approve.split(",") if x.strip()]
@@ -550,13 +553,19 @@ def main(argv: Optional[List[str]] = None) -> int:
         # an approved item that was not written, for whatever reason, is not a clean run
         return 1 if report["rolled_back"] or report["refused"] or report["skipped"] else 0
     plan = synk.plan()
+    plan_written = True
     if args.plan:
-        Path(args.plan).write_text(json.dumps(plan, indent=2, ensure_ascii=False), encoding="utf-8")
-        _say(f"📋 Plan written: {args.plan} ({len(plan)} item(s); nothing changed on disk)")
-    if args.pulse:
+        try:
+            Path(args.plan).write_text(json.dumps(plan, indent=2, ensure_ascii=False), encoding="utf-8")
+        except OSError as e:  # a missing folder, a folder in its place, no permission to write
+            _say(f"✗ Plan not written ({e})")
+            plan_written = False
+        else:
+            _say(f"📋 Plan written: {args.plan} ({len(plan)} item(s); nothing changed on disk)")
+    if args.pulse:  # the scan is still recorded; only the plan file failed
         _record_pulse(synk.user_dir, {"synk_last_run": _now_iso(), "synk_drift_detected": drift},
                       [("environment_diverged", "devcom5", f"{len(plan)} path(s) differ")] if drift else [])
-    return 0
+    return 0 if plan_written else 1
 
 
 if __name__ == "__main__":
