@@ -66,6 +66,7 @@ backup sprawl (`.bak`/`.old`), archive sprawl (file + zip of same).
 | Binary | Hash only — never a content tier | Size |
 
 Superset detection: File A contains every line of B + more → A is superset.
+A backup (`.bak`, `.old`, `.backup`, `.orig`, `~`) is compared as the kind of file it backs up: `cfg.json.bak` as JSON, `guide.md.bak` as Markdown.
 
 ### Phase 3: Classification → Tier assignment, cluster grouping.
 
@@ -171,7 +172,7 @@ Full protocol: [references/TRIFECTA_PROTOCOL.md](references/TRIFECTA_PROTOCOL.md
 
 ---
 
-*⁰ Formerly: Denser v1.0 (unnamed concept, pre-v1) → Solid8 v1.0 → Solid8 v1.1 (2026-09-15: triggers moved into the description; engine fixes for backups, copy names, binaries, JSON and Markdown, archives, and Windows consoles) → Solid8 v1.2 (2026-09-30: part of The Triad; the description says what it is not for beside Synk182, verafox and a memory tool; the engine no longer proposes a superset pair that lies wholly inside an archive; freeware) → Solid8 v1.3 (2026-09-30: version, copy and backup sprawl is found across folders; a year in parentheses is not a copy number; a wrong-typed PULSE field is treated as empty with a note; a target that is not a folder is an error; the not-for pointers name kinds of work rather than private skills).
+*⁰ Formerly: Denser v1.0 (unnamed concept, pre-v1) → Solid8 v1.0 → Solid8 v1.1 (2026-09-15: triggers moved into the description; engine fixes for backups, copy names, binaries, JSON and Markdown, archives, and Windows consoles) → Solid8 v1.2 (2026-09-30: part of The Triad; the description says what it is not for beside Synk182, verafox and a memory tool; the engine no longer proposes a superset pair that lies wholly inside an archive; freeware) → Solid8 v1.3 (2026-09-30: version, copy and backup sprawl is found across folders; a backup is compared as the kind of file it backs up; a year in parentheses is not a copy number; a wrong-typed PULSE field is treated as empty with a note; a target that is not a folder is an error; the not-for pointers name kinds of work rather than private skills).
 "Solid8" — solid as in consolidated, 8 as in the infinity symbol ∞ rotated,
 representing the endless cycle of project entropy that this skill tames.
 The Denser alias persists for when subtlety isn't working.*

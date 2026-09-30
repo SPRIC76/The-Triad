@@ -1,5 +1,5 @@
 # Trifecta Protocol
-<!-- v3.0 | 2026-09-15 | Byte-identical in DevCom5, Synk182 and Solid8 (v2.0 2026-02-10) -->
+<!-- v3.0 | 2026-09-15 | Byte-identical in DevCom5, Synk182 and Solid8 (v2.0 2026-02-10) | Updated: 2026-09-30 04:50 ET — Safety 4 says what a missing or unparseable PULSE leads to -->
 
 Cross-skill integration through one file in the project: `docs/PULSE.json`.
 Each skill works alone; together they cover the whole cycle.
@@ -82,5 +82,5 @@ Synk reports drift AND mid-scan finds new files.
 1. No skill overwrites another's output without user approval
 2. Signals are advisory — user has final say
 3. Each skill writes only its own PULSE keys; preserve unknown fields
-4. Corrupt/missing PULSE → graceful fallback to standalone; never overwrite a PULSE that does not parse
+4. Missing PULSE → Synk182 or Solid8 creates `docs/PULSE.json` holding only `cross_skill`, and DevCom5 fills out the rest at its next Deep pass. A PULSE that does not parse is never overwritten: Synk182 and Solid8 leave it untouched, say so and work standalone; DevCom5 keeps it as `PULSE.corrupt.json` before it rebuilds the baseline
 5. All cross-skill actions visible in under-the-hood display

@@ -3,6 +3,7 @@
 Denser Engine v1.3 — Consolidation Analysis
 2026-09-30 | For: solid8 skill v1.3 (v1.2 2026-09-30, v1.1 2026-09-15, v1.0 2026-02-10)
 Updated: 2026-09-30 04:05 ET — sprawl found across folders, copy numbers, wrong-typed PULSE fields, target check
+Updated: 2026-09-30 04:53 ET — a backup is compared as the kind of file it backs up (cfg.json.bak as JSON)
 
 Fingerprints every file under a folder, compares likely redundant pairs across
 the full similarity spectrum, and builds a consolidation proposal. It never
@@ -14,6 +15,7 @@ Comparison:
   Markdown    each line keyed by its heading, so moved sections count as change
   JSON        flattened key paths and values, key order ignored
   binary      hash only; never a content tier
+  A backup (.bak, .old, .backup, .orig, ~) is read as the file it backs up: cfg.json.bak as JSON.
 Files under ARCHIVE/Archive/Archives/archive or POTIMP are intentional: they are
 reported only as exact duplicates, or as the subset of a live file.
 
@@ -298,7 +300,8 @@ class DenserEngine:
         """Comparable units for a file: flattened JSON pairs, heading-keyed Markdown lines, or lines."""
         with open(path, "r", encoding="utf-8", errors="replace") as f:
             text = f.read()
-        ext = path.suffix.lower()
+        # A backup is read as the kind of file it backs up: cfg.json.bak is JSON, guide.md~ Markdown.
+        ext = Path(self.BACKUP_PATTERN.sub("", path.name)).suffix.lower()
         if ext == ".json":
             try:
                 return set(self._flatten_json(json.loads(text)))

@@ -1,4 +1,4 @@
-"""Version 1.1 | Deps: stdlib; Skillshaper's validate_skill.py when present | Parent: The Triad (DevCom5 1.3, Synk182 3.3, Solid8 1.3) | Path: tests | Filename: test_triad.py | Created: 2026-09-30 01:12 ET - kept tests for the pack: the two engines, the three skill folders, and the pack's own ratchets. | Updated: 2026-09-30 04:05 ET - v1.3: red-first cases from the v1.2 review (bounded plan paths, stale plans, wrong-typed PULSE fields, CLI messages, copy numbers, sprawl across folders, pointer and version ratchets); comments read for a public reader; both engines checked for personal paths.
+"""Version 1.1 | Deps: stdlib; Skillshaper's validate_skill.py when present | Parent: The Triad (DevCom5 1.3, Synk182 3.3, Solid8 1.3) | Path: tests | Filename: test_triad.py | Created: 2026-09-30 01:12 ET - kept tests for the pack: the two engines, the three skill folders, and the pack's own ratchets. | Updated: 2026-09-30 04:05 ET - v1.3: red-first cases from the v1.2 review (bounded plan paths, stale plans, wrong-typed PULSE fields, CLI messages, copy numbers, sprawl across folders, pointer and version ratchets); comments read for a public reader; both engines checked for personal paths. | Updated: 2026-09-30 04:53 ET - red-first cases from the second v1.3 review: folder targets and rollback, backups read as the file they back up, unknown --approve ids, one folder given twice, an unparseable PULSE reported, signals only when true, protocol safety rule 4; the pointer check is an allow-list, so the test names no private skill.
 
 Run from the pack folder:  python -B -m unittest discover -s tests -v
 
@@ -39,7 +39,10 @@ CALL_WORDS = {"devcom5": ("devcom5", "dc5", "logger"),
 # Skills a "not for" may name: the pack's own, and verafox, which is public in The
 # Proof Pack. Anything else is described as a kind of work, never named.
 SIBLINGS = ("verafox", "DevCom5", "Synk182", "Solid8")
-RETIRED_POINTERS = ("knowledge-query", "archify", "mk-repo-rules", "consolidate-memory")
+# What a pointer may start with: a sibling, git, or words that describe a kind of
+# work ("a diagramming skill", "your repository's own rules", "in The Proof Pack").
+POINTER_NAMES = re.compile(r"(?i)(?:%s)\b" % "|".join(SIBLINGS + ("git",)))
+POINTER_WORDS = ("a ", "an ", "your ", "in ", "the ")
 PROOF_PACK = "https://github.com/SPRIC76/The-Proof-Pack"
 
 
@@ -113,6 +116,34 @@ def _frontmatter(skill):
     return out
 
 
+def _unlisted_pointers(text):
+    """Skills a Markdown text sends its reader to that are neither in the pack nor public.
+
+    A pointer is a '(→ ...)' group anywhere; a '(...)' group in a 'not for' or
+    '**Not X:**' clause, up to the clause's end ('. ', ';' or a line end); or the Skill
+    cell of an '| Ask | Skill |' table. Each comma-separated item must start with a
+    sibling, git, or words that describe a kind of work; any other item is returned.
+    """
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)  # a Markdown link reads as its text
+    text = re.sub(r"\n[ \t]+", " ", text)  # a folded frontmatter description reads as one line
+    groups = re.findall(r"\(→\s*([^)]*)\)", text)
+    for m in re.finditer(r"(?i)\bnot for\b|\*\*not \w+:\*\*", text):
+        clause = re.split(r"\.\s|;|\n", text[m.end():], maxsplit=1)[0]
+        groups += re.findall(r"\(→?\s*([^()]*)\)", clause)
+    in_table = False
+    for line in text.splitlines():
+        if re.match(r"^\|\s*Ask\s*\|\s*Skill\s*\|", line):
+            in_table = True
+        elif in_table and line.startswith("|"):
+            cell = line.strip().strip("|").split("|")[-1].strip()
+            if cell.strip("-: "):
+                groups.append(cell)
+        else:
+            in_table = False
+    items = (i.strip() for g in groups for i in g.split(","))
+    return [i for i in items if i and not POINTER_NAMES.match(i) and not i.lower().startswith(POINTER_WORDS)]
+
+
 # ─────────────────────────────────────────────────────────────── solid8
 class Solid8Engine(unittest.TestCase):
     def setUp(self):
@@ -173,6 +204,26 @@ class Solid8Engine(unittest.TestCase):
         self.assertEqual(len(comp), 1)
         self.assertEqual(comp[0].tier, "B")
         self.assertGreaterEqual(comp[0].similarity, 0.999)
+
+    def test_a_backup_is_compared_as_the_kind_of_file_it_backs_up(self):
+        # Break it catches: the comparison unit picked from the file's own suffix,
+        # so cfg.json.bak was read as raw lines against cfg.json read as JSON, and
+        # guide.md.bak as raw lines against guide.md read by heading. The units
+        # never overlap, and the very pair the engine formed by base name got no
+        # tier (found by the second v1.3 review). A backup that differs only in
+        # formatting is the case a user expects caught.
+        cfg = {"a": 1, "b": {"c": 2, "d": 3}}
+        _write(self.tmp, "cfg.json", json.dumps(cfg, indent=2))
+        _write(self.tmp, "cfg.json.bak", json.dumps(cfg))
+        guide = "# Guide\n\nline one\n\nline two\n\n## Part\n\nline three\n"
+        _write(self.tmp, "docs/guide.md", guide)
+        _write(self.tmp, "docs/guide.md.bak", guide.replace("\n\n", "\n"))
+        e = self.engine()
+        for pair in (("cfg.json", "cfg.json.bak"), ("docs/guide.md", "docs/guide.md.bak")):
+            with self.subTest(pair=pair):
+                comp = [c for c in e.comparisons if {c.file_a, c.file_b} == set(pair)]
+                self.assertEqual([c.tier for c in comp], ["B"])
+                self.assertGreaterEqual(comp[0].similarity, 0.999)
 
     def test_archive_folder_is_named_for_solid8_and_utf8(self):
         _write(self.tmp, "é-notes.txt", "x\n")
@@ -429,6 +480,60 @@ class Synk182Engine(unittest.TestCase):
         for r in report["refused"]:
             self.assertIn("re-plan", r["reason"])
 
+    def test_plan_item_naming_a_folder_is_refused_before_anything_is_touched(self):
+        # Break it catches: a plan item naming a folder inside the copies ("sub",
+        # or "." for the copy itself) passed the path and premise checks; the copy
+        # failed, the rollback called unlink() on the folder, and the run died on
+        # a PermissionError traceback, leaving an archive behind (found by the
+        # second v1.3 review). It is refused before any backup or write, with a
+        # message and exit 1.
+        _write(self.u, "keep.txt", "one\n")
+        _write(self.w, "keep.txt", "one\n")
+        _write(self.w, "sub/inner.txt", "inner\n")
+        (self.u / "sub").mkdir()
+        plan = [{"id": 1, "path": "sub", "status": "merge", "direction": "working_to_user"},
+                {"id": 2, "path": ".", "status": "merge", "direction": "user_to_working"}]
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            report = s.apply(plan, [1, 2])
+        self.assertEqual(report["applied"], [])
+        self.assertEqual(sorted(r["path"] for r in report["refused"]), [".", "sub"])
+        for r in report["refused"]:
+            self.assertIn("folder", r["reason"])
+        self.assertIsNone(report["archive"])
+        self.assertFalse((self.u / "ARCHIVE").exists())
+        self.assertTrue((self.u / "sub").is_dir())
+        self.assertEqual((self.w / "sub/inner.txt").read_text(encoding="utf-8"), "inner\n")
+        plan_file = _write(self.tmp, "plan.json", json.dumps(plan))
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "1,2"])
+        self.assertEqual(rc, 1)
+        self.assertIn("folder", out.getvalue())
+        self.assertFalse((self.u / "ARCHIVE").exists())
+
+    def test_rollback_never_deletes_or_offers_to_delete_a_folder(self):
+        # Break it catches: the rollback of a failed copy calling unlink() on a
+        # destination that is a folder, and rollback.md listing that existing
+        # folder as "did not exist: delete it" (found by the second v1.3 review).
+        # The refusal above keeps folders out of apply; this holds even for an
+        # item that gets past it.
+        _write(self.w, "sub/inner.txt", "inner\n")
+        _write(self.u, "sub/mine.txt", "mine\n")
+        plan = [{"id": 1, "path": "sub", "status": "merge", "direction": "working_to_user"}]
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            s.refusal = lambda rel: None  # force the item past the checks
+            report = s.apply(plan, [1])
+        self.assertEqual(report["rolled_back"], ["sub"])
+        self.assertEqual((self.u / "sub/mine.txt").read_text(encoding="utf-8"), "mine\n")
+        note = (Path(report["archive"]) / "rollback.md").read_text(encoding="utf-8")
+        line = [l for l in note.splitlines() if l.startswith("- `") and "sub`" in l]
+        self.assertEqual(len(line), 1, note)
+        self.assertNotIn("delete", line[0])
+
     def test_bulk_approve_new_skips_an_escaping_item(self):
         _write(self.u, "new.txt", "brand new\n")
         with redirect_stdout(io.StringIO()):
@@ -488,6 +593,79 @@ class Synk182Engine(unittest.TestCase):
                 self.assertEqual([s["signal"] for s in data["cross_skill"]["pending_signals"]], ["sync_completed"])
                 self.assertIn("treated as empty", out.getvalue())
 
+    def test_cli_pulse_says_when_the_pulse_does_not_parse(self):
+        # Break it catches: --pulse beside a docs/PULSE.json that does not parse,
+        # or is not an object, saying nothing and exiting 0, so the user is never
+        # told the run was not recorded (found by the second v1.3 review). The
+        # file is left untouched and the run says so, as Solid8's does; the same
+        # holds after an apply.
+        _write(self.u, "a.txt", "x\n")
+        _write(self.w, "a.txt", "y\n")
+        _write(self.u, "new.txt", "brand new\n")
+        for text in ("{not json", "[]"):
+            with self.subTest(pulse=text):
+                p = _write(self.u, "docs/PULSE.json", text)
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    rc = self.mod.main([str(self.u), str(self.w), "--pulse"])
+                self.assertEqual(rc, 0)
+                self.assertIn("PULSE.json did not parse; left untouched", out.getvalue())
+                self.assertEqual(p.read_text(encoding="utf-8"), text)
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            plan_file = _write(self.tmp, "plan.json", json.dumps(s.plan()))
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "new", "--pulse"])
+        self.assertEqual(rc, 0)
+        self.assertTrue((self.w / "new.txt").is_file())
+        self.assertIn("PULSE.json did not parse; left untouched", out.getvalue())
+
+    def _pulse_signals(self):
+        data = json.loads((self.u / "docs/PULSE.json").read_text(encoding="utf-8"))
+        return {s["signal"]: s["details"] for s in data["cross_skill"]["pending_signals"]}
+
+    def test_pulse_after_a_wholly_refused_apply_emits_no_sync_completed(self):
+        # Break it catches: after an apply in which every item was refused (a
+        # stale plan), --pulse still emitted sync_completed, "0 file(s) written",
+        # beside sync_conflict; DevCom5 reads sync_completed as a sync that
+        # happened (found by the second v1.3 review).
+        _write(self.u, "late.txt", "user version\n")
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            plan_file = _write(self.tmp, "plan.json", json.dumps(s.plan()))
+        _write(self.w, "late.txt", "written after the plan\n")
+        with redirect_stdout(io.StringIO()):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "1", "--pulse"])
+        self.assertEqual(rc, 1)
+        self.assertEqual(sorted(self._pulse_signals()), ["sync_conflict"])
+
+    def test_new_files_synced_names_only_files_the_apply_created(self):
+        # Break it catches: new_files_synced emitted for every applied path, so
+        # overwriting a file present on both sides (a merge, a superset) told
+        # Solid8 of a new file that was not new (found by the second v1.3 review).
+        _write(self.u, "m.txt", "a\nb\nc\nd\ne\n")
+        _write(self.w, "m.txt", "a\nb\nc\nd\nf\n")
+        _write(self.u, "s.txt", "a\nb\nc\n")
+        _write(self.w, "s.txt", "a\nb\n")
+        _write(self.u, "new.txt", "brand new\n")
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            plan = s.plan()
+        for act in plan:
+            act["direction"] = "user_to_working"
+        plan_file = _write(self.tmp, "plan.json", json.dumps(plan))
+        ids = ",".join(str(a["id"]) for a in plan)
+        with redirect_stdout(io.StringIO()):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", ids, "--pulse"])
+        self.assertEqual(rc, 0)
+        sigs = self._pulse_signals()
+        self.assertEqual(sigs["sync_completed"], "3 file(s) written")
+        self.assertEqual(sigs["new_files_synced"], "new.txt")
+
     def test_no_personal_paths_in_the_engines(self):
         # One person's profile folder in a script (C:\Users\someone, /home/someone)
         # breaks on every other machine and discloses the account name; a sandbox
@@ -513,6 +691,19 @@ class Synk182Engine(unittest.TestCase):
         self.assertIn("not a folder", out.getvalue())
         self.assertIn("nope", out.getvalue())
 
+    def test_cli_refuses_the_same_folder_as_both_copies(self):
+        # Break it catches: the same folder given for both copies read as two
+        # copies in agreement ("✓1 identical", exit 0), so a second path mistyped
+        # onto the first reads as a clean sync (found by the second v1.3 review).
+        _write(self.u, "a.txt", "x\n")
+        for second in (str(self.u), os.path.join(str(self.u), "."), str(self.w / ".." / "user")):
+            with self.subTest(second=second):
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    rc = self.mod.main([str(self.u), second])
+                self.assertEqual(rc, 1)
+                self.assertIn("same folder", out.getvalue())
+
     def test_cli_answers_a_bad_plan_or_approval_with_a_message(self):
         # Break it catches: raw tracebacks for --apply nope.json (FileNotFoundError)
         # and --approve 1,x (ValueError), seen 2026-09-30.
@@ -527,6 +718,38 @@ class Synk182Engine(unittest.TestCase):
                     rc = self.mod.main(argv)
                 self.assertEqual(rc, 1)
                 self.assertIn(word, out.getvalue())
+
+    def test_cli_approve_with_an_id_in_no_plan_item_is_an_error(self):
+        # Break it catches: --approve 999 (or -1) against a plan with no such id
+        # printing "Synced: 0 | ... | Archive: None" and exiting 0, so a mistyped
+        # id read as a clean run (found by the second v1.3 review). It is an error
+        # that names the id, and nothing is applied, not even the ids that exist.
+        _write(self.u, "new.txt", "brand new\n")
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            plan_file = _write(self.tmp, "plan.json", json.dumps(s.plan()))
+        for approve in ("999", "-1", "1,999"):
+            with self.subTest(approve=approve):
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", approve])
+                self.assertEqual(rc, 1)
+                self.assertIn(approve.split(",")[-1], out.getvalue())
+                self.assertFalse((self.w / "new.txt").exists())
+                self.assertFalse((self.u / "ARCHIVE").exists())
+
+    def test_cli_approve_without_apply_is_an_error(self):
+        # Break it catches: --approve 1 without --apply silently ignored, the
+        # dashboard printed and exit 0 (found by the second v1.3 review), so a
+        # user who meant to apply reads that nothing needed doing.
+        _write(self.u, "new.txt", "brand new\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--approve", "1"])
+        self.assertEqual(rc, 1)
+        self.assertIn("--apply", out.getvalue())
+        self.assertFalse((self.w / "new.txt").exists())
 
     def test_cli_diff_says_when_a_path_is_on_neither_side(self):
         # Break it catches: --diff for a path that exists in neither copy printing
@@ -559,6 +782,32 @@ class SkillFolders(unittest.TestCase):
         texts = {n: (ROOT / n / "references/TRIFECTA_PROTOCOL.md").read_bytes() for n in SKILLS}
         texts["docs"] = (ROOT / "docs/TRIFECTA.md").read_bytes()
         self.assertEqual(len(set(texts.values())), 1, "the protocol must be byte-identical everywhere it is copied")
+
+    def test_protocol_says_what_the_engines_do_with_a_missing_or_broken_pulse(self):
+        # Break it catches: the protocol's safety rule still saying "Corrupt/missing
+        # PULSE → graceful fallback to standalone" while both engines create
+        # docs/PULSE.json holding only cross_skill when none exists (found by the
+        # second v1.3 review). The engines' behaviour is driven here, so the rule
+        # and the code move together.
+        for rel in ("synk182/scripts/synk_engine.py", "solid8/scripts/denser_engine.py"):
+            mod = _load(Path(rel).stem, rel)
+            tmp = tempfile.mkdtemp()
+            try:
+                with self.subTest(engine=rel):
+                    path = mod.update_pulse(tmp, {"probe_last_run": "2026-09-30T00:00:00-04:00"})
+                    self.assertEqual(list(json.loads(Path(path).read_text(encoding="utf-8"))), ["cross_skill"])
+                    broken = _write(tmp, "docs/PULSE.json", "{not json")
+                    self.assertIsNone(mod.update_pulse(tmp, {"probe_last_run": "x"}))
+                    self.assertEqual(broken.read_text(encoding="utf-8"), "{not json")
+            finally:
+                shutil.rmtree(tmp, ignore_errors=True)
+        protocol = (ROOT / "docs/TRIFECTA.md").read_text(encoding="utf-8")
+        self.assertFalse("missing PULSE → graceful fallback to standalone" in protocol,
+                         "the protocol still says a missing PULSE falls back to standalone")
+        rule =[l for l in protocol.splitlines() if l.startswith("4. Missing PULSE")]
+        self.assertEqual(len(rule), 1, "Safety rule 4 must say what a missing PULSE leads to")
+        self.assertIn("creates `docs/PULSE.json` holding only `cross_skill`", rule[0])
+        self.assertIn("leave it untouched, say so and work standalone", rule[0])
 
     def test_description_reaches_the_host_listing(self):
         # Break it catches: a description a strict host drops from its listing,
@@ -595,13 +844,34 @@ class SkillFolders(unittest.TestCase):
     def test_no_pointer_to_a_skill_that_is_neither_in_the_pack_nor_public(self):
         # Break it catches: "not for X, use Y" where Y is neither in the pack nor
         # public, so a reader's agent is sent nowhere (found by the v1.2 review).
+        # An allow-list, so the test itself names no skill it keeps out; run with
+        # TRIAD_ROOT on commit a9f9b3a it goes red on all four pointers that
+        # review found.
         for p in sorted(ROOT.rglob("*.md")):
             if ".git" in p.parts:
                 continue
             with self.subTest(file=p.relative_to(ROOT).as_posix()):
-                text = p.read_text(encoding="utf-8")
-                for name in RETIRED_POINTERS:
-                    self.assertNotIn(name, text, f"{name} is not public; describe the work instead")
+                self.assertEqual(_unlisted_pointers(p.read_text(encoding="utf-8")), [],
+                                 "not in the pack and not public; describe the work instead")
+
+    def test_pointer_check_goes_red_on_every_form_it_reads(self):
+        # The probe for the case above, in made-up names: each pointer form goes
+        # red on a skill outside the pack, and stays green on the pack's names,
+        # git, verafox behind a link, and a described kind of work.
+        red = {"Not for diagrams (private-helper).": ["private-helper"],
+               "| x | redundancy (→ internal-notes) |": ["internal-notes"],
+               "**Not Synk:** repo rules (git, house-rules), the rest": ["house-rules"],
+               "| Ask | Skill |\n|-----|-------|\n| Tidy notes | memo-sweeper |": ["memo-sweeper"],
+               "description: >-\n  Does things. Not for proofs\n  (github-helper).": ["github-helper"]}
+        for text, names in red.items():
+            with self.subTest(text=text):
+                self.assertEqual(_unlisted_pointers(text), names)
+        green = ("Not for proofs ([verafox](https://example.org), in The Proof Pack), or diagrams "
+                 "(a diagramming skill). Other text (not a pointer).\n"
+                 "| x | redundancy (→ Solid8), merges (→ git), rules (→ your repository's own rules) |\n"
+                 "| Ask | Skill |\n|-----|-------|\n| Two copies | Synk182 |\n| Prove it | verafox (The Proof Pack) |\n"
+                 "Formerly: v1.2 (it is not for beside Solid8; freeware) → v1.3 (2026-09-30: fixes).")
+        self.assertEqual(_unlisted_pointers(green), [])
 
     def test_devcom5_template_names_the_protocol_version(self):
         # Break it catches: the pulse_version in DevCom5's PULSE template drifting

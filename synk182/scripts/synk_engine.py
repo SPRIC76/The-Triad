@@ -3,6 +3,7 @@
 Synk Engine v2.1 — compare two copies of a project, plan, back up, apply, verify.
 2026-09-15 | For: synk182 skill v3.3 (v2.0 2026-09-15 for v3.1; v1.0 2026-02-10 compared only)
 Updated: 2026-09-30 04:05 ET — plan paths bounded to the copies, stale plan refused, wrong-typed PULSE fields, CLI messages
+Updated: 2026-09-30 04:53 ET — folder targets refused, rollback never deletes a folder, unknown --approve ids and one folder given twice are errors, an unparseable PULSE is reported, sync_completed and new_files_synced only when true
 
 Two copies: the USER copy (the one the user treats as authority) and the
 WORKING copy (a sandbox or upload, a mounted or cloud-synced folder, a git
@@ -21,8 +22,9 @@ CLI (read-only unless --apply):
   python synk_engine.py USER_DIR WORKING_DIR --apply plan.json --approve 3,7
         back up, copy each approved item in its direction, verify six layers,
         roll back any item that fails; --approve new approves every one-sided file;
-        an item whose path leaves either copy, or whose destination changed since
-        the plan was written, is refused before any backup or write
+        an item whose path leaves either copy or names a folder, or whose destination
+        changed since the plan was written, is refused before any backup or write;
+        an id that names no plan item stops the run before anything is applied
   --threshold 0.6   --pulse (write results to USER_DIR/docs/PULSE.json)
 """
 
@@ -45,6 +47,7 @@ LAYERS = ["existence", "hash", "size", "timestamp", "line_count", "content"]
 TIMESTAMP_TOLERANCE_S = 2.0
 DIRECTIONS = ("user_to_working", "working_to_user")
 PULSE_REL = "docs/PULSE.json"
+PULSE_UNTOUCHED = "  ⚠️ PULSE.json did not parse; left untouched, so this run is not recorded there"
 
 
 def _say(text: str = "") -> None:
@@ -230,7 +233,8 @@ class SynkEngine:
         """Why a plan path may not be written, or None when it names a file inside the copies.
 
         A plan file is data the user may have edited by hand: the path must be relative,
-        with no '..', drive, UNC or root prefix, and must resolve under each copy."""
+        with no '..', drive, UNC or root prefix, must resolve under each copy, and must
+        not name a folder in either copy ('sub', or '.' for the copy itself)."""
         if not isinstance(rel, str) or not rel.strip():
             return "no path"
         win, posix = PureWindowsPath(rel), PurePosixPath(rel)
@@ -243,6 +247,8 @@ class SynkEngine:
                 (root / rel).resolve().relative_to(root)
             except ValueError:
                 return "path resolves outside the copy"
+        if any((root / rel).is_dir() for root in (self.user_dir, self.working_dir)):
+            return "names a folder, not a file"
         return None
 
     def _premise_changed(self, act: Dict) -> Optional[str]:
@@ -288,6 +294,8 @@ class SynkEngine:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, target)
                 entry.update(hash=_hash(src), size=src.stat().st_size)
+            elif src.exists():  # a folder: not backed up, and never listed for deletion
+                entry["folder"] = True
             manifest["files"][f"{side}:{rel}"] = entry
         manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
         lines = ["# Rollback", "", f"Archive created: {manifest['timestamp']}", "",
@@ -296,7 +304,9 @@ class SynkEngine:
         for key, e in manifest["files"].items():
             side_name, rel = key.split(":", 1)
             root_name = self.user_dir if side_name == "user" else self.working_dir
-            lines.append(f"- `{root_name / rel}` — " + ("restore from `" + f"{side_name}/{rel}`" if e["existed"] else "did not exist: delete it"))
+            how = ("restore from `" + f"{side_name}/{rel}`" if e["existed"] else
+                   "a folder, not a file: leave it as it is" if e.get("folder") else "did not exist: delete it")
+            lines.append(f"- `{root_name / rel}` — {how}")
         (dest / "rollback.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     def backup(self, paths: List[str], side: str) -> Path:
@@ -337,8 +347,8 @@ class SynkEngine:
     def apply(self, plan: List[Dict], approved_ids: Iterable[int]) -> Dict:
         """Execute approved actions that have a direction; back up first, roll back on failure.
 
-        An item whose path leaves either copy, or whose destination changed since the
-        plan was written, is refused before any backup or write."""
+        An item whose path leaves either copy or names a folder, or whose destination
+        changed since the plan was written, is refused before any backup or write."""
         approved = set(approved_ids)
         report = {"applied": [], "skipped": [], "refused": [], "rolled_back": [], "archive": None}
         todo = []
@@ -377,12 +387,13 @@ class SynkEngine:
             if failed:
                 if existed:
                     shutil.copy2(dest / side / act["path"], dst)
-                elif dst.exists():
+                elif dst.is_file():  # never a folder: only a file this copy created is removed
                     dst.unlink()
                 report["rolled_back"].append(act["path"])
                 _say(f"  ↩️ Rolled back {act['path']} (failed: {', '.join(failed)})")
             else:
-                report["applied"].append({"path": act["path"], "direction": act["direction"], "verified": list(LAYERS)})
+                report["applied"].append({"path": act["path"], "direction": act["direction"],
+                                          "created": not existed, "verified": list(LAYERS)})
                 _say(f"  ✓ {act['direction']}: {act['path']} (six layers verified)")
         (dest / "apply-report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
         return report
@@ -447,10 +458,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--pulse", action="store_true", help="record results in USER_DIR/docs/PULSE.json")
     args = ap.parse_args(argv)
 
+    if args.approve.strip() and not args.apply:
+        _say("✗ --approve works only with --apply PLAN_JSON; nothing was applied")
+        return 1
     for label, folder in (("user copy", args.user_dir), ("working copy", args.working_dir)):
         if not Path(folder).is_dir():
             _say(f"✗ The {label} is not a folder: {folder}")
             return 1
+    if Path(args.user_dir).samefile(args.working_dir):  # one path typed twice is not two copies in agreement
+        _say(f"✗ The user copy and the working copy are the same folder: {args.user_dir}")
+        return 1
     synk = SynkEngine(args.user_dir, args.working_dir, threshold=args.threshold)
     if args.diff:
         if not any((root / args.diff).is_file() for root in (synk.user_dir, synk.working_dir)):
@@ -481,6 +498,10 @@ def main(argv: Optional[List[str]] = None) -> int:
             except ValueError:
                 _say(f"✗ --approve takes plan ids separated by commas, or 'new': got {args.approve!r}")
                 return 1
+            unknown = [i for i in ids if i not in [a["id"] for a in plan]]
+            if unknown:  # a mistyped id must not read as a clean run
+                _say(f"✗ No item in {args.apply} has id {', '.join(map(str, unknown))}; nothing applied")
+                return 1
         if not ids:
             _say("Nothing approved: pass --approve with plan ids.")
             return 1
@@ -488,22 +509,26 @@ def main(argv: Optional[List[str]] = None) -> int:
         _say(f"🔄 Synced: {len(report['applied'])} | Rolled back: {len(report['rolled_back'])} "
              f"| Refused: {len(report['refused'])} | Skipped: {len(report['skipped'])} | Archive: {report['archive']}")
         if args.pulse:
-            sigs = [("sync_completed", "devcom5", f"{len(report['applied'])} file(s) written")]
+            # sync_completed only when something was written: DevCom5 reads it as a sync that happened
+            sigs = [("sync_completed", "devcom5", f"{len(report['applied'])} file(s) written")] if report["applied"] else []
             conflicts = report["rolled_back"] + [f"{r['path']} ({r['reason']})" for r in report["refused"]]
             if conflicts:
                 sigs.append(("sync_conflict", "devcom5", ", ".join(conflicts)))
-            if any(a["path"] for a in report["applied"]):
-                sigs.append(("new_files_synced", "solid8", ", ".join(a["path"] for a in report["applied"])))
-            update_pulse(synk.user_dir, {"synk_last_run": _now_iso(), "synk_drift_detected": drift,
-                                         "synk_files_changed": len(report["applied"])}, sigs)
+            created = [a["path"] for a in report["applied"] if a["created"]]  # an overwrite is not a new file
+            if created:
+                sigs.append(("new_files_synced", "solid8", ", ".join(created)))
+            if not update_pulse(synk.user_dir, {"synk_last_run": _now_iso(), "synk_drift_detected": drift,
+                                                "synk_files_changed": len(report["applied"])}, sigs):
+                _say(PULSE_UNTOUCHED)
         return 1 if report["rolled_back"] or report["refused"] else 0
     plan = synk.plan()
     if args.plan:
         Path(args.plan).write_text(json.dumps(plan, indent=2, ensure_ascii=False), encoding="utf-8")
         _say(f"📋 Plan written: {args.plan} ({len(plan)} item(s); nothing changed on disk)")
     if args.pulse:
-        update_pulse(synk.user_dir, {"synk_last_run": _now_iso(), "synk_drift_detected": drift},
-                     [("environment_diverged", "devcom5", f"{len(plan)} path(s) differ")] if drift else [])
+        if not update_pulse(synk.user_dir, {"synk_last_run": _now_iso(), "synk_drift_detected": drift},
+                            [("environment_diverged", "devcom5", f"{len(plan)} path(s) differ")] if drift else []):
+            _say(PULSE_UNTOUCHED)
     return 0
 
 
