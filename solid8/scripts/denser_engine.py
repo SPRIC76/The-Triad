@@ -4,6 +4,7 @@ Denser Engine v1.3 — Consolidation Analysis
 2026-09-30 | For: solid8 skill v1.3 (v1.2 2026-09-30, v1.1 2026-09-15, v1.0 2026-02-10)
 Updated: 2026-09-30 04:05 ET — sprawl found across folders, copy numbers, wrong-typed PULSE fields, target check
 Updated: 2026-09-30 04:53 ET — a backup is compared as the kind of file it backs up (cfg.json.bak as JSON)
+Updated: 2026-09-30 05:37 ET — a backup of a binary is binary, every trailing backup marker is removed, --pulse warns when docs is a file and says a PULSE holding no object holds none
 
 Fingerprints every file under a folder, compares likely redundant pairs across
 the full similarity spectrum, and builds a consolidation proposal. It never
@@ -15,7 +16,8 @@ Comparison:
   Markdown    each line keyed by its heading, so moved sections count as change
   JSON        flattened key paths and values, key order ignored
   binary      hash only; never a content tier
-  A backup (.bak, .old, .backup, .orig, ~) is read as the file it backs up: cfg.json.bak as JSON.
+  A backup (.bak, .old, .backup, .orig, ~, any number of them) is read as the file it
+  backs up: cfg.json.bak as JSON, doc.pdf.bak as a binary.
 Files under ARCHIVE/Archive/Archives/archive or POTIMP are intentional: they are
 reported only as exact duplicates, or as the subset of a live file.
 
@@ -127,7 +129,8 @@ class DenserEngine:
     VERSION_PATTERN = re.compile(r"[_\-\s.]v\d+(?:\.\d+)*(?=$|[_\-\s.])", re.IGNORECASE)
     # A copy number has one to three digits: "(2024)" is a year, not a copy.
     COPY_PATTERN = re.compile(r"(?:\s*-\s*copy(?:\s*\(\d{1,3}\))?|\s*\(\d{1,3}\)|[_\s]copy\d*)$", re.IGNORECASE)
-    BACKUP_PATTERN = re.compile(r"(?:\.(?:bak|old|backup|orig)|~)$", re.IGNORECASE)
+    # Every trailing marker, so cfg.json.bak.old and cfg.json.orig~ both come back to cfg.json.
+    BACKUP_PATTERN = re.compile(r"(?:\.(?:bak|old|backup|orig)|~)+$", re.IGNORECASE)
 
     SKIP_DIRS = {
         "node_modules", ".git", "__pycache__", ".venv", "venv", "bin", "obj",
@@ -180,7 +183,7 @@ class DenserEngine:
         return FileFingerprint(
             path=path, relative=relative, hash=self._hash_file(path), size=stat.st_size,
             line_count=0 if binary else self._count_lines(path),
-            extension=path.suffix.lower(), name_pattern=self._detect_pattern(path.name),
+            extension=self._kind_suffix(path), name_pattern=self._detect_pattern(path.name),
             modified=stat.st_mtime, binary=binary,
             protected=any(p.lower() in self.ARCHIVE_DIRS or p.upper().startswith("POTIMP") for p in parts),
         )
@@ -196,9 +199,14 @@ class DenserEngine:
         except OSError:
             return ""
 
-    @staticmethod
-    def _is_binary(path: Path) -> bool:
-        if path.suffix.lower() in BINARY_EXTENSIONS:
+    @classmethod
+    def _kind_suffix(cls, path: Path) -> str:
+        """The suffix of the kind of file this is; a backup is the kind it backs up: doc.pdf.bak is .pdf."""
+        return Path(cls.BACKUP_PATTERN.sub("", path.name)).suffix.lower()
+
+    @classmethod
+    def _is_binary(cls, path: Path) -> bool:
+        if cls._kind_suffix(path) in BINARY_EXTENSIONS:
             return True
         try:
             with open(path, "rb") as f:
@@ -300,8 +308,7 @@ class DenserEngine:
         """Comparable units for a file: flattened JSON pairs, heading-keyed Markdown lines, or lines."""
         with open(path, "r", encoding="utf-8", errors="replace") as f:
             text = f.read()
-        # A backup is read as the kind of file it backs up: cfg.json.bak is JSON, guide.md~ Markdown.
-        ext = Path(self.BACKUP_PATTERN.sub("", path.name)).suffix.lower()
+        ext = self._kind_suffix(path)  # a backup is read as the kind it backs up: cfg.json.bak is JSON
         if ext == ".json":
             try:
                 return set(self._flatten_json(json.loads(text)))
@@ -426,7 +433,7 @@ class DenserEngine:
             if fp.name_pattern:
                 proposal.name_sprawl.setdefault(fp.name_pattern, []).append(rel)
         for rel, fp in self.fingerprints.items():
-            if fp.extension == ".zip":
+            if fp.path.suffix.lower() == ".zip":  # a zip itself; a backup of one (pack.zip.bak) is backup sprawl
                 sibling_dir = fp.path.with_suffix("")
                 siblings = [r for r, o in self.fingerprints.items()
                             if r != rel and o.path.parent == fp.path.parent and o.path.stem == fp.path.stem]
@@ -469,10 +476,15 @@ class DenserEngine:
 def update_pulse(project_dir, fields: Dict, signals: Iterable[Tuple[str, str, str]] = ()) -> Optional[Path]:
     """Merge solid8's keys and signals into docs/PULSE.json, keeping every other key.
 
-    A PULSE.json that does not parse is left untouched and None is returned.
+    A PULSE.json that does not parse, or holds no object ([], null), is left
+    untouched and None is returned.
     One that parses but holds a wrong-typed field (cross_skill not an object,
-    pending_signals null) is handled as if that field were empty, and says so."""
+    pending_signals null) is handled as if that field were empty, and says so.
+    A docs that is a file raises NotADirectoryError naming it, before anything
+    is written; the CLI reports that, and any other OSError, as a warning."""
     path = Path(project_dir) / "docs" / "PULSE.json"
+    if path.parent.exists() and not path.parent.is_dir():
+        raise NotADirectoryError(f"{path.parent} is a file, not a folder")
     data: Dict = {}
     if path.is_file():
         try:
@@ -556,10 +568,14 @@ def main(argv: Optional[List[str]] = None) -> int:
             rmap.setdefault(comp.tier, []).append([comp.file_a, comp.file_b])
         rmap = {t: pairs[:50] for t, pairs in rmap.items()}
         found = sum(tc.values())
-        written = update_pulse(engine.target_dir,
-                               {"solid8_last_run": proposal.timestamp, "solid8_redundancy_map": rmap},
-                               [("redundancy_found", "devcom5", f"{found} redundant pair(s)")] if found else [])
-        _say("   📡 PULSE updated" if written else "   ⚠️  PULSE.json did not parse; left untouched")
+        try:
+            written = update_pulse(engine.target_dir,
+                                   {"solid8_last_run": proposal.timestamp, "solid8_redundancy_map": rmap},
+                                   [("redundancy_found", "devcom5", f"{found} redundant pair(s)")] if found else [])
+        except OSError as e:  # docs is a file, PULSE.json is a folder, no permission to write
+            _say(f"   ⚠️  PULSE.json not written ({e})")
+        else:
+            _say("   📡 PULSE updated" if written else "   ⚠️  PULSE.json does not hold a JSON object; left untouched")
     return 0
 
 

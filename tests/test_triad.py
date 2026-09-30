@@ -1,4 +1,4 @@
-"""Version 1.1 | Deps: stdlib; Skillshaper's validate_skill.py when present | Parent: The Triad (DevCom5 1.3, Synk182 3.3, Solid8 1.3) | Path: tests | Filename: test_triad.py | Created: 2026-09-30 01:12 ET - kept tests for the pack: the two engines, the three skill folders, and the pack's own ratchets. | Updated: 2026-09-30 04:05 ET - v1.3: red-first cases from the v1.2 review (bounded plan paths, stale plans, wrong-typed PULSE fields, CLI messages, copy numbers, sprawl across folders, pointer and version ratchets); comments read for a public reader; both engines checked for personal paths. | Updated: 2026-09-30 04:53 ET - red-first cases from the second v1.3 review: folder targets and rollback, backups read as the file they back up, unknown --approve ids, one folder given twice, an unparseable PULSE reported, signals only when true, protocol safety rule 4; the pointer check is an allow-list, so the test names no private skill.
+"""Version 1.1 | Deps: stdlib; Skillshaper's validate_skill.py when present | Parent: The Triad (DevCom5 1.3, Synk182 3.3, Solid8 1.3) | Path: tests | Filename: test_triad.py | Created: 2026-09-30 01:12 ET - kept tests for the pack: the two engines, the three skill folders, and the pack's own ratchets. | Updated: 2026-09-30 04:05 ET - v1.3: red-first cases from the v1.2 review (bounded plan paths, stale plans, wrong-typed PULSE fields, CLI messages, copy numbers, sprawl across folders, pointer and version ratchets); comments read for a public reader; both engines checked for personal paths. | Updated: 2026-09-30 04:53 ET - red-first cases from the second v1.3 review: folder targets and rollback, backups read as the file they back up, unknown --approve ids, one folder given twice, an unparseable PULSE reported, signals only when true, protocol safety rule 4; the pointer check is an allow-list, so the test names no private skill. | Updated: 2026-09-30 05:37 ET - red-first cases from the third v1.3 review: --pulse when docs is a file, a PULSE holding no object, an approved item with no direction, an item with only an id named by its id, --plan beside --apply and --diff beside another action, a backup of a binary, backups with two markers; the pointer check reads what a pointer names, in any of its forms, rather than its first word.
 
 Run from the pack folder:  python -B -m unittest discover -s tests -v
 
@@ -39,10 +39,11 @@ CALL_WORDS = {"devcom5": ("devcom5", "dc5", "logger"),
 # Skills a "not for" may name: the pack's own, and verafox, which is public in The
 # Proof Pack. Anything else is described as a kind of work, never named.
 SIBLINGS = ("verafox", "DevCom5", "Synk182", "Solid8")
-# What a pointer may start with: a sibling, git, or words that describe a kind of
-# work ("a diagramming skill", "your repository's own rules", "in The Proof Pack").
-POINTER_NAMES = re.compile(r"(?i)(?:%s)\b" % "|".join(SIBLINGS + ("git",)))
-POINTER_WORDS = ("a ", "an ", "your ", "in ", "the ")
+# The words a pointer may name: the siblings, git, and the kinds of work the pack
+# describes ("a diagramming skill"). A new kind is added here on purpose; any other
+# skill-shaped word in a pointer names a skill the reader cannot reach.
+POINTER_NAMES = {s.lower() for s in SIBLINGS} | {"git"}
+POINTER_KINDS = {"knowledge-search", "diagramming", "repo-rules", "memory-consolidation"}
 PROOF_PACK = "https://github.com/SPRIC76/The-Proof-Pack"
 
 
@@ -116,32 +117,71 @@ def _frontmatter(skill):
     return out
 
 
+# An Agent Skills name is lowercase letters, digits and hyphens, so a capitalised word
+# (GitHub, Verafox) is never one.
+_SKILL_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+# A name ends its phrase; a word a noun follows is describing it ("read-only mode").
+_ENDS = r"(?![\w-])(?=\s*(?:$|[.,;:!?)`'\"*|])|\s+(?:instead|for|to|when|if|here|there|or|and|skills?)\b)"
+_HYPHENATED = re.compile(r"(?<![\w-])([a-z0-9]+(?:-[a-z0-9]+)+)" + _ENDS)
+_KIND = re.compile(r"\b(?:a|an|the|your)\s+([a-z0-9][a-z0-9-]*)\s+skills?\b")
+_AFTER_LEAD = re.compile(r"\b(?:see|use|in|via|try|the)\s+([a-z0-9]+(?:-[a-z0-9]+)+)" + _ENDS)
+_USE = re.compile(r"(?i:\buse)\s+(?:(?:the|a|an|your)\s+)?`?([a-z0-9][a-z0-9-]*)" + _ENDS)
+_NOT_A_NAME = {"it", "this", "that", "them", "these", "those", "one", "both", "each", "any", "some"}
+_ARROW = re.compile(r"\((?:→|->)\s*((?:[^()]|\([^()]*\))*)\)")
+_PAREN = re.compile(r"\((?:→|->)?\s*((?:[^()]|\([^()]*\))*)\)")
+_PARTS = re.compile(r",|\s+(?:or|and)\s+")
+
+
+def _pointer_names(part, strict):
+    """The skill-shaped words one part of a pointer names. strict: the part is surely a
+    pointer (an arrow group or a Skill cell), so a hyphenated word anywhere in it counts."""
+    part = re.sub(r"\([^()]*\)", "", part).strip().strip("`").strip()
+    names = [part] if _SKILL_NAME.fullmatch(part) else []
+    names += _KIND.findall(part)
+    names += (_HYPHENATED if strict else _AFTER_LEAD).findall(part)
+    return names
+
+
 def _unlisted_pointers(text):
     """Skills a Markdown text sends its reader to that are neither in the pack nor public.
 
-    A pointer is a '(→ ...)' group anywhere; a '(...)' group in a 'not for' or
-    '**Not X:**' clause, up to the clause's end ('. ', ';' or a line end); or the Skill
-    cell of an '| Ask | Skill |' table. Each comma-separated item must start with a
-    sibling, git, or words that describe a kind of work; any other item is returned.
+    Reads what a pointer names, not its first word. The pointers read are:
+      - '(→ ...)' and '(-> ...)' groups, anywhere;
+      - the Skill column of a table whose header holds Ask and Skill, in any case;
+      - '(...)' groups in a 'not for' or '**Not X:**' clause, up to '. ', ';' or a line end;
+      - 'use X' in that sentence or the next.
+    Arrow groups and Skill cells are split on ',', 'or' and 'and', and a hyphenated word
+    anywhere in them is a name. A clause's parentheses are split on ',' only and name a
+    skill when a part is one lowercase word ('(notetaker)'), reads 'a/the/your X skill', or
+    puts a hyphenated word after see/use/in/via/try/the, so '(see above)', '(v2 and
+    later)' and '(e.g., branch merges)' name nothing. Beyond a whole part, a word is a
+    name only where it ends its phrase (_ENDS), so 'read-only mode' names nothing. A
+    name must be a sibling, git or a kind in POINTER_KINDS; any other is returned, once
+    each, in the order found. Its limit: a lone lowercase word in a not-for clause's
+    parentheses ('(optional)') reads as a name, and the fix is to reword it.
     """
     text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)  # a Markdown link reads as its text
     text = re.sub(r"\n[ \t]+", " ", text)  # a folded frontmatter description reads as one line
-    groups = re.findall(r"\(→\s*([^)]*)\)", text)
-    for m in re.finditer(r"(?i)\bnot for\b|\*\*not \w+:\*\*", text):
-        clause = re.split(r"\.\s|;|\n", text[m.end():], maxsplit=1)[0]
-        groups += re.findall(r"\(→?\s*([^()]*)\)", clause)
-    in_table = False
+    named = [n for group in _ARROW.findall(text) for part in _PARTS.split(group)
+             for n in _pointer_names(part, strict=True)]
+    skill_col = None
     for line in text.splitlines():
-        if re.match(r"^\|\s*Ask\s*\|\s*Skill\s*\|", line):
-            in_table = True
-        elif in_table and line.startswith("|"):
-            cell = line.strip().strip("|").split("|")[-1].strip()
-            if cell.strip("-: "):
-                groups.append(cell)
-        else:
-            in_table = False
-    items = (i.strip() for g in groups for i in g.split(","))
-    return [i for i in items if i and not POINTER_NAMES.match(i) and not i.lower().startswith(POINTER_WORDS)]
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if not line.lstrip().startswith("|"):
+            skill_col = None
+        elif {"ask", "skill"} <= {c.lower() for c in cells}:
+            skill_col = [c.lower() for c in cells].index("skill")
+        elif skill_col is not None and skill_col < len(cells) and cells[skill_col].strip("-: "):
+            named += [n for part in _PARTS.split(cells[skill_col]) for n in _pointer_names(part, strict=True)]
+    for m in re.finditer(r"(?i)\bnot for\b|\*\*not [^*\n]+:\*\*", text):
+        line = text[m.end():].split("\n", 1)[0]
+        clause = re.split(r"\.\s|;", line, maxsplit=1)[0]
+        named += [n for group in _PAREN.findall(clause) for part in group.split(",")
+                  for n in _pointer_names(part, strict=False)]
+        two_sentences = " ".join(re.split(r"(?<=\.)\s+", line, maxsplit=2)[:2])
+        named += [n for n in _USE.findall(two_sentences) if n not in _NOT_A_NAME]
+    allowed = POINTER_NAMES | POINTER_KINDS
+    return list(dict.fromkeys(n for n in named if n not in allowed))
 
 
 # ─────────────────────────────────────────────────────────────── solid8
@@ -224,6 +264,43 @@ class Solid8Engine(unittest.TestCase):
                 comp = [c for c in e.comparisons if {c.file_a, c.file_b} == set(pair)]
                 self.assertEqual([c.tier for c in comp], ["B"])
                 self.assertGreaterEqual(comp[0].similarity, 0.999)
+
+    def test_a_backup_with_two_markers_meets_its_live_file(self):
+        # Break it catches: the backup marker stripped once, so cfg.json.bak.bak
+        # and cfg.json.bak.old met only each other (base cfg.json.bak, read as raw
+        # lines) and cfg.json.orig~ met nothing (found by the third v1.3 review).
+        # Every marker is stripped: each backup meets cfg.json and is read as JSON.
+        cfg = {"a": 1, "b": {"c": 2, "d": 3}, "e": [1, 2]}
+        _write(self.tmp, "cfg.json", json.dumps(cfg, indent=2))
+        backups = {"cfg.json.bak.bak": json.dumps(cfg), "cfg.json.bak.old": json.dumps(cfg, indent=1),
+                   "cfg.json.orig~": json.dumps(cfg, indent=4)}
+        for rel, text in backups.items():
+            _write(self.tmp, rel, text)
+        e = self.engine()
+        for rel in backups:
+            with self.subTest(backup=rel):
+                self.assertEqual(e._base_name(rel), "cfg.json")
+                comp = [c for c in e.comparisons if {c.file_a, c.file_b} == {"cfg.json", rel}]
+                self.assertEqual([c.tier for c in comp], ["B"])
+                self.assertGreaterEqual(comp[0].similarity, 0.999)
+
+    def test_a_backup_of_a_binary_is_binary(self):
+        # Break it catches: the binary check and the fingerprint's extension read
+        # the backup's own suffix, so a PDF backup with no null byte in its first
+        # 8 KiB was fingerprinted as text and got a content tier: doc2.pdf.bak and
+        # doc3.pdf.orig came back one tier-B cluster (found by the third v1.3
+        # review). A binary never gets a content tier, backed up or not.
+        pdf = "%PDF-1.4\n" + "".join(f"{i} 0 obj << /Type /Page /N {i} >> endobj\n" for i in range(40)) + "%%EOF\n"
+        _write(self.tmp, "doc.pdf", pdf)
+        _write(self.tmp, "doc.pdf.bak", pdf + "trailer << >>\n")
+        _write(self.tmp, "doc2.pdf.bak", pdf.replace("/N 3 ", "/N 33 "))
+        _write(self.tmp, "doc3.pdf.orig", pdf.replace("/N 5 ", "/N 55 "))
+        e = self.engine()
+        for rel in ("doc.pdf.bak", "doc2.pdf.bak", "doc3.pdf.orig"):
+            with self.subTest(file=rel):
+                fp = e.fingerprints[rel]
+                self.assertEqual((fp.binary, fp.extension, fp.line_count), (True, ".pdf", 0))
+        self.assertEqual([(c.file_a, c.file_b, c.tier) for c in e.comparisons], [])
 
     def test_archive_folder_is_named_for_solid8_and_utf8(self):
         _write(self.tmp, "é-notes.txt", "x\n")
@@ -332,6 +409,36 @@ class Solid8Engine(unittest.TestCase):
                 self.assertEqual(data["project"], "X")
                 self.assertEqual([s["signal"] for s in data["cross_skill"]["pending_signals"]], ["redundancy_found"])
                 self.assertIn("treated as empty", out.getvalue())
+
+    def test_cli_pulse_when_docs_is_a_file_warns(self):
+        # Break it catches: --pulse in a project whose docs is a file printing the
+        # whole proposal and then dying on an uncaught FileExistsError (found by
+        # the third v1.3 review). The run says why nothing was recorded.
+        docs = _write(self.tmp, "docs", "a file, not a folder\n")
+        _write(self.tmp, "a.txt", "same\n")
+        _write(self.tmp, "a - Copy.txt", "same\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([self.tmp, "--pulse"])
+        self.assertEqual(rc, 0)
+        self.assertIn("Consolidation Proposal", out.getvalue())
+        self.assertIn("not a folder", out.getvalue())
+        self.assertEqual(docs.read_text(encoding="utf-8"), "a file, not a folder\n")
+
+    def test_cli_pulse_says_when_the_pulse_holds_no_object(self):
+        # Break it catches: "PULSE.json did not parse" for a PULSE that parses but
+        # is not an object ("[]", "null", "0"), a claim the run cannot make (the
+        # third v1.3 review). The file is left untouched and the words are true.
+        _write(self.tmp, "a.txt", "same\n")
+        for text in ("{not json", "[]"):
+            with self.subTest(pulse=text):
+                p = _write(self.tmp, "docs/PULSE.json", text)
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    rc = self.mod.main([self.tmp, "--pulse"])
+                self.assertEqual(rc, 0)
+                self.assertIn("PULSE.json does not hold a JSON object; left untouched", out.getvalue())
+                self.assertEqual(p.read_text(encoding="utf-8"), text)
 
 
 # ─────────────────────────────────────────────────────────────── synk182
@@ -598,7 +705,8 @@ class Synk182Engine(unittest.TestCase):
         # or is not an object, saying nothing and exiting 0, so the user is never
         # told the run was not recorded (found by the second v1.3 review). The
         # file is left untouched and the run says so, as Solid8's does; the same
-        # holds after an apply.
+        # holds after an apply. "[]" parses, so the words say the file holds no
+        # JSON object rather than that it did not parse (the third v1.3 review).
         _write(self.u, "a.txt", "x\n")
         _write(self.w, "a.txt", "y\n")
         _write(self.u, "new.txt", "brand new\n")
@@ -609,7 +717,7 @@ class Synk182Engine(unittest.TestCase):
                 with redirect_stdout(out):
                     rc = self.mod.main([str(self.u), str(self.w), "--pulse"])
                 self.assertEqual(rc, 0)
-                self.assertIn("PULSE.json did not parse; left untouched", out.getvalue())
+                self.assertIn("PULSE.json does not hold a JSON object; left untouched", out.getvalue())
                 self.assertEqual(p.read_text(encoding="utf-8"), text)
         with redirect_stdout(io.StringIO()):
             s = self.synk()
@@ -620,7 +728,32 @@ class Synk182Engine(unittest.TestCase):
             rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "new", "--pulse"])
         self.assertEqual(rc, 0)
         self.assertTrue((self.w / "new.txt").is_file())
-        self.assertIn("PULSE.json did not parse; left untouched", out.getvalue())
+        self.assertIn("PULSE.json does not hold a JSON object; left untouched", out.getvalue())
+
+    def test_cli_pulse_when_docs_is_a_file_warns_and_still_reports_the_apply(self):
+        # Break it catches: --pulse in a project whose docs is a file dying on an
+        # uncaught FileExistsError; after an apply the files were written and
+        # "Synced: 2" printed, then the traceback, so the run's last word was a
+        # traceback and the apply went unrecorded (found by the third v1.3 review).
+        docs = _write(self.u, "docs", "a file, not a folder\n")
+        _write(self.u, "new.txt", "brand new\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--pulse"])
+        self.assertEqual(rc, 0)
+        self.assertIn("not a folder", out.getvalue())
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            plan_file = _write(self.tmp, "plan.json", json.dumps(s.plan()))
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "new", "--pulse"])
+        self.assertEqual(rc, 0)
+        self.assertIn("Synced: 2", out.getvalue())
+        self.assertIn("not a folder", out.getvalue().split("Synced: 2", 1)[1])
+        self.assertTrue((self.w / "new.txt").is_file())
+        self.assertEqual(docs.read_text(encoding="utf-8"), "a file, not a folder\n")
 
     def _pulse_signals(self):
         data = json.loads((self.u / "docs/PULSE.json").read_text(encoding="utf-8"))
@@ -738,6 +871,92 @@ class Synk182Engine(unittest.TestCase):
                 self.assertIn(approve.split(",")[-1], out.getvalue())
                 self.assertFalse((self.w / "new.txt").exists())
                 self.assertFalse((self.u / "ARCHIVE").exists())
+
+    def test_cli_approved_item_without_a_direction_says_so_and_exits_1(self):
+        # Break it catches: approving a merge whose direction is still null (as
+        # --plan writes every merge and superset) printing only "Synced: 0 | ... |
+        # Skipped: 1" and exiting 0; the reason sat in the report dict, never
+        # printed (found by the third v1.3 review). The run names the item and
+        # why, and exits 1, as when an approved item is refused.
+        _write(self.u, "m.txt", "a\nb\nc\nd\ne\n")
+        _write(self.w, "m.txt", "a\nb\nc\nd\nf\n")
+        _write(self.u, "new.txt", "brand new\n")
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            plan = s.plan()
+        plan_file = _write(self.tmp, "plan.json", json.dumps(plan))
+        merge = [a["id"] for a in plan if a["path"] == "m.txt"][0]
+        new = [a["id"] for a in plan if a["path"] == "new.txt"][0]
+        for approve in (str(merge), f"{merge},{new}"):
+            with self.subTest(approve=approve):
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", approve])
+                self.assertEqual(rc, 1)
+                self.assertRegex(out.getvalue(), r"m\.txt.*no direction")
+                self.assertEqual((self.w / "m.txt").read_text(encoding="utf-8"), "a\nb\nc\nd\nf\n")
+
+    def test_cli_plan_item_with_only_an_id_is_answered_with_a_message(self):
+        # Break it catches: a hand-edited item with an id and nothing else,
+        # [{"id": 1}], crashing --apply ... --approve 1 on KeyError: 'path'
+        # (found by the third v1.3 review), while the same item with a direction
+        # was answered "Refused None: no path". An item with no path is named by
+        # its id, so the user can find it in the plan.
+        _write(self.u, "a.txt", "x\n")
+        for item, words in (({"id": 1}, "item 1: no direction"),
+                            ({"id": 1, "direction": "user_to_working"}, "item 1: no path")):
+            with self.subTest(item=item):
+                plan_file = _write(self.tmp, "plan.json", json.dumps([item]))
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    rc = self.mod.main([str(self.u), str(self.w), "--apply", str(plan_file), "--approve", "1"])
+                self.assertEqual(rc, 1)
+                self.assertIn(words, out.getvalue())
+                self.assertNotRegex(out.getvalue(), r"(?:Skipped|Refused) None")
+
+    def test_cli_plan_beside_apply_is_an_error(self):
+        # Break it catches: --plan OUT given beside --apply dropped without a word:
+        # the apply ran, exited 0, and OUT never appeared (found by the third v1.3
+        # review). The two are separate runs; nothing is done and the run says so.
+        _write(self.u, "new.txt", "brand new\n")
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            plan_file = _write(self.tmp, "plan.json", json.dumps(s.plan()))
+        out_file = Path(self.tmp) / "plan2.json"
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rc = self.mod.main([str(self.u), str(self.w), "--plan", str(out_file),
+                                "--apply", str(plan_file), "--approve", "new"])
+        self.assertEqual(rc, 1)
+        self.assertIn("--plan", out.getvalue())
+        self.assertIn("--apply", out.getvalue())
+        self.assertFalse((self.w / "new.txt").exists())
+        self.assertFalse(out_file.exists())
+
+    def test_cli_diff_beside_plan_apply_or_pulse_is_an_error(self):
+        # Break it catches: --diff returning before anything else ran, so --plan,
+        # --apply or --pulse given beside it were dropped without a word and the
+        # run exited 0 (found while fixing the --plan/--apply case above).
+        _write(self.u, "a.txt", "one\n")
+        _write(self.w, "a.txt", "two\n")
+        _write(self.u, "new.txt", "brand new\n")
+        with redirect_stdout(io.StringIO()):
+            s = self.synk()
+            s.scan_and_compare()
+            plan_file = _write(self.tmp, "plan.json", json.dumps(s.plan()))
+        out_file = Path(self.tmp) / "plan2.json"
+        for extra in (["--plan", str(out_file)], ["--apply", str(plan_file), "--approve", "new"], ["--pulse"]):
+            with self.subTest(extra=extra[0]):
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    rc = self.mod.main([str(self.u), str(self.w), "--diff", "a.txt", *extra])
+                self.assertEqual(rc, 1)
+                self.assertIn(extra[0], out.getvalue())
+        self.assertFalse(out_file.exists())
+        self.assertFalse((self.w / "new.txt").exists())
+        self.assertFalse((self.u / "docs").exists())
 
     def test_cli_approve_without_apply_is_an_error(self):
         # Break it catches: --approve 1 without --apply silently ignored, the
@@ -857,21 +1076,56 @@ class SkillFolders(unittest.TestCase):
     def test_pointer_check_goes_red_on_every_form_it_reads(self):
         # The probe for the case above, in made-up names: each pointer form goes
         # red on a skill outside the pack, and stays green on the pack's names,
-        # git, verafox behind a link, and a described kind of work.
+        # git, verafox behind a link, a described kind of work, and parentheses
+        # that name nothing. The third v1.3 review found a first-word check passed
+        # "(→ the private-notes skill)", "use X", "->" and a lowercase table
+        # header, and flagged "(→ GitHub)", "(see above)" and a 3-column table.
         red = {"Not for diagrams (private-helper).": ["private-helper"],
                "| x | redundancy (→ internal-notes) |": ["internal-notes"],
                "**Not Synk:** repo rules (git, house-rules), the rest": ["house-rules"],
                "| Ask | Skill |\n|-----|-------|\n| Tidy notes | memo-sweeper |": ["memo-sweeper"],
-               "description: >-\n  Does things. Not for proofs\n  (github-helper).": ["github-helper"]}
+               "description: >-\n  Does things. Not for proofs\n  (github-helper).": ["github-helper"],
+               "| x | notes (→ the private-notes skill) |": ["private-notes"],
+               "| x | notes (→ a private-notes skill) |": ["private-notes"],
+               "| x | notes (→ in private-notes) |": ["private-notes"],
+               "| x | notes (→ your private-notes skill) |": ["private-notes"],
+               "| x | notes (→ `private-notes`) |": ["private-notes"],
+               "| x | notes (→ Solid8 or private-notes) |": ["private-notes"],
+               "| x | notes (-> private-notes) |": ["private-notes"],
+               "| x | notes (→ notetaker) |": ["notetaker"],
+               "Not for notes (the private-notes skill).": ["private-notes"],
+               "Not for notes (see private-notes).": ["private-notes"],
+               "Not for notes (private-notes (v2)).": ["private-notes"],
+               "Not for notes; use private-notes instead.": ["private-notes"],
+               "Not for notes. Use notetaker for those.": ["notetaker"],
+               "**Not Synk:** notes, use private-notes for those": ["private-notes"],
+               "| ask | skill |\n|---|---|\n| Notes | private-notes |": ["private-notes"],
+               "| Ask | Skill | Why |\n|---|---|---|\n| Notes | notetaker | because |": ["notetaker"],
+               "| Ask | Skill |\n|---|---|\n| Notes | [private-notes](https://example.org) |": ["private-notes"]}
         for text, names in red.items():
-            with self.subTest(text=text):
+            with self.subTest(red=text):
                 self.assertEqual(_unlisted_pointers(text), names)
         green = ("Not for proofs ([verafox](https://example.org), in The Proof Pack), or diagrams "
-                 "(a diagramming skill). Other text (not a pointer).\n"
-                 "| x | redundancy (→ Solid8), merges (→ git), rules (→ your repository's own rules) |\n"
-                 "| Ask | Skill |\n|-----|-------|\n| Two copies | Synk182 |\n| Prove it | verafox (The Proof Pack) |\n"
+                 "(a diagramming skill). Other text (not a pointer).",
+                 "| x | redundancy (→ Solid8), merges (→ git), rules (→ your repository's own rules) |",
+                 "| x | memory (→ your memory-consolidation tool), proofs (→ verafox Mutate, in The Proof Pack) |",
+                 "| x | issues (→ GitHub), CI (→ GitHub Actions), merges (→ git's own merge) |",
+                 "| x | proofs (→ The Proof Pack), comms (→ DevCom5 Scribe), copies (→ Synk182's engine) |",
+                 "| Ask | Skill | Why |\n|---|---|---|\n| Two copies | Synk182 | because |\n"
+                 "| Prove it | verafox (The Proof Pack) | it is public |",
+                 "**Not Synk:** repo rules (git, a repo-rules skill); use git for merges.",
+                 "Not for merges (e.g., branch merges).", "Not for merges (see above).",
+                 "Not for merges (that is Synk182's job).", "Not for merges (v2 and later).",
+                 "Not for notes (or diagrams).", "Not for notes (and diagrams).", "Not for big files (over 10 MB).",
+                 "Not for merging (one copy wins).", "Not for notes (\"memory\").", "Not for proofs (Verafox).",
+                 "Not for notes (which stay).", "Not for notes (this one); use it elsewhere.",
+                 "Byte-comparing docs (use section-aware diff).",
+                 "| x | merges (→ git's own three-way merge) |", "Not for merges (in read-only mode).",
+                 "Not for merges; use section-aware diff instead.", "Not for merges; use a diff tool.",
                  "Formerly: v1.2 (it is not for beside Solid8; freeware) → v1.3 (2026-09-30: fixes).")
-        self.assertEqual(_unlisted_pointers(green), [])
+        for text in green:
+            with self.subTest(green=text):
+                self.assertEqual(_unlisted_pointers(text), [])
 
     def test_devcom5_template_names_the_protocol_version(self):
         # Break it catches: the pulse_version in DevCom5's PULSE template drifting

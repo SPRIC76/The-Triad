@@ -4,6 +4,7 @@ Synk Engine v2.1 — compare two copies of a project, plan, back up, apply, veri
 2026-09-15 | For: synk182 skill v3.3 (v2.0 2026-09-15 for v3.1; v1.0 2026-02-10 compared only)
 Updated: 2026-09-30 04:05 ET — plan paths bounded to the copies, stale plan refused, wrong-typed PULSE fields, CLI messages
 Updated: 2026-09-30 04:53 ET — folder targets refused, rollback never deletes a folder, unknown --approve ids and one folder given twice are errors, an unparseable PULSE is reported, sync_completed and new_files_synced only when true
+Updated: 2026-09-30 05:37 ET — an approved item with no direction exits 1 with its reason, an item with no path is named by its id, --plan with --apply and --diff with another action are errors, --pulse warns when docs is a file and says a PULSE holding no object holds none
 
 Two copies: the USER copy (the one the user treats as authority) and the
 WORKING copy (a sandbox or upload, a mounted or cloud-synced folder, a git
@@ -24,7 +25,9 @@ CLI (read-only unless --apply):
         roll back any item that fails; --approve new approves every one-sided file;
         an item whose path leaves either copy or names a folder, or whose destination
         changed since the plan was written, is refused before any backup or write;
-        an id that names no plan item stops the run before anything is applied
+        an id that names no plan item stops the run before anything is applied;
+        an approved item with no direction is skipped with its reason, and exits 1
+  --plan, --diff and --apply are separate runs; --diff takes no --pulse
   --threshold 0.6   --pulse (write results to USER_DIR/docs/PULSE.json)
 """
 
@@ -47,7 +50,7 @@ LAYERS = ["existence", "hash", "size", "timestamp", "line_count", "content"]
 TIMESTAMP_TOLERANCE_S = 2.0
 DIRECTIONS = ("user_to_working", "working_to_user")
 PULSE_REL = "docs/PULSE.json"
-PULSE_UNTOUCHED = "  ⚠️ PULSE.json did not parse; left untouched, so this run is not recorded there"
+PULSE_UNTOUCHED = "  ⚠️ PULSE.json does not hold a JSON object; left untouched, so this run is not recorded there"
 
 
 def _say(text: str = "") -> None:
@@ -355,13 +358,15 @@ class SynkEngine:
         for act in plan:
             if act["id"] not in approved:
                 continue
+            name = act.get("path") or f"item {act.get('id')}"  # a hand-edited item may have no path
             if act.get("direction") not in DIRECTIONS:
-                report["skipped"].append({"path": act["path"], "reason": "no direction chosen; review first"})
+                report["skipped"].append({"path": act.get("path"), "reason": "no direction chosen; review first"})
+                _say(f"  ⏭️ Skipped {name}: no direction chosen; review it, then set its direction in the plan")
                 continue
             why = self.refusal(act.get("path")) or self._premise_changed(act)
             if why:
                 report["refused"].append({"path": act.get("path"), "reason": why})
-                _say(f"  ✗ Refused {act.get('path')}: {why}")
+                _say(f"  ✗ Refused {name}: {why}")
             else:
                 todo.append(act)
         if not todo:
@@ -403,11 +408,16 @@ class SynkEngine:
 def update_pulse(project_dir, fields: Dict, signals: Iterable[Tuple[str, str, str]] = ()) -> Optional[Path]:
     """Merge synk182's keys and signals into docs/PULSE.json, keeping every other key.
 
-    A PULSE.json that does not parse is left untouched and None is returned:
+    A PULSE.json that does not parse, or holds no object ([], null), is left
+    untouched and None is returned:
     DevCom5 owns rebuilding it, and overwriting would destroy its history.
     One that parses but holds a wrong-typed field (cross_skill not an object,
-    pending_signals null) is handled as if that field were empty, and says so."""
+    pending_signals null) is handled as if that field were empty, and says so.
+    A docs that is a file raises NotADirectoryError naming it, before anything
+    is written; the CLI reports that, and any other OSError, as a warning."""
     path = Path(project_dir) / "docs" / "PULSE.json"
+    if path.parent.exists() and not path.parent.is_dir():
+        raise NotADirectoryError(f"{path.parent} is a file, not a folder")
     data: Dict = {}
     if path.is_file():
         try:
@@ -446,6 +456,17 @@ def update_pulse(project_dir, fields: Dict, signals: Iterable[Tuple[str, str, st
     return path
 
 
+def _record_pulse(project_dir, fields: Dict, signals: Iterable[Tuple[str, str, str]]) -> None:
+    """--pulse for the CLI: update the PULSE, or say why this run is not recorded there."""
+    try:
+        written = update_pulse(project_dir, fields, signals)
+    except OSError as e:  # docs is a file, PULSE.json is a folder, no permission to write
+        _say(f"  ⚠️ PULSE.json not written ({e}), so this run is not recorded there")
+        return
+    if not written:
+        _say(PULSE_UNTOUCHED)
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="Synk182 engine: compare, plan, back up, apply, verify.")
     ap.add_argument("user_dir")
@@ -460,6 +481,13 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if args.approve.strip() and not args.apply:
         _say("✗ --approve works only with --apply PLAN_JSON; nothing was applied")
+        return 1
+    if args.plan and args.apply:  # one of them would be dropped without a word
+        _say("✗ --plan and --apply are separate runs: write the plan, review it, then apply it; nothing was done")
+        return 1
+    beside_diff = [flag for flag, on in (("--plan", args.plan), ("--apply", args.apply), ("--pulse", args.pulse)) if on]
+    if args.diff and beside_diff:
+        _say(f"✗ --diff shows one file and writes nothing: run it without {', '.join(beside_diff)}; nothing was done")
         return 1
     for label, folder in (("user copy", args.user_dir), ("working copy", args.working_dir)):
         if not Path(folder).is_dir():
@@ -517,18 +545,17 @@ def main(argv: Optional[List[str]] = None) -> int:
             created = [a["path"] for a in report["applied"] if a["created"]]  # an overwrite is not a new file
             if created:
                 sigs.append(("new_files_synced", "solid8", ", ".join(created)))
-            if not update_pulse(synk.user_dir, {"synk_last_run": _now_iso(), "synk_drift_detected": drift,
-                                                "synk_files_changed": len(report["applied"])}, sigs):
-                _say(PULSE_UNTOUCHED)
-        return 1 if report["rolled_back"] or report["refused"] else 0
+            _record_pulse(synk.user_dir, {"synk_last_run": _now_iso(), "synk_drift_detected": drift,
+                                          "synk_files_changed": len(report["applied"])}, sigs)
+        # an approved item that was not written, for whatever reason, is not a clean run
+        return 1 if report["rolled_back"] or report["refused"] or report["skipped"] else 0
     plan = synk.plan()
     if args.plan:
         Path(args.plan).write_text(json.dumps(plan, indent=2, ensure_ascii=False), encoding="utf-8")
         _say(f"📋 Plan written: {args.plan} ({len(plan)} item(s); nothing changed on disk)")
     if args.pulse:
-        if not update_pulse(synk.user_dir, {"synk_last_run": _now_iso(), "synk_drift_detected": drift},
-                            [("environment_diverged", "devcom5", f"{len(plan)} path(s) differ")] if drift else []):
-            _say(PULSE_UNTOUCHED)
+        _record_pulse(synk.user_dir, {"synk_last_run": _now_iso(), "synk_drift_detected": drift},
+                      [("environment_diverged", "devcom5", f"{len(plan)} path(s) differ")] if drift else [])
     return 0
 
 
